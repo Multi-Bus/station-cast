@@ -7,7 +7,7 @@ commit on `main` is supported.
 
 ## Reporting a Vulnerability
 
-Please **do not** open a public Issue for security vulnerabilities.
+Please do not open a public Issue for security vulnerabilities.
 
 Instead, report it privately via [GitHub Security Advisories](../../security/advisories/new)
 for this repository, or contact the maintainers directly at:
