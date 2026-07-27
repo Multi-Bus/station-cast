@@ -12,8 +12,7 @@ Please do not open a public Issue for security vulnerabilities.
 Instead, report it privately via [GitHub Security Advisories](../../security/advisories/new)
 for this repository, or contact the maintainers directly at:
 
-<!-- TODO: 팀 대표 연락처(이메일)로 교체 -->
-- `TODO-team-contact@example.com`
+- `subniin@naver.com`
 
 We aim to acknowledge reports within 7 days.
 
