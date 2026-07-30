@@ -29,3 +29,30 @@ jobs:
 
       - name: Test (pytest)
         run: pytest
+
+  license:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install fosslight_dependency
+        run: pip install fosslight_dependency
+
+      - name: Scan dependency licenses
+        run: fosslight_dependency -p . -m pypi -o license-report.csv -f csv
+
+      - name: Check forbidden licenses (docs/LICENSE_POLICY.md)
+        run: python scripts/check_licenses.py license-report.csv
+
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: license-report.csv
