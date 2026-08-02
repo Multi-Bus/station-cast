@@ -16,8 +16,9 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# License scan output (scripts/check_licenses.py)
+# License scan output (scripts/check_licenses.py, scripts/check_source_licenses.py)
 license-report.csv
+scancode-source-report-*.json
 venv_osc_dep_tmp/
 
 # Data (raw/processed artifacts are not committed; keep folder structure via .gitkeep)

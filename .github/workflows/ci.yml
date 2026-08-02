@@ -56,3 +56,35 @@ jobs:
         with:
           name: license-report
           path: license-report.csv
+
+      - name: Cache ScanCode Toolkit license index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/scancode-tk
+          key: scancode-tk-${{ runner.os }}
+
+      - name: Install ScanCode Toolkit
+        run: pip install scancode-toolkit
+
+      # check_licenses.py is excluded: it contains forbidden-license names as
+      # string literals (its own FORBIDDEN_KEYWORDS list), which ScanCode's
+      # text matcher always flags as a false positive — not embedded license text.
+      - name: Scan source files for embedded licenses
+        run: |
+          scancode --license --json-pp scancode-source-report-src.json --ignore "*.egg-info/*" --ignore "__pycache__/*" src
+          scancode --license --json-pp scancode-source-report-scripts.json --ignore "check_licenses.py" scripts
+          scancode --license --json-pp scancode-source-report-tests.json tests
+
+      - name: Check source files for embedded licenses (docs/LICENSE_POLICY.md)
+        run: >
+          python scripts/check_source_licenses.py
+          scancode-source-report-src.json
+          scancode-source-report-scripts.json
+          scancode-source-report-tests.json
+
+      - name: Upload source license scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scancode-source-report
+          path: scancode-source-report-*.json
