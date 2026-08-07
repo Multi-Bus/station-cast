@@ -139,9 +139,11 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 
 | 파일 | 스키마 | 설명 |
 |---|---|---|
-| `corridor_hourly.parquet` | `표준버스정류장ID, 정류장명, 시간대(0~23), 승차, 하차` | 21개 정류장 × 24시간 = 504행. 노선 무관하게 groupby-sum 완료(long/tidy 포맷). 큐 수지 방정식의 `B(s,t)`(승차)·하차(s,t) 입력값 |
+| `corridor_hourly.parquet` | `표준버스정류장ID, 정류장명, 시간대(0~23), 승차, 하차` | 21개 정류장 × 24시간 = 504행. 노선 무관하게 groupby-sum 완료(long/tidy 포맷) 후 **사용년월의 일수로 나눈 일평균 값**(아래 참고). 큐 수지 방정식의 `B(s,t)`(승차)·하차(s,t) 입력값 |
 | `corridor_stops.parquet` | `표준버스정류장ID, 정류장명, ARS번호, X좌표, Y좌표, 정류소 타입` | 21개 정류장 메타데이터. 계산에는 불필요하나 대시보드 표시·정류장 조회용(ARS번호는 시민이 실제 보는 5자리 안내번호) |
 
 `data/raw/`, `data/processed/`는 `.gitignore`로 커밋되지 않는다(`.gitkeep`만 추적) — 원본·가공 데이터 파일은 각자 로컬에서 `python -m stationcast.ingest.oa12913`(또는 `run()` 호출)로 재생성해서 사용한다.
 
-**QA 결과**: `corridor_hourly.parquet`의 승차+하차 총합이 §"최종 확정 회랑" 표의 합계(3,824,452)와 정확히 일치(기존 CSV 버전과도 값 동일함을 재대조 완료). 21개 정류장 × 24시간 = 504행 모두 존재, 결측·음수 0건. `corridor_stops.parquet`는 21개 정류장 좌표 결측 0건. 신규 모듈은 `ruff check`, `mypy`, `pytest`(단위테스트 2개 추가, 74% 커버리지) 전부 통과.
+**월간 총량 → 일평균 정규화 (S2, issue #16)**: §1의 원본 컬럼은 "그 시간대의 **월간 누적** 인원"이다. 큐 수지 모델은 하루(0~23시, W가 0에서 시작해 0으로 끝남)를 가정하는데, 월간 누적값을 그대로 넣으면 W가 사용년월의 일수(6월=30일)만큼 부풀려진다. 그래서 `build_corridor_hourly`가 groupby-sum 이후 `사용년월`(YYYYMM)로 일수를 계산해 승차·하차를 그 값으로 나눈다. 이 정규화 이전 버전으로 만들어진 `corridor_wait.parquet`(S1 GATE, issue #8)는 이 부풀림 때문에 비음수 위반율 90.9%로 나왔었다.
+
+**QA 결과**: 위 정규화를 반영한 `corridor_hourly.parquet`의 승차+하차 총합은 §"최종 확정 회랑" 표의 월간 합계(3,824,452)를 30으로 나눈 약 127,482(하루 평균)와 일치. 21개 정류장 × 24시간 = 504행 모두 존재, 결측·음수 0건. `corridor_stops.parquet`는 21개 정류장 좌표 결측 0건. 신규 모듈은 `ruff check`, `mypy`, `pytest` 전부 통과.

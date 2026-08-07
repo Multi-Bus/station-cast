@@ -5,6 +5,7 @@ data/README.md from the raw Seoul Open Data Plaza CSVs (OA-12913 and the
 bus stop coordinate dataset).
 """
 
+import calendar
 import re
 from pathlib import Path
 
@@ -54,16 +55,32 @@ def load_stop_coordinates(csv_path: Path) -> pd.DataFrame:
     return pd.read_csv(csv_path, encoding="cp949", low_memory=False)
 
 
+def _days_in_month(year_month: int) -> int:
+    """Number of days in a 사용년월 (YYYYMM) value, e.g. 202606 -> 30."""
+    year, month = divmod(int(year_month), 100)
+    return calendar.monthrange(year, month)[1]
+
+
 def build_corridor_hourly(
     boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] = CORRIDOR_STOP_IDS
 ) -> pd.DataFrame:
-    """Aggregate route-level rows into stop x hour boarding/alighting totals.
+    """Aggregate route-level rows into stop x hour daily-average boarding/alighting.
 
     Sums across every route serving a stop, since the queue balance model
     is stop-independent (see data/README.md section 3).
+
+    The raw hourly columns are a full month's cumulative total for that
+    hour-of-day (data/README.md section 1), not one day's. The queue
+    balance model is a single day (W starts at 0 at hour 0 and should
+    return to ~0 by hour 23), so feeding it a month's worth of boarding
+    inflates W by roughly the number of days in the month. Dividing by
+    that day count here turns the monthly total into the daily average the
+    model actually needs.
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
     sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+
+    days = _days_in_month(boarding_df["사용년월"].iloc[0])
 
     on_cols = [c for c in boarding_df.columns if c.endswith("시승차총승객수")]
     off_cols = [c for c in boarding_df.columns if c.endswith("시하차총승객수")]
@@ -78,6 +95,8 @@ def build_corridor_hourly(
             .agg(승차=(on_col, "sum"), 하차=(off_col, "sum"))
             .reset_index()
         )
+        grp["승차"] = grp["승차"] / days
+        grp["하차"] = grp["하차"] / days
         grp["시간대"] = hour
         frames.append(grp)
 
