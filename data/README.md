@@ -230,7 +230,7 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 | `corridor_features_daily.parquet` | `features/calendar_features.py` | 위 3개를 사용일자로 결합 + 요일구분(평일/주말+공휴일) | 7,664행 |
 | `weekday_holiday_factor.parquet` | `features/calendar_features.py` | 표준버스정류장ID·정류장명·평일/주말+공휴일 평균·보정계수·극단치주의 | 21행. 정류장별 요일 보정계수 |
 
-**월간 총량 → 일평균 정규화 (S2, issue #16)**: §1의 원본 컬럼은 "그 시간대의 **월간 누적** 인원"이다. 큐 수지 모델은 하루(0~23시, W가 0에서 시작해 0으로 끝남)를 가정하는데, 월간 누적값을 그대로 넣으면 W가 사용년월의 일수(6월=30일)만큼 부풀려진다. 그래서 `build_corridor_hourly`가 groupby-sum 이후 `사용년월`(YYYYMM)로 일수를 계산해 승차·하차를 그 값으로 나눈다. 이 정규화 이전 버전으로 만들어진 `corridor_wait.parquet`(S1 GATE, issue #8)는 이 부풀림 때문에 비음수 위반율 90.9%로 나왔었다.
+**월간 총량 → 일평균 정규화 (S2, issue #42)**: §1의 원본 컬럼은 "그 시간대의 **월간 누적** 인원"이다. 큐 수지 모델은 하루(0~23시, W가 0에서 시작해 0으로 끝남)를 가정하는데, 월간 누적값을 그대로 넣으면 W가 사용년월의 일수(6월=30일)만큼 부풀려진다. 그래서 `build_corridor_hourly`가 groupby-sum 이후 `사용년월`(YYYYMM)로 일수를 계산해 승차·하차를 그 값으로 나눈다. 이 정규화 이전 버전으로 만들어진 `corridor_wait.parquet`(S1 GATE, issue #8)는 이 부풀림 때문에 비음수 위반율 90.9%로 나왔었다.
 
 **QA 결과 (데이터셋①②/corridor_hourly·stops)**: 정규화를 반영한 `corridor_hourly.parquet`의 승차+하차 총합은 §"최종 확정 회랑" 표의 월간 합계(3,824,452)를 30으로 나눈 약 127,482(하루 평균)와 일치. 21개 정류장 × 24시간 = 504행 모두 존재, 결측·음수 0건. `corridor_stops.parquet`는 21개 정류장 좌표 결측 0건.
 
