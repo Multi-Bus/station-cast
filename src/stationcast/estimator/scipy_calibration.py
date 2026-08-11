@@ -20,8 +20,7 @@ Because the anchor is #9's own output, this refinement cannot by itself
 validate whether #9's scale is realistic -- it can only clean up the
 remaining non-negativity/day-end violations without repeating the old
 blow-up. Whether the *scale* (e.g. a several-hundred-person peak wait) is
-plausible is a separate, open question -- see the capacity-constraint
-proposal (용량_제약_필요성_및_구현방안.md). If this refinement leaves the
+plausible is a separate, open question. If this refinement leaves the
 peak essentially unchanged, that is evidence the scale question is not an
 optimizer artifact and needs an independent check (capacity), not more
 tuning here.
