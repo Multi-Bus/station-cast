@@ -21,7 +21,17 @@ pip install -e ".[dev]"
 pytest
 ```
 
-API 서버 실행 방법은 `api/` 구현 후 이 절에 추가합니다 (S2).
+데이터 파이프라인(`ingest/`, `features/`, `estimator/`)을 먼저 로컬에서 실행해
+`data/processed/`를 채운 뒤(각 모듈의 `if __name__ == "__main__"` 참고), API 서버를 띄웁니다.
+
+```bash
+uvicorn stationcast.api.main:app --reload
+```
+
+`http://127.0.0.1:8000/docs`에서 Swagger UI로 확인할 수 있습니다. 응답 스키마는
+[`docs/openapi.json`](./docs/openapi.json)에 freeze되어 있으며(issue #14),
+`api/main.py`·`api/schemas.py` 변경 시 `python scripts/export_openapi.py`로
+재생성해야 CI가 통과합니다.
 
 ## 디렉터리 구조
 

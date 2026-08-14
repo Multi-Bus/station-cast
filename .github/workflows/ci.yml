@@ -30,6 +30,11 @@ jobs:
       - name: Test (pytest)
         run: pytest
 
+      - name: Check OpenAPI spec is frozen (docs/openapi.json)
+        run: |
+          python scripts/export_openapi.py
+          git diff --exit-code docs/openapi.json
+
   license:
     runs-on: ubuntu-latest
     steps:
