@@ -2,11 +2,15 @@
   "components": {
     "schemas": {
       "CongestionResponse": {
-        "description": "Raw estimated wait for one stop at one hour.\n\nNo grade (여유/보통/혼잡/매우혼잡) field yet",
+        "description": "Estimated wait and congestion grade for one stop at one hour.",
         "properties": {
           "estimated_wait": {
             "title": "Estimated Wait",
             "type": "number"
+          },
+          "grade": {
+            "title": "Grade",
+            "type": "string"
           },
           "hour": {
             "title": "Hour",
@@ -25,7 +29,8 @@
           "stop_id",
           "name",
           "hour",
-          "estimated_wait"
+          "estimated_wait",
+          "grade"
         ],
         "title": "CongestionResponse",
         "type": "object"
@@ -147,6 +152,10 @@
             "title": "Estimated Wait",
             "type": "number"
           },
+          "grade": {
+            "title": "Grade",
+            "type": "string"
+          },
           "hour": {
             "title": "Hour",
             "type": "integer"
@@ -154,7 +163,8 @@
         },
         "required": [
           "hour",
-          "estimated_wait"
+          "estimated_wait",
+          "grade"
         ],
         "title": "TimelinePoint",
         "type": "object"
@@ -326,7 +336,7 @@
     },
     "/stops/{stop_id}/congestion": {
       "get": {
-        "description": "Raw estimated wait for one stop at one hour (default: current hour).",
+        "description": "Estimated wait and congestion grade for one stop at one hour (default: current hour).",
         "operationId": "get_congestion_stops__stop_id__congestion_get",
         "parameters": [
           {
@@ -384,7 +394,7 @@
     },
     "/stops/{stop_id}/timeline": {
       "get": {
-        "description": "Full 24-hour estimated-wait curve for one stop.",
+        "description": "Full 24-hour estimated-wait curve for one stop, each hour graded.",
         "operationId": "get_timeline_stops__stop_id__timeline_get",
         "parameters": [
           {

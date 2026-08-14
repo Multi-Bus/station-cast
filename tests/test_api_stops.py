@@ -36,7 +36,13 @@ def corridor_data() -> CorridorData:
             "W": [12.5, 30.0, -3.0],
         }
     )
-    return CorridorData(stops=stops, wait=wait)
+    capacity = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP_A, STOP_B],
+            "포용인원": [20.0, 10.0],
+        }
+    )
+    return CorridorData(stops=stops, wait=wait, capacity=capacity)
 
 
 @pytest.fixture
@@ -64,7 +70,7 @@ def test_list_stops(client: TestClient) -> None:
     }
 
 
-def test_congestion_returns_raw_estimate_for_given_hour(client: TestClient) -> None:
+def test_congestion_returns_estimate_and_grade_for_given_hour(client: TestClient) -> None:
     response = client.get(f"/stops/{STOP_A}/congestion", params={"hour": 9})
 
     assert response.status_code == 200
@@ -73,6 +79,7 @@ def test_congestion_returns_raw_estimate_for_given_hour(client: TestClient) -> N
         "name": "명동성당",
         "hour": 9,
         "estimated_wait": 30.0,
+        "grade": "혼잡",
     }
 
 
@@ -94,15 +101,15 @@ def test_congestion_rejects_hour_out_of_range(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_timeline_returns_full_curve_sorted_by_hour(client: TestClient) -> None:
+def test_timeline_returns_full_curve_sorted_by_hour_with_grade(client: TestClient) -> None:
     response = client.get(f"/stops/{STOP_A}/timeline")
 
     assert response.status_code == 200
     body = response.json()
     assert body["stop_id"] == STOP_A
     assert body["timeline"] == [
-        {"hour": 8, "estimated_wait": 12.5},
-        {"hour": 9, "estimated_wait": 30.0},
+        {"hour": 8, "estimated_wait": 12.5, "grade": "보통"},
+        {"hour": 9, "estimated_wait": 30.0, "grade": "혼잡"},
     ]
 
 
