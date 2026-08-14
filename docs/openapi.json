@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "CongestionResponse": {
-        "description": "Raw estimated wait for one stop at one hour.\n\nNo grade (여유/보통/혼잡/매우혼잡) field yet -- that is issue #12's\noutput, still unimplemented as of this endpoint's first version.",
+        "description": "Raw estimated wait for one stop at one hour.\n\nNo grade (여유/보통/혼잡/매우혼잡) field yet",
         "properties": {
           "estimated_wait": {
             "title": "Estimated Wait",
