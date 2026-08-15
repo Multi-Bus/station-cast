@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.ingest.oa12913 import CORRIDOR_STOP_IDS
+from stationcast.ingest.oa12913 import CORRIDOR_NIGHT_BUS_ROUTES, CORRIDOR_STOP_IDS
 
 _NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
 
@@ -70,8 +70,12 @@ def build_corridor_route_schedule(
     registered routes without a published schedule yet), are flagged via
     배차정보없음 rather than dropped, so gaps stay visible downstream
     instead of silently disappearing.
+
+    Excludes CORRIDOR_NIGHT_BUS_ROUTES (same exclusion as
+    build_corridor_hourly in oa12913.py).
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
+    sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
     sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
     sub["노선번호"] = sub["노선번호"].astype(str)
     corridor_routes = sub[["표준버스정류장ID", "정류장명", "노선번호"]].drop_duplicates()

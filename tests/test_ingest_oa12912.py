@@ -8,17 +8,24 @@ from stationcast.ingest.oa12912 import build_corridor_daily
 def _daily_df(usage_date: int) -> pd.DataFrame:
     return pd.DataFrame(
         {
-            "사용일자": [usage_date, usage_date, usage_date],
-            "노선번호": ["150", "201", "999"],
-            "표준버스정류장ID": [100000389, 100000389, 999999999],
-            "역명": ["종로2가(00063)", "종로2가(00090)", "다른정류장(00001)"],
-            "승차총승객수": [100, 50, 30],
-            "하차총승객수": [80, 40, 20],
+            "사용일자": [usage_date, usage_date, usage_date, usage_date],
+            "노선번호": ["150", "201", "N15", "999"],
+            "표준버스정류장ID": [100000389, 100000389, 100000389, 999999999],
+            "역명": [
+                "종로2가(00063)",
+                "종로2가(00090)",
+                "종로2가(00099)",
+                "다른정류장(00001)",
+            ],
+            # N15's large values would blow up the expected totals below
+            # if the night-bus filter didn't exclude it.
+            "승차총승객수": [100, 50, 9000, 30],
+            "하차총승객수": [80, 40, 9000, 20],
         }
     )
 
 
-def test_build_corridor_daily_sums_across_routes_and_dates() -> None:
+def test_build_corridor_daily_sums_across_routes_and_excludes_night_buses() -> None:
     combined = pd.concat([_daily_df(20260601), _daily_df(20260701)], ignore_index=True)
 
     result = build_corridor_daily(combined, stop_ids=(100000389,))
@@ -28,8 +35,8 @@ def test_build_corridor_daily_sums_across_routes_and_dates() -> None:
     assert len(result) == 2  # one row per (stop, date)
 
     june_row = result[result["사용일자"] == 20260601].iloc[0]
-    assert june_row["승차"] == 150  # 100 + 50
-    assert june_row["하차"] == 120  # 80 + 40
+    assert june_row["승차"] == 150  # 100 + 50, N15 excluded
+    assert june_row["하차"] == 120  # 80 + 40, N15 excluded
 
     july_row = result[result["사용일자"] == 20260701].iloc[0]
     assert july_row["승차"] == 150
