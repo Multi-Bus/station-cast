@@ -225,6 +225,7 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 | `corridor_hourly.parquet` | `ingest/oa12913.py` | 표준버스정류장ID·정류장명·시간대(0~23)·승차·하차 | 504행(21정류장×24h). **사용년월의 일수로 나눈 일평균 값**(아래 정규화 설명 참고). `B(s,t)`·하차(s,t) 입력값 |
 | `corridor_stops.parquet` | `ingest/oa12913.py` | 표준버스정류장ID·정류장명·ARS번호·X좌표·Y좌표·정류소타입 | 21행. 대시보드 표시용 메타데이터 |
 | `corridor_daily.parquet` | `ingest/oa12912.py` | 표준버스정류장ID·정류장명·사용일자·승차·하차 | 7,664행(21정류장×365일). 일별 시계열 |
+| `corridor_route_schedule.parquet` | `ingest/route_schedule.py` | 표준버스정류장ID·정류장명·노선번호·요일유형·배차간격·인가대수·최소배차·최대배차·배차정보없음 | 1,038행(정류장×노선 조합×평일/토요일/공휴일). issue #51(용량 제약) 입력 데이터, 시간당 처리용량 계산 자체는 포함 안 함 |
 | `weather_daily.parquet` | `ingest/weather.py` | 사용일자·평균/최고/최저기온·강수량·습도·신적설·평균/최대풍속 | 365행 |
 | `holiday_daily.parquet` | `ingest/holiday.py` | 사용일자·공휴일명 | 20행(같은 날 겹치는 공휴일은 병합) |
 | `corridor_features_daily.parquet` | `features/calendar_features.py` | 위 3개를 사용일자로 결합 + 요일구분(평일/주말+공휴일) | 7,664행 |
