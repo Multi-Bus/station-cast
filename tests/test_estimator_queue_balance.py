@@ -51,6 +51,37 @@ def test_compute_wait_series_arrival_rate_as_series() -> None:
     assert result.tolist() == [-6.0, -7.0]
 
 
+def test_compute_wait_series_resets_to_zero_when_service_closed() -> None:
+    # Hour 2 has zero boarding AND zero alighting -- treated as no bus that
+    # hour, so W hard-resets to 0 there regardless of the carried-over value.
+    boarding = pd.Series([10, 0, 0, 5])
+    alighting = pd.Series([20, 0, 0, 0])
+
+    result = compute_wait_series(
+        boarding, alighting, transfer_rate=0.5, arrival_rate=2, w0=0
+    )
+
+    # W0 = 0 + 2 + 20*0.5 - 10 = 2       (normal hour)
+    # W1 = 0                              (closed -- reset, would otherwise be 2+2=4)
+    # W2 = 0                              (closed -- reset)
+    # W3 = 0 + 2 + 0*0.5 - 5 = -3         (boarding=5 resumes the recursion from the reset)
+    assert result.tolist() == [2.0, 0.0, 0.0, -3.0]
+
+
+def test_compute_wait_series_does_not_reset_when_only_alighting_is_zero() -> None:
+    # Existing test_compute_wait_series_arrival_rate_as_series already covers
+    # alighting all-zero with nonzero boarding; this pins that boarding=0
+    # alone (with nonzero alighting) also does not count as "closed".
+    boarding = pd.Series([0, 5])
+    alighting = pd.Series([10, 0])
+
+    result = compute_wait_series(boarding, alighting, transfer_rate=0.5, w0=1)
+
+    # W0 = 1 + 0 + 10*0.5 - 0 = 6  (alighting>0, so not closed even though boarding=0)
+    # W1 = 6 + 0 +  0*0.5 - 5 = 1
+    assert result.tolist() == [6.0, 1.0]
+
+
 def test_compute_wait_series_rejects_length_mismatch() -> None:
     with pytest.raises(ValueError, match="same length"):
         compute_wait_series(pd.Series([1, 2]), pd.Series([1, 2, 3]))
