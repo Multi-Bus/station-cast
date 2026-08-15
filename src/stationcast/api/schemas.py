@@ -17,20 +17,19 @@ class StopsResponse(BaseModel):
 
 
 class CongestionResponse(BaseModel):
-    """Raw estimated wait for one stop at one hour.
-
-    No grade (여유/보통/혼잡/매우혼잡) field yet
-    """
+    """Estimated wait and congestion grade for one stop at one hour."""
 
     stop_id: int
     name: str
     hour: int
     estimated_wait: float
+    grade: str
 
 
 class TimelinePoint(BaseModel):
     hour: int
     estimated_wait: float
+    grade: str
 
 
 class TimelineResponse(BaseModel):
