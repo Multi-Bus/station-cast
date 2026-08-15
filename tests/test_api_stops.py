@@ -83,6 +83,17 @@ def test_congestion_returns_estimate_and_grade_for_given_hour(client: TestClient
     }
 
 
+def test_congestion_clamps_negative_wait_to_zero(client: TestClient) -> None:
+    # STOP_B's fixture W is -3.0 at hour 8 -- a negative wait count is
+    # physically meaningless, so the API clamps it for display.
+    response = client.get(f"/stops/{STOP_B}/congestion", params={"hour": 8})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estimated_wait"] == 0.0
+    assert body["grade"] == "여유"
+
+
 def test_congestion_unknown_stop_returns_404(client: TestClient) -> None:
     response = client.get("/stops/999999999/congestion", params={"hour": 9})
 
@@ -113,6 +124,14 @@ def test_timeline_returns_full_curve_sorted_by_hour_with_grade(client: TestClien
     ]
 
 
+def test_timeline_clamps_negative_wait_to_zero(client: TestClient) -> None:
+    response = client.get(f"/stops/{STOP_B}/timeline")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["timeline"] == [{"hour": 8, "estimated_wait": 0.0, "grade": "여유"}]
+
+
 def test_timeline_unknown_stop_returns_404(client: TestClient) -> None:
     response = client.get("/stops/999999999/timeline")
 
@@ -127,7 +146,9 @@ def test_corridor_returns_every_stop_at_given_hour(client: TestClient) -> None:
     assert body["hour"] == 8
     assert body["stops"] == [
         {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5},
-        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": -3.0},
+        # STOP_B's raw W is -3.0 (see fixture); a negative wait count is
+        # physically meaningless, so the API clamps it to 0 for display.
+        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 0.0},
     ]
 
 

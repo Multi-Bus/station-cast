@@ -18,10 +18,14 @@ recursion itself:
 - Negative W values are NOT clamped here. Physical-constraint checking
   (non-negativity, day-end closure) is a separate concern (issue #5,
   validate/) so it has real violations to measure and report.
+- The one exception: an hour with zero boarding and zero alighting hard-
+  resets W to 0, as a proxy for the stop having no bus service that hour.
+  See compute_wait_series for why.
 """
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 DEFAULT_TRANSFER_RATE = 0.3
@@ -33,18 +37,31 @@ fits this via optimization against real boarding data (ARCHITECTURE.md)."""
 def compute_wait_series(
     boarding: pd.Series,
     alighting: pd.Series,
-    transfer_rate: float = DEFAULT_TRANSFER_RATE,
+    transfer_rate: float | pd.Series = DEFAULT_TRANSFER_RATE,
     arrival_rate: pd.Series | float = 0.0,
     w0: float = 0.0,
 ) -> pd.Series:
     """Compute W(t) for a single stop via the queue balance recursion.
 
     ``boarding`` and ``alighting`` must be the same length and share the
-    same index, ordered by hour ascending. ``arrival_rate`` may be a
-    constant applied to every hour or a Series aligned to the same index.
+    same index, ordered by hour ascending. ``arrival_rate`` and
+    ``transfer_rate`` may each be a constant applied to every hour or a
+    Series aligned to the same index (a single stop-wide transfer_rate can't
+    track a corridor's morning/evening tidal asymmetry -- see estimator/
+    scipy_calibration.py).
 
     Returned values are not clamped to be non-negative; see validate/
     (issue #5) for constraint checking.
+
+    An hour with zero boarding *and* zero alighting is treated as no bus
+    having served the stop that hour, and W is hard-reset to 0 there,
+    overriding whatever the recursion would otherwise carry forward. This
+    is a proxy for 첫차/막차 (first/last bus) times -- the team has no
+    schedule data to know those directly (data/README.md §7), but a stop
+    with literally no recorded activity is the closest available signal
+    that service was closed. Without this, a stale W from the last hour
+    with any activity would sit there unchanged through a whole closed
+    stretch, since nothing decrements W except boarding.
     """
     if len(boarding) != len(alighting):
         raise ValueError("boarding and alighting must be the same length")
@@ -58,13 +75,25 @@ def compute_wait_series(
     else:
         lam = [float(arrival_rate)] * len(boarding)
 
-    transfer_in = alighting.to_numpy(dtype="float64") * transfer_rate
+    if isinstance(transfer_rate, pd.Series):
+        if not transfer_rate.index.equals(boarding.index):
+            raise ValueError("transfer_rate index must match boarding/alighting")
+        rate = transfer_rate.to_numpy(dtype="float64")
+    else:
+        rate = np.full(len(boarding), float(transfer_rate))
+
+    transfer_in = alighting.to_numpy(dtype="float64") * rate
     board = boarding.to_numpy(dtype="float64")
+    alight = alighting.to_numpy(dtype="float64")
+    service_closed = (board == 0.0) & (alight == 0.0)
 
     values: list[float] = []
     prev = float(w0)
     for i in range(len(board)):
-        prev = prev + lam[i] + transfer_in[i] - board[i]
+        if service_closed[i]:
+            prev = 0.0
+        else:
+            prev = prev + lam[i] + transfer_in[i] - board[i]
         values.append(prev)
 
     return pd.Series(values, index=boarding.index, name="W")

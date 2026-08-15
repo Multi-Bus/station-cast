@@ -27,10 +27,16 @@ tuning here.
 
 Priority order follows 개발계획_최종.md §8's mitigation order for when not
 all physical constraints can be simultaneously satisfied: 마감조건(day-end)
-> 용량(capacity, not implemented here -- requires vehicle-seat and
-route-topology data this project does not currently have) > 비음수
-(non-negativity). DAY_END_WEIGHT > DEFAULT_VIOLATION_WEIGHT reflects that
-ordering.
+> 용량(capacity, via stop_capacity.py's field-surveyed 포용인원) > 비음수
+(non-negativity). DAY_END_WEIGHT > DEFAULT_CAPACITY_WEIGHT >
+DEFAULT_VIOLATION_WEIGHT reflects that ordering.
+
+Capacity itself is optional (``capacity_df=None`` skips the term entirely):
+day-end and non-negativity alone let lambda freely backfill whatever a lower
+transfer_rate no longer contributes, so a several-hundred-person midday peak
+can survive even an aggressively low transfer_rate prior. Only a capacity
+penalty actually bounds the peak, since it is the one term in the objective
+that looks at every hour's W individually rather than just the day-end value.
 """
 
 from pathlib import Path
@@ -41,9 +47,11 @@ from scipy.optimize import minimize
 
 from stationcast.estimator.queue_balance import compute_wait_series
 from stationcast.features.calibration import calibrate_corridor
+from stationcast.ingest.stop_capacity import build_stop_capacity
 from stationcast.validate.physical_constraints import build_validation_report
 
 DAY_END_WEIGHT = 2.0
+DEFAULT_CAPACITY_WEIGHT = 1.5
 DEFAULT_VIOLATION_WEIGHT = 1.0
 DEFAULT_REG_WEIGHT = 0.1
 
@@ -64,9 +72,17 @@ def _stop_frames(hourly: pd.DataFrame) -> list[StopFrame]:
 
 
 def _unpack(params: np.ndarray, n_stops: int, n_hours: int) -> tuple[np.ndarray, np.ndarray]:
-    """Split the flat optimizer vector into transfer_rate(n_stops) and lambda(n_stops, n_hours)."""
-    transfer_rate = params[:n_stops]
-    lam = params[n_stops:].reshape(n_stops, n_hours)
+    """Split the flat optimizer vector into transfer_rate and lambda, both (n_stops, n_hours).
+
+    transfer_rate is per-hour, not a single stop-wide scalar -- a real
+    corridor's transfer share of alighting isn't constant across a morning
+    rush (alighting-heavy) and an evening rush (boarding-heavy) at the same
+    stop, and forcing one constant left day-end closure achievable only by
+    pushing lambda into an implausible peak. See module docstring.
+    """
+    half = n_stops * n_hours
+    transfer_rate = params[:half].reshape(n_stops, n_hours)
+    lam = params[half:].reshape(n_stops, n_hours)
     return transfer_rate, lam
 
 
@@ -79,20 +95,34 @@ def _objective(
     violation_weight: float,
     day_end_weight: float,
     reg_weight: float,
+    capacity: np.ndarray | None = None,
+    capacity_weight: float = DEFAULT_CAPACITY_WEIGHT,
 ) -> float:
-    """Weighted day-end residual + non-negativity penalty + drift-from-#9 penalty."""
+    """Weighted day-end residual + non-negativity + capacity penalty + drift-from-#9 penalty.
+
+    ``capacity`` is per-stop (aligned to stop_frames), not per-hour -- every
+    hour's W is checked against the same stop capacity. Left as None, the
+    capacity term is skipped entirely (existing callers get the old behavior
+    unchanged).
+    """
     n_stops = len(stop_frames)
     transfer_rate, lam = _unpack(params, n_stops, n_hours)
 
     total = 0.0
     for i, (_stop_id, _name, boarding, alighting) in enumerate(stop_frames):
         arrival_rate = pd.Series(lam[i], index=boarding.index)
+        transfer_rate_series = pd.Series(transfer_rate[i], index=boarding.index)
         wait = compute_wait_series(
-            boarding, alighting, transfer_rate=transfer_rate[i], arrival_rate=arrival_rate
+            boarding, alighting, transfer_rate=transfer_rate_series, arrival_rate=arrival_rate
         )
-        day_end_residual = float(wait.iloc[-1]) ** 2
-        violation_penalty = float(np.sum(np.minimum(wait.to_numpy(), 0.0) ** 2))
+        wait_values = wait.to_numpy()
+        day_end_residual = float(wait_values[-1]) ** 2
+        violation_penalty = float(np.sum(np.minimum(wait_values, 0.0) ** 2))
         total += day_end_weight * day_end_residual + violation_weight * violation_penalty
+
+        if capacity is not None:
+            capacity_penalty = float(np.sum(np.maximum(wait_values - capacity[i], 0.0) ** 2))
+            total += capacity_weight * capacity_penalty
 
     drift = float(np.sum((transfer_rate - prior_transfer) ** 2)) + float(
         np.sum((lam - prior_lambda) ** 2)
@@ -104,18 +134,28 @@ def _objective(
 
 def calibrate_corridor_scipy(
     hourly: pd.DataFrame,
+    capacity_df: pd.DataFrame | None = None,
     violation_weight: float = DEFAULT_VIOLATION_WEIGHT,
     day_end_weight: float = DAY_END_WEIGHT,
+    capacity_weight: float = DEFAULT_CAPACITY_WEIGHT,
     reg_weight: float = DEFAULT_REG_WEIGHT,
 ) -> dict[str, pd.DataFrame]:
     """Refine #9's transfer_rate/lambda with SciPy, anchored to those priors.
 
+    ``capacity_df`` (표준버스정류장ID, 포용인원 -- see ingest/stop_capacity.py)
+    is optional; omitting it skips the capacity penalty and reproduces the
+    pre-capacity behavior.
+
     Returns:
-        "stops": 표준버스정류장ID, 정류장명, 환승률
+        "stops": 표준버스정류장ID, 정류장명, 시간대, 환승률 (per-hour, not
+            a single stop-wide value -- see _unpack)
         "lambda": 표준버스정류장ID, 정류장명, 시간대, lambda
 
-    Same column names as features/calibration.calibrate_corridor()'s output,
-    so both can be passed interchangeably to apply_scipy_calibration().
+    #9's closed-form 환승률 (one scalar per stop) seeds every hour of this
+    module's per-hour 환승률 as an identical starting point/regularization
+    anchor, so "stops" here is no longer directly interchangeable with
+    features/calibration.calibrate_corridor()'s one-row-per-stop output --
+    apply_scipy_calibration() handles both shapes.
     """
     stop_frames = _stop_frames(hourly)
     n_stops = len(stop_frames)
@@ -125,7 +165,8 @@ def calibrate_corridor_scipy(
 
     prior_params, prior_lambdas = calibrate_corridor(hourly)
     prior_params = prior_params.set_index("표준버스정류장ID").loc[stop_order].reset_index()
-    prior_transfer = prior_params["환승률"].to_numpy()
+    prior_transfer_scalar = prior_params["환승률"].to_numpy()
+    prior_transfer = np.tile(prior_transfer_scalar[:, None], (1, n_hours))
 
     prior_lambda = np.zeros((n_stops, n_hours))
     for i, stop_id in enumerate(stop_order):
@@ -135,8 +176,13 @@ def calibrate_corridor_scipy(
             .to_numpy()
         )
 
-    x0 = np.concatenate([prior_transfer, prior_lambda.ravel()])
-    bounds = [(0.0, 1.0)] * n_stops + [(0.0, None)] * (n_stops * n_hours)
+    capacity = None
+    if capacity_df is not None:
+        capacity_lookup = capacity_df.set_index("표준버스정류장ID")["포용인원"]
+        capacity = np.array([float(capacity_lookup[stop_id]) for stop_id in stop_order])
+
+    x0 = np.concatenate([prior_transfer.ravel(), prior_lambda.ravel()])
+    bounds = [(0.0, 1.0)] * (n_stops * n_hours) + [(0.0, None)] * (n_stops * n_hours)
 
     result = minimize(
         _objective,
@@ -149,6 +195,8 @@ def calibrate_corridor_scipy(
             violation_weight,
             day_end_weight,
             reg_weight,
+            capacity,
+            capacity_weight,
         ),
         method="L-BFGS-B",
         bounds=bounds,
@@ -157,8 +205,19 @@ def calibrate_corridor_scipy(
     transfer_rate, lam = _unpack(result.x, n_stops, n_hours)
     names = [name for _, name, *_ in stop_frames]
 
-    stops_df = pd.DataFrame(
-        {"표준버스정류장ID": stop_order, "정류장명": names, "환승률": transfer_rate}
+    stops_df = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "표준버스정류장ID": stop_order[i],
+                    "정류장명": names[i],
+                    "시간대": hours,
+                    "환승률": transfer_rate[i],
+                }
+            )
+            for i in range(n_stops)
+        ],
+        ignore_index=True,
     )
     lambda_df = pd.concat(
         [
@@ -183,16 +242,26 @@ def apply_scipy_calibration(
 ) -> pd.DataFrame:
     """Recompute W(s,t) for the whole corridor using the given per-stop parameters.
 
-    stops_df/lambda_df schema matches both this module's own output and
+    lambda_df's schema matches both this module's own output and
     features/calibration.calibrate_corridor()'s output, so this doubles as
     the "before" computation (pass #9's raw priors) and the "after"
     computation (pass this module's refined result).
+
+    stops_df, however, differs between the two: #9's closed-form output has
+    one 환승률 row per stop (a day-wide constant), while this module's own
+    output has one row per (stop, hour). Both are accepted -- a 시간대
+    column in stops_df selects the per-hour path.
     """
     frames = []
     for stop_id, name, boarding, alighting in _stop_frames(hourly):
-        transfer_rate = float(
-            stops_df.loc[stops_df["표준버스정류장ID"] == stop_id, "환승률"].iloc[0]
-        )
+        stop_rows = stops_df[stops_df["표준버스정류장ID"] == stop_id]
+        transfer_rate: float | pd.Series
+        if "시간대" in stops_df.columns:
+            transfer_rate = (
+                stop_rows.sort_values("시간대").set_index("시간대")["환승률"].loc[boarding.index]
+            )
+        else:
+            transfer_rate = float(stop_rows["환승률"].iloc[0])
         lam = (
             lambda_df[lambda_df["표준버스정류장ID"] == stop_id]
             .sort_values("시간대")
@@ -222,17 +291,26 @@ def apply_scipy_calibration(
     )
 
 
+def _capacity_violation_rate(wait_df: pd.DataFrame, capacity_df: pd.DataFrame) -> float:
+    """Fraction of (stop, hour) rows where W exceeds the stop's 포용인원."""
+    merged = wait_df.merge(capacity_df[["표준버스정류장ID", "포용인원"]], on="표준버스정류장ID")
+    return float((merged["W"] > merged["포용인원"]).mean())
+
+
 def run(hourly_path: Path, out_dir: Path) -> None:
     """Refine #9's calibration on corridor_hourly.parquet; write params + resulting W(s,t)."""
     hourly = pd.read_parquet(hourly_path)
+    capacity_df = build_stop_capacity()
 
     prior_params, prior_lambdas = calibrate_corridor(hourly)
     baseline_wait = apply_scipy_calibration(hourly, prior_params, prior_lambdas)
     before = build_validation_report(baseline_wait)
+    before_capacity = _capacity_violation_rate(baseline_wait, capacity_df)
 
-    calibration = calibrate_corridor_scipy(hourly)
+    calibration = calibrate_corridor_scipy(hourly, capacity_df=capacity_df)
     wait_refined = apply_scipy_calibration(hourly, calibration["stops"], calibration["lambda"])
     after = build_validation_report(wait_refined)
+    after_capacity = _capacity_violation_rate(wait_refined, capacity_df)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     calibration["stops"].to_parquet(out_dir / "scipy_calibrated_stops.parquet", index=False)
@@ -241,11 +319,13 @@ def run(hourly_path: Path, out_dir: Path) -> None:
 
     print(
         f"#9 기준 — 비음수 위반율: {before['비음수_위반율']:.1%}, "
-        f"일마감 평균 잔차: {before['일마감_평균잔차']:,.1f}"
+        f"일마감 평균 잔차: {before['일마감_평균잔차']:,.1f}, "
+        f"용량 위반율: {before_capacity:.1%}"
     )
     print(
         f"SciPy 정교화 후 — 비음수 위반율: {after['비음수_위반율']:.1%}, "
-        f"일마감 평균 잔차: {after['일마감_평균잔차']:,.1f}"
+        f"일마감 평균 잔차: {after['일마감_평균잔차']:,.1f}, "
+        f"용량 위반율: {after_capacity:.1%}"
     )
 
 
