@@ -3,9 +3,7 @@
 Prepares the input data for issue #51 (capacity constraint): joins each
 corridor stop's serving routes (already derivable from OA-12913, see
 oa12913.py) with that route's headway and fleet size
-(서울시버스노선기본정보). Computing the hourly processing capacity itself
-(seat-count assumption, remaining-seat methodology) is out of scope here
-and picked up by B in #51.
+(서울시버스노선기본정보).
 """
 
 import re
