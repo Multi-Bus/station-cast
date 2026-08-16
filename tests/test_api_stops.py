@@ -79,6 +79,13 @@ def client(corridor_data: CorridorData) -> TestClient:
         app.dependency_overrides.clear()
 
 
+def test_health_check(client: TestClient) -> None:
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 def test_list_stops(client: TestClient) -> None:
     response = client.get("/stops")
 
@@ -117,6 +124,18 @@ def test_congestion_clamps_negative_wait_to_zero(client: TestClient) -> None:
     body = response.json()
     assert body["estimated_wait"] == 0.0
     assert body["grade"] == "여유"
+
+
+def test_congestion_defaults_to_current_hour_when_omitted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("stationcast.api.main._current_hour", lambda: 9)
+    response = client.get(f"/stops/{STOP_A}/congestion")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hour"] == 9
+    assert body["estimated_wait"] == 30.0
 
 
 def test_congestion_unknown_stop_returns_404(client: TestClient) -> None:
@@ -177,6 +196,21 @@ def test_corridor_returns_every_stop_at_given_hour(client: TestClient) -> None:
     ]
 
 
+def test_corridor_defaults_to_current_hour_when_omitted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("stationcast.api.main._current_hour", lambda: 8)
+    response = client.get("/corridor")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["hour"] == 8
+    assert body["stops"] == [
+        {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5},
+        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 0.0},
+    ]
+
+
 def test_corridor_empty_at_hour_with_no_data(client: TestClient) -> None:
     response = client.get("/corridor", params={"hour": 15})
 
@@ -214,6 +248,18 @@ def test_context_weekday_returns_baseline_note(client: TestClient) -> None:
     body = response.json()
     assert body["day_type"] == "평일"
     assert body["congestion_note"] == "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
+
+
+def test_context_defaults_to_current_date_when_omitted(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("stationcast.api.main._current_date", lambda: 20260102)
+    response = client.get(f"/stops/{STOP_B}/context")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["date"] == 20260102
+    assert body["day_type"] == "평일"
 
 
 def test_context_unknown_stop_returns_404(client: TestClient) -> None:
