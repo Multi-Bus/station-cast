@@ -36,6 +36,23 @@ CORRIDOR_STOP_IDS: tuple[int, ...] = (
     101000141,
 )
 
+# 서울심야버스(N-접두) 노선: 회랑 21개 정류장에 걸리는 10개 노선. 자정 이후에만
+# 운행하고 배차간격도 25~140분으로 일반 노선과 특성이 달라 모델 스코프에서
+# 제외한다. OA-12912·route_schedule.py 등 교통수단타입명 컬럼이 없는
+# 데이터셋에서도 동일하게 걸러낼 수 있도록 노선번호로 명시한다.
+CORRIDOR_NIGHT_BUS_ROUTES: tuple[str, ...] = (
+    "N15",
+    "N16",
+    "N26",
+    "N30",
+    "N31",
+    "N37",
+    "N51",
+    "N62",
+    "N73",
+    "N75",
+)
+
 _NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
 _HOUR_RE = re.compile(r"(\d+)시")
 
@@ -67,7 +84,9 @@ def build_corridor_hourly(
     """Aggregate route-level rows into stop x hour daily-average boarding/alighting.
 
     Sums across every route serving a stop, since the queue balance model
-    is stop-independent (see data/README.md section 3).
+    is stop-independent (see data/README.md section 3). Excludes
+    CORRIDOR_NIGHT_BUS_ROUTES: those routes only run after midnight on a
+    sparse, irregular schedule and are out of the model's scope.
 
     The raw hourly columns are a full month's cumulative total for that
     hour-of-day (data/README.md section 1), not one day's. The queue
@@ -78,6 +97,7 @@ def build_corridor_hourly(
     model actually needs.
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
+    sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
     sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
 
     days = _days_in_month(boarding_df["사용년월"].iloc[0])
