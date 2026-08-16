@@ -233,6 +233,7 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 | `holiday_daily.parquet` | `ingest/holiday.py` | 사용일자·공휴일명 | 20행(같은 날 겹치는 공휴일은 병합) |
 | `corridor_features_daily.parquet` | `features/calendar_features.py` | 위 3개를 사용일자로 결합 + 요일구분(평일/주말+공휴일) | 7,664행 |
 | `weekday_holiday_factor.parquet` | `features/calendar_features.py` | 표준버스정류장ID·정류장명·평일/주말+공휴일 평균·보정계수·극단치주의 | 21행. 정류장별 요일 보정계수 |
+| `weekday_weather_factor.parquet` | `features/calendar_features.py` | 표준버스정류장ID·정류장명·요일구분×날씨구분(평일/주말+공휴일 × 맑음/강수) 4그룹 평균·보정계수·극단치주의 | 21행. `weekday_holiday_factor.parquet`(요일만 2그룹)와 별개 파일 — 날씨(강수 여부)까지 함께 반영한 보정계수 |
 
 **월간 총량 → 일평균 정규화 (S2, issue #42)**: §1의 원본 컬럼은 "그 시간대의 **월간 누적** 인원"이다. 큐 수지 모델은 하루(0~23시, W가 0에서 시작해 0으로 끝남)를 가정하는데, 월간 누적값을 그대로 넣으면 W가 사용년월의 일수(6월=30일)만큼 부풀려진다. 그래서 `build_corridor_hourly`가 groupby-sum 이후 `사용년월`(YYYYMM)로 일수를 계산해 승차·하차를 그 값으로 나눈다. 이 정규화 이전 버전으로 만들어진 `corridor_wait.parquet`(S1 GATE, issue #8)는 이 부풀림 때문에 비음수 위반율 90.9%로 나왔었다.
 
@@ -243,6 +244,8 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 **QA 결과 (데이터셋③④⑤/일별 산출물)**: `corridor_daily`·`weather_daily`·`holiday_daily`의 사용일자 범위 완전 일치(2025-07-01~2026-06-30). `weekday_holiday_factor`에서 **명동·롯데영프라자(보정계수 0.992, 상업·관광지구라 주말에도 유지)**와 **종로1가(ID `100000387`, 보정계수 0.447, 업무지구라 주말에 급감)**의 대비가 뚜렷하게 확인되어, "정류장별로 계수를 낸다"는 설계 결정이 타당했음을 실증. 회랑에는 종로1가가 2곳(ID `100000386`·`100000387`) 있으며 그중 `100000387`만 해당. 보정계수 0.5 미만 4개 정류장(종로1가 `100000387`, 염천교, 을지로2가·기업은행본점, 을지로입구역·광교)은 `극단치주의=True`로 플래그.
 
 모든 신규 모듈(`ingest/oa12912.py`, `ingest/route_schedule.py`, `ingest/weather.py`, `ingest/holiday.py`, `features/calendar_features.py`)은 `ruff check`, `mypy`, `pytest` 전부 통과.
+
+**날씨+요일 결합 보정계수 (`weekday_weather_factor.parquet`)**: 날씨 구분은 강수 여부만 사용한다(강수량>0 또는 신적설>0 → 강수, 아니면 맑음) — 기온 구간까지 넣으면 365일 기준 그룹당 표본이 더 쪼개져서 채택하지 않았다. 요일구분(평일/주말+공휴일) × 날씨구분(맑음/강수) 4그룹으로 나누고, 표본이 가장 많은 **평일·맑음을 기준선**으로 나머지 3그룹의 보정계수를 계산한다. 실측 표본수는 평일·맑음 ~175일, 평일·강수 ~69일, 주말+공휴일·맑음 85일, 주말+공휴일·강수 35일(가장 작은 그룹도 30일대 확보). 종로1가·염천교 등 업무지구 정류장은 여기서도 여전히 보정계수 0.5 미만으로 `극단치주의=True` 플래그가 붙는다.
 
 **`GET /stops/{id}/context` 필드 매핑 (S3, issue #47)**: 위 세 산출물을 API 응답으로 노출한다.
 
