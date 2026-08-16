@@ -130,6 +130,65 @@
         "title": "Stop",
         "type": "object"
       },
+      "StopContextResponse": {
+        "description": "Weather + day-type context for one stop on one date (issue #47).",
+        "properties": {
+          "congestion_note": {
+            "title": "Congestion Note",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "integer"
+          },
+          "day_type": {
+            "title": "Day Type",
+            "type": "string"
+          },
+          "humidity": {
+            "title": "Humidity",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "precipitation": {
+            "title": "Precipitation",
+            "type": "number"
+          },
+          "snowfall": {
+            "title": "Snowfall",
+            "type": "number"
+          },
+          "stop_id": {
+            "title": "Stop Id",
+            "type": "integer"
+          },
+          "temperature": {
+            "title": "Temperature",
+            "type": "number"
+          },
+          "wind_speed": {
+            "title": "Wind Speed",
+            "type": "number"
+          }
+        },
+        "required": [
+          "stop_id",
+          "name",
+          "date",
+          "day_type",
+          "temperature",
+          "precipitation",
+          "humidity",
+          "snowfall",
+          "wind_speed",
+          "congestion_note"
+        ],
+        "title": "StopContextResponse",
+        "type": "object"
+      },
       "StopsResponse": {
         "properties": {
           "stops": {
@@ -390,6 +449,62 @@
           }
         },
         "summary": "Get Congestion"
+      }
+    },
+    "/stops/{stop_id}/context": {
+      "get": {
+        "description": "Weather + day-type context for one stop on one date (default: today).",
+        "operationId": "get_context_stops__stop_id__context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "stop_id",
+            "required": true,
+            "schema": {
+              "title": "Stop Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Context"
       }
     },
     "/stops/{stop_id}/timeline": {

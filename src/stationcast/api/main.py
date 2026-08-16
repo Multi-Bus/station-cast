@@ -1,7 +1,7 @@
 """FastAPI application entrypoint.
 
 /stops, /stops/{id}/congestion, /stops/{id}/timeline, /corridor added in
-S2 (issue #13).
+S2 (issue #13). /stops/{id}/context added in S3 (issue #47).
 """
 
 from datetime import datetime
@@ -15,6 +15,7 @@ from stationcast.api.schemas import (
     CorridorResponse,
     CorridorStopSnapshot,
     Stop,
+    StopContextResponse,
     StopsResponse,
     TimelinePoint,
     TimelineResponse,
@@ -58,9 +59,41 @@ def _current_hour() -> int:
     return datetime.now().hour
 
 
+def _current_date() -> int:
+    return int(datetime.now().strftime("%Y%m%d"))
+
+
 def _stop_capacity(data: CorridorData, stop_id: int) -> float:
     row = data.capacity[data.capacity["표준버스정류장ID"] == stop_id]
     return float(row["포용인원"].iloc[0])
+
+
+def _stop_name(data: CorridorData, stop_id: int) -> str:
+    row = data.stops[data.stops["표준버스정류장ID"] == stop_id]
+    if row.empty:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
+    return str(row["정류장명"].iloc[0])
+
+
+def _day_type(date: int, holiday_dates: set[int]) -> str:
+    """Classify a date as 공휴일 > 주말 > 평일 (holiday takes priority over weekend)."""
+    if date in holiday_dates:
+        return "공휴일"
+    dow = pd.to_datetime(str(date), format="%Y%m%d").dayofweek
+    return "주말" if dow >= 5 else "평일"
+
+
+def _congestion_note(day_type: str, boarding_factor: float) -> str:
+    """Human-readable explanation of the day-type correction factor.
+
+    boarding_factor is 보정계수_승차 (주말+공휴일 평균승차 / 평일 평균승차) from
+    weekday_holiday_factor.parquet
+    """
+    if day_type == "평일":
+        return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
+    percent = round(abs(boarding_factor - 1.0) * 100)
+    direction = "낮을" if boarding_factor < 1.0 else "높을"
+    return f"{day_type}이라 평소보다 혼잡도가 약 {percent}% {direction} 것으로 예상됩니다."
 
 
 @app.get("/stops/{stop_id}/congestion", response_model=CongestionResponse)
@@ -125,3 +158,37 @@ def get_corridor(
         for _, row in snapshot.iterrows()
     ]
     return CorridorResponse(hour=target_hour, stops=stops)
+
+
+@app.get("/stops/{stop_id}/context", response_model=StopContextResponse)
+def get_context(
+    stop_id: int,
+    date: int | None = Query(default=None),
+    data: CorridorData = Depends(get_corridor_data),
+) -> StopContextResponse:
+    """Weather + day-type context for one stop on one date (default: today)."""
+    name = _stop_name(data, stop_id)
+    target_date = _current_date() if date is None else date
+
+    weather_row = data.weather[data.weather["사용일자"] == target_date]
+    if weather_row.empty:
+        raise HTTPException(status_code=404, detail=f"weather for date {target_date} not found")
+
+    day_type = _day_type(target_date, set(data.holiday["사용일자"]))
+    factor_row = data.weekday_holiday_factor[
+        data.weekday_holiday_factor["표준버스정류장ID"] == stop_id
+    ]
+    boarding_factor = float(factor_row["보정계수_승차"].iloc[0])
+
+    return StopContextResponse(
+        stop_id=stop_id,
+        name=name,
+        date=target_date,
+        day_type=day_type,
+        temperature=float(weather_row["평균기온"].iloc[0]),
+        precipitation=float(weather_row["강수량"].iloc[0]),
+        humidity=float(weather_row["습도"].iloc[0]),
+        snowfall=float(weather_row["신적설"].iloc[0]),
+        wind_speed=float(weather_row["평균풍속"].iloc[0]),
+        congestion_note=_congestion_note(day_type, boarding_factor),
+    )
