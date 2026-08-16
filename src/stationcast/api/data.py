@@ -12,7 +12,7 @@ a plain in-memory constant with no ingest step to run.
 
 ``weather``, ``holiday``, ``weekday_holiday_factor`` back the
 /stops/{id}/context endpoint (issue #47) and are the direct parquet
-outputs of features/calendar_features.py (issue #10):
+outputs of features/demand_factors.py (issue #10):
 - weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속
 - holiday: 사용일자·공휴일명
 - weekday_holiday_factor: 표준버스정류장ID·정류장명·보정계수_승차·보정계수_하차 등

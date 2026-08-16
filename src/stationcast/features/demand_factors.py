@@ -1,10 +1,11 @@
-"""Weekday/holiday and weather calendar features (issue #10).
+"""Weekday/holiday/weather/temperature demand correction factors (issue #10).
 
 Joins corridor_daily.parquet (per-stop daily boarding/alighting, from
 ingest/oa12912.py) with weather_daily.parquet and holiday_daily.parquet
 on 사용일자, labels each date 평일 or 주말+공휴일 (weekends are computed
-directly from the date; holidays come from holiday_daily.parquet) and
-강수 or 맑음, and derives per-stop correction factors from those labels.
+directly from the date; holidays come from holiday_daily.parquet), 강수
+or 맑음, and a 저온/보통/고온 temperature tercile, and derives per-stop
+correction factors from those labels.
 """
 
 from pathlib import Path
@@ -17,6 +18,8 @@ _WEEKEND_DAYOFWEEK = {5, 6}  # Saturday, Sunday (pandas dayofweek: Monday=0)
 # rather than silently trusted (agreed post-hoc outlier check).
 _OUTLIER_LOW = 0.5
 _OUTLIER_HIGH = 2.0
+
+_TEMP_LABELS = ["저온", "보통", "고온"]
 
 
 def _day_type(dates: pd.Series, holiday_dates: set[int]) -> pd.Series:
@@ -34,16 +37,23 @@ def _weather_type(precipitation: pd.Series, snowfall: pd.Series) -> pd.Series:
     return has_precip.map({True: "강수", False: "맑음"})
 
 
+def _temp_type(high_temps: pd.Series) -> pd.Series:
+    """Label each day 저온/보통/고온 by tercile of 최고기온 (most correlated
+    with ridership among the weather columns -- see issue discussion)."""
+    return pd.qcut(high_temps, 3, labels=_TEMP_LABELS)
+
+
 def build_features_daily(
     corridor_daily: pd.DataFrame,
     weather_daily: pd.DataFrame,
     holiday_daily: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Join corridor/weather/holiday data and attach 요일구분/날씨구분 labels."""
+    """Join corridor/weather/holiday data and attach 요일구분/날씨구분/기온구분 labels."""
     holiday_dates = set(holiday_daily["사용일자"])
     merged = corridor_daily.merge(weather_daily, on="사용일자", how="left")
     merged["요일구분"] = _day_type(merged["사용일자"], holiday_dates)
     merged["날씨구분"] = _weather_type(merged["강수량"], merged["신적설"])
+    merged["기온구분"] = _temp_type(merged["최고기온"])
     return merged
 
 
@@ -74,32 +84,52 @@ def build_weekday_holiday_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
-    """Per-stop 요일구분×날씨구분(4그룹) average ratio for 승차/하차.
+    """Per-stop 요일구분×날씨구분×기온구분(12그룹) average ratio for 승차/하차.
 
-    Baseline is 평일·맑음 (largest sample, and the natural "business as
-    usual" reference point). Separate from build_weekday_holiday_factor's
+    Baseline is 평일·맑음·보통 (largest sample, and the natural "business
+    as usual" reference point). Separate from build_weekday_holiday_factor's
     2-group (요일구분 only) output -- this is a distinct file so the
     existing weekday_holiday_factor.parquet consumers (e.g. the
     /stops/{id}/context API) are unaffected.
+
+    12 groups over a 3-year corridor (issue: temperature added, 2023-07
+    range extension) keeps every group's sample size >= ~30 days; the
+    rarest combination (주말+공휴일 x 강수, 3 temp terciles) is ~34-46
+    days/group. See 극단치주의 for any that still land outside the
+    trusted ratio band.
     """
+    group_cols = ["표준버스정류장ID", "정류장명", "요일구분", "날씨구분", "기온구분"]
     grouped = (
-        features_daily.groupby(["표준버스정류장ID", "정류장명", "요일구분", "날씨구분"])
+        features_daily.groupby(group_cols, observed=True)
         .agg(평균승차=("승차", "mean"), 평균하차=("하차", "mean"), 표본수=("사용일자", "count"))
         .reset_index()
     )
     pivot = grouped.pivot(
         index=["표준버스정류장ID", "정류장명"],
-        columns=["요일구분", "날씨구분"],
+        columns=["요일구분", "날씨구분", "기온구분"],
         values=["평균승차", "평균하차", "표본수"],
     )
-    pivot.columns = [f"{value}_{day}_{weather}" for value, day, weather in pivot.columns]
+    pivot.columns = [
+        f"{value}_{day}_{weather}_{temp}" for value, day, weather, temp in pivot.columns
+    ]
     pivot = pivot.reset_index()
 
-    base_board = pivot["평균승차_평일_맑음"]
-    base_alight = pivot["평균하차_평일_맑음"]
-    for day, weather in [("평일", "강수"), ("주말+공휴일", "맑음"), ("주말+공휴일", "강수")]:
-        pivot[f"보정계수_승차_{day}_{weather}"] = pivot[f"평균승차_{day}_{weather}"] / base_board
-        pivot[f"보정계수_하차_{day}_{weather}"] = pivot[f"평균하차_{day}_{weather}"] / base_alight
+    base_board = pivot["평균승차_평일_맑음_보통"]
+    base_alight = pivot["평균하차_평일_맑음_보통"]
+    non_baseline = [
+        (day, weather, temp)
+        for day in ("평일", "주말+공휴일")
+        for weather in ("맑음", "강수")
+        for temp in _TEMP_LABELS
+        if not (day == "평일" and weather == "맑음" and temp == "보통")
+    ]
+    for day, weather, temp in non_baseline:
+        pivot[f"보정계수_승차_{day}_{weather}_{temp}"] = (
+            pivot[f"평균승차_{day}_{weather}_{temp}"] / base_board
+        )
+        pivot[f"보정계수_하차_{day}_{weather}_{temp}"] = (
+            pivot[f"평균하차_{day}_{weather}_{temp}"] / base_alight
+        )
 
     ratio_cols = [c for c in pivot.columns if c.startswith("보정계수_")]
     in_range = pivot[ratio_cols].apply(lambda s: s.between(_OUTLIER_LOW, _OUTLIER_HIGH))

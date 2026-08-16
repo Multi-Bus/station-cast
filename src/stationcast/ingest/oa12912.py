@@ -47,8 +47,17 @@ def build_corridor_daily(
     build_corridor_hourly in oa12913.py) -- this dataset has no
     교통수단타입명 column, so night-bus routes are filtered by number here
     instead.
+
+    표준버스정류장ID is coerced to numeric before filtering: some monthly
+    CSVs (e.g. 202312, 202401) have a single row using '~' as a
+    virtual/depot-stop placeholder (the same convention documented for
+    ARS번호), which makes pandas infer that whole column as string dtype
+    for that file. Without coercion, an int-based .isin() silently matches
+    nothing and drops the entire month.
     """
-    sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
+    stop_id_num = pd.to_numeric(boarding_df["표준버스정류장ID"], errors="coerce")
+    sub = boarding_df[stop_id_num.isin(stop_ids)].copy()
+    sub["표준버스정류장ID"] = stop_id_num[stop_id_num.isin(stop_ids)].astype("int64")
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
     sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
 

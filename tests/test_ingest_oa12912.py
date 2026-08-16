@@ -72,3 +72,26 @@ def test_build_corridor_daily_keeps_one_series_when_stop_name_changes() -> None:
     # the rename must not fragment the stop's identity: every row carries
     # a single representative (most recent) name
     assert set(result["정류장명"]) == {"소공동.롯데영플라자"}
+
+
+def test_build_corridor_daily_ignores_tilde_placeholder_stop_id() -> None:
+    # A single '~' row (virtual/depot-stop placeholder) makes pandas infer
+    # 표준버스정류장ID as string dtype for the whole file (seen in the real
+    # 202312/202401 monthly CSVs); this must not break the int-based filter.
+    df = pd.DataFrame(
+        {
+            "사용일자": [20260601, 20260601],
+            "노선번호": ["150", "150"],
+            "표준버스정류장ID": ["100000389", "~"],
+            "역명": ["종로2가(00063)", "가상정류장(00001)"],
+            "승차총승객수": [100, 999],
+            "하차총승객수": [80, 999],
+        }
+    )
+
+    result = build_corridor_daily(df, stop_ids=(100000389,))
+
+    assert len(result) == 1
+    assert result.iloc[0]["표준버스정류장ID"] == 100000389
+    assert result.iloc[0]["승차"] == 100
+    assert result["표준버스정류장ID"].dtype == "int64"

@@ -1,19 +1,24 @@
 """Public holiday collector (한국천문연구원 특일정보 API, getRestDeInfo).
 
-Filters the raw API dump (data/origin_data/SPCDE_HOLIDAY_2025_2026.csv,
-fetched for solYear 2025 and 2026) down to the corridor's date range and
-collapses same-day co-occurring holidays (e.g., 2025-05-05 is both
-어린이날 and 부처님오신날) into one row per date. Weekends are computed
-directly from the date in features/ (not fetched here); combined with
-this holiday flag they form the "평일 vs 주말+공휴일" grouping for
-issue #10.
+Filters the raw API dump (data/raw/SPCDE_HOLIDAY_2023_2026.csv, fetched
+for solYear 2023-2026) down to the corridor's date range and collapses
+same-day co-occurring holidays (e.g., 2025-05-05 is both 어린이날 and
+부처님오신날) into one row per date. Weekends are computed directly from
+the date in features/ (not fetched here); combined with this holiday
+flag they form the "평일 vs 주말+공휴일" grouping for issue #10.
 """
 
 from pathlib import Path
 
 import pandas as pd
 
-CORRIDOR_START = 20250701
+# 3-year corridor range (issue for the weather+weekday combined factor):
+# extended from 1 year to 3 so the rarest weekday-type x weather x
+# temperature combination (주말+공휴일 x 강수 x 기온구분) has enough
+# samples. 2023-07 avoids Seoul's COVID-era social distancing, lifted
+# 2022-04-18 -- data from before that skews ridership independent of
+# weather.
+CORRIDOR_START = 20230701
 CORRIDOR_END = 20260630
 
 
