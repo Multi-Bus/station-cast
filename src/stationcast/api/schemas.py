@@ -47,3 +47,18 @@ class CorridorStopSnapshot(BaseModel):
 class CorridorResponse(BaseModel):
     hour: int
     stops: list[CorridorStopSnapshot]
+
+
+class StopContextResponse(BaseModel):
+    """Weather + day-type context for one stop on one date (issue #47)."""
+
+    stop_id: int
+    name: str
+    date: int
+    day_type: str
+    temperature: float
+    precipitation: float
+    humidity: float
+    snowfall: float
+    wind_speed: float
+    congestion_note: str

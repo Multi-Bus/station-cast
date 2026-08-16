@@ -243,3 +243,13 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 **QA 결과 (데이터셋③④⑤/일별 산출물)**: `corridor_daily`·`weather_daily`·`holiday_daily`의 사용일자 범위 완전 일치(2025-07-01~2026-06-30). `weekday_holiday_factor`에서 **명동·롯데영프라자(보정계수 0.992, 상업·관광지구라 주말에도 유지)**와 **종로1가(ID `100000387`, 보정계수 0.447, 업무지구라 주말에 급감)**의 대비가 뚜렷하게 확인되어, "정류장별로 계수를 낸다"는 설계 결정이 타당했음을 실증. 회랑에는 종로1가가 2곳(ID `100000386`·`100000387`) 있으며 그중 `100000387`만 해당. 보정계수 0.5 미만 4개 정류장(종로1가 `100000387`, 염천교, 을지로2가·기업은행본점, 을지로입구역·광교)은 `극단치주의=True`로 플래그.
 
 모든 신규 모듈(`ingest/oa12912.py`, `ingest/route_schedule.py`, `ingest/weather.py`, `ingest/holiday.py`, `features/calendar_features.py`)은 `ruff check`, `mypy`, `pytest` 전부 통과.
+
+**`GET /stops/{id}/context` 필드 매핑 (S3, issue #47)**: 위 세 산출물을 API 응답으로 노출한다.
+
+| API 필드 | 원본 컬럼 | 파일 |
+|---|---|---|
+| `temperature`·`precipitation`·`humidity`·`snowfall`·`wind_speed` | 평균기온·강수량·습도·신적설·평균풍속 | `weather_daily.parquet` |
+| `day_type` (평일\|주말\|공휴일) | 사용일자가 `holiday_daily.parquet`에 있으면 공휴일, 아니면 요일로 주말/평일 판정 | `holiday_daily.parquet` |
+| `congestion_note`의 등락률 | `보정계수_승차` (평일 대비 배율)을 %로 변환한 1줄 설명. 평일 자체는 배율을 적용하지 않고 기준선 문구 고정 | `weekday_holiday_factor.parquet` |
+
+`날짜` 파라미터를 생략하면 오늘 날짜(YYYYMMDD)를 기본값으로 쓴다. `weather_daily`·`holiday_daily`의 범위가 회랑 수집 기간(2025-07-01~2026-06-30)으로 고정돼 있어, 그 범위 밖 날짜는 404를 반환한다.

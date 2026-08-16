@@ -42,7 +42,32 @@ def corridor_data() -> CorridorData:
             "포용인원": [20.0, 10.0],
         }
     )
-    return CorridorData(stops=stops, wait=wait, capacity=capacity)
+    weather = pd.DataFrame(
+        {
+            # 20260101 목요일이지만 신정(공휴일), 20260102 금(평일)
+            "사용일자": [20260101, 20260102],
+            "평균기온": [-2.5, -1.0],
+            "강수량": [0.0, 3.2],
+            "습도": [55.0, 70.0],
+            "신적설": [0.0, 1.5],
+            "평균풍속": [2.1, 3.4],
+        }
+    )
+    holiday = pd.DataFrame({"사용일자": [20260101], "공휴일명": ["신정"]})
+    weekday_holiday_factor = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP_A, STOP_B],
+            "보정계수_승차": [0.85, 1.2],
+        }
+    )
+    return CorridorData(
+        stops=stops,
+        wait=wait,
+        capacity=capacity,
+        weather=weather,
+        holiday=holiday,
+        weekday_holiday_factor=weekday_holiday_factor,
+    )
 
 
 @pytest.fixture
@@ -157,3 +182,47 @@ def test_corridor_empty_at_hour_with_no_data(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"hour": 15, "stops": []}
+
+
+def test_context_returns_weather_and_holiday_note(client: TestClient) -> None:
+    # 20260101 is a Thursday but flagged as 신정 in the holiday fixture, so
+    # holiday takes priority over weekday in day_type, and STOP_A's
+    # 보정계수_승차=0.85 becomes "15% lower than usual".
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260101})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "stop_id": STOP_A,
+        "name": "명동성당",
+        "date": 20260101,
+        "day_type": "공휴일",
+        "temperature": -2.5,
+        "precipitation": 0.0,
+        "humidity": 55.0,
+        "snowfall": 0.0,
+        "wind_speed": 2.1,
+        "congestion_note": "공휴일이라 평소보다 혼잡도가 약 15% 낮을 것으로 예상됩니다.",
+    }
+
+
+def test_context_weekday_returns_baseline_note(client: TestClient) -> None:
+    # 20260102 is a plain Friday (not weekend, not holiday) -- day_type is
+    # 평일, so the note is a flat baseline regardless of STOP_B's factor.
+    response = client.get(f"/stops/{STOP_B}/context", params={"date": 20260102})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["day_type"] == "평일"
+    assert body["congestion_note"] == "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
+
+
+def test_context_unknown_stop_returns_404(client: TestClient) -> None:
+    response = client.get("/stops/999999999/context", params={"date": 20260101})
+
+    assert response.status_code == 404
+
+
+def test_context_unknown_date_returns_404(client: TestClient) -> None:
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260201})
+
+    assert response.status_code == 404
