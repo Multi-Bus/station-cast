@@ -1,9 +1,10 @@
 /** Sample data from design_source/design_handoff_station_cast/design-data.md.
- * Real /stops, /stops/{id}/congestion, /stops/{id}/timeline exist (issue #13)
- * but /congestion has no grade yet (issue #12 is unimplemented) and the
- * design's 0-100 congestion value / weather / arrivals have no backend
- * source at all yet -- so this screen runs on the design's own sample data
- * until those land. Swapping to real fetches only touches this file. */
+ * Real /stops, /stops/{id}/congestion (grade included, issue #57),
+ * /stops/{id}/timeline, /stops/{id}/context (weather, issue #47) all exist,
+ * but the design's 0-100 congestion value and arrivals (issue #48, in
+ * progress) have no backend source yet -- so this screen runs on the
+ * design's own sample data until those land. Swapping to real fetches only
+ * touches this file. */
 import type { NearbyStop, StopDetail } from "../types/stop";
 
 export const NEARBY_STOPS: NearbyStop[] = [
