@@ -1,0 +1,22 @@
+.estimate-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--radius-badge-sm);
+  color: inherit;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.estimate-badge-on-color {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Outlined rather than filled: on a plain surface a filled chip competes with
+   the congestion badge sitting next to it in the same row. */
+.estimate-badge-surface {
+  padding: 1px 4px;
+  border: 1px solid var(--color-card-border);
+  color: var(--color-text-muted);
+  font-size: 9px;
+}

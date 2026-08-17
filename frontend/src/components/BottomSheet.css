@@ -1,0 +1,55 @@
+.bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--tabbar-total);
+  background: var(--color-surface);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.bottom-sheet-grabber-row {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 6px;
+  touch-action: none;
+  cursor: grab;
+  flex: none;
+}
+
+.bottom-sheet-grabber {
+  position: relative;
+  width: 38px;
+  height: 4px;
+  padding: 0;
+  border-radius: var(--radius-grabber);
+  background: var(--neutral-300);
+}
+
+/* Keeps the bar visually 4px tall while giving it a real 44px touch target. */
+.bottom-sheet-grabber::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  transform: translate(-50%, -50%);
+}
+
+.bottom-sheet-content {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+/* At Peek the sheet is a summary strip -- letting it scroll there would hide
+   a full detail view inside a 120px window with no sign it is scrollable. */
+.bottom-sheet-content-locked {
+  overflow-y: hidden;
+}

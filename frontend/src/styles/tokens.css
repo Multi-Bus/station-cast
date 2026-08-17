@@ -1,0 +1,88 @@
+/* Design tokens from design_source/design_handoff_station_cast/README.md.
+   Congestion colors are absolute (never change with theme, per README).
+   The neutral-N ramp is also absolute; --color-* semantic tokens below map
+   it (and a few standalone values) onto light/dark roles. */
+
+:root {
+  --congestion-relaxed-bg: #35c96a;
+  /* White-on-green is 2.16:1 -- fails WCAG AA (4.5:1) at badge text sizes.
+     neutral-900 on this green is 6.51:1. */
+  --congestion-relaxed-fg: var(--neutral-900);
+  --congestion-moderate-bg: #e8bb2a;
+  --congestion-moderate-fg: #3f2d00;
+  --congestion-heavy-bg: #dd3a3a;
+  --congestion-heavy-fg: #ffffff;
+
+  --neutral-100: #f8f4f4;
+  --neutral-200: #eae7e7;
+  --neutral-300: #d7d3d3;
+  --neutral-400: #bab6b6;
+  --neutral-500: #9b9797;
+  --neutral-600: #7d7979;
+  --neutral-700: #605d5d;
+  --neutral-800: #444141;
+  --neutral-900: #2d2b2b;
+
+  --color-favorite-star: #e8bb2a;
+
+  --radius-card: 10px;
+  --radius-sheet: 14px 14px 0 0;
+  --radius-map-control: 9px;
+  --radius-pill: 9999px;
+  --radius-badge-sm: 5px;
+  --radius-grabber: 2px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 10px;
+  --space-4: 14px;
+  --space-5: 16px;
+  --space-6: 24px;
+
+  --shadow-floating: 0 2px 8px rgba(0, 0, 0, 0.16);
+  --shadow-chip: 0 1px 5px rgba(0, 0, 0, 0.14);
+  --shadow-sheet: 0 -6px 20px rgba(0, 0, 0, 0.14);
+  --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+  --sheet-snap-duration: 280ms;
+  --sheet-snap-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --tabbar-height: 56px;
+  /* The bar is 56px of content plus the home-indicator inset; everything that
+     sits above the bar (map, sheet, tab screens) offsets by this total. */
+  --tabbar-total: calc(56px + env(safe-area-inset-bottom));
+  --touch-target-min: 44px;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+
+  /* light (default) */
+  --color-bg: #f3f2f2;
+  --color-surface: #ffffff;
+  --color-text: #201e1d;
+  --color-text-muted: var(--neutral-600);
+  --color-divider: rgba(32, 30, 29, 0.12);
+  --color-map-bg: var(--neutral-100);
+  --color-map-line: #ffffff;
+  --color-floating-bg: #ffffff;
+  --color-invert-bg: #201e1d;
+  --color-invert-fg: #ffffff;
+  --color-card-border: var(--neutral-300);
+  --color-skeleton: var(--neutral-200);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #2e2b29;
+    --color-surface: #3a3633;
+    --color-text: #f2efec;
+    --color-text-muted: rgba(242, 239, 236, 0.6);
+    --color-divider: rgba(255, 255, 255, 0.18);
+    --color-map-bg: #38342f;
+    --color-map-line: #4a453f;
+    --color-floating-bg: #38342f;
+    --color-invert-bg: #f2efec;
+    --color-invert-fg: #201e1d;
+    --color-card-border: rgba(255, 255, 255, 0.3);
+    --color-skeleton: #4a453f;
+  }
+}
