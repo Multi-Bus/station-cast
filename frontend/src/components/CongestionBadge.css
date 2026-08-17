@@ -1,0 +1,23 @@
+.congestion-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.congestion-relaxed {
+  background: var(--congestion-relaxed-bg);
+  color: var(--congestion-relaxed-fg);
+}
+
+.congestion-moderate {
+  background: var(--congestion-moderate-bg);
+  color: var(--congestion-moderate-fg);
+}
+
+.congestion-heavy {
+  background: var(--congestion-heavy-bg);
+  color: var(--congestion-heavy-fg);
+}

@@ -33,6 +33,18 @@ uvicorn stationcast.api.main:app --reload
 `api/main.py`·`api/schemas.py` 변경 시 `python scripts/export_openapi.py`로
 재생성해야 CI가 통과합니다.
 
+### 프론트엔드 (issue #56)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+`http://localhost:5173`. 목데이터로 동작하며(백엔드 fetch 연동은 각 데이터가
+준비되는 대로 진행), API 서버를 같이 띄우면 `/api`가 프록시됩니다. 자세한 범위는
+[`frontend/README.md`](./frontend/README.md) 참고.
+
 ## 디렉터리 구조
 
 ```
@@ -43,6 +55,8 @@ station-cast/
     estimator/    # 큐 수지 방정식 — 대기인원 W(s,t) 추정
     validate/     # 물리 제약 검증 (비음수·마감조건·용량·환승 정합성)
     api/          # FastAPI 서비스
+  frontend/       # React + Vite + TypeScript 모바일 웹 UI
+  design_source/  # 디자인 핸드오프 원본 (frontend/README.md 참고)
   tests/
   docs/           # LICENSE_POLICY.md 등
   data/           # raw/processed (커밋되지 않음, .gitkeep만 추적)

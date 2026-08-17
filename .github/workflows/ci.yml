@@ -35,6 +35,26 @@ jobs:
           python scripts/export_openapi.py
           git diff --exit-code docs/openapi.json
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build (tsc + vite)
+        working-directory: frontend
+        run: npm run build
+
   license:
     runs-on: ubuntu-latest
     steps:
@@ -49,18 +69,41 @@ jobs:
       - name: Install fosslight_dependency
         run: pip install fosslight_dependency
 
-      - name: Scan dependency licenses
+      - name: Scan dependency licenses (Python)
         run: fosslight_dependency -p . -m pypi -o license-report.csv -f csv
 
-      - name: Check forbidden licenses (docs/LICENSE_POLICY.md)
+      - name: Check forbidden licenses (Python, docs/LICENSE_POLICY.md)
         run: python scripts/check_licenses.py license-report.csv
 
-      - name: Upload license report
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Only covers frontend/package.json's direct dependencies -- the npm
+      # scanner mode doesn't walk the full transitive tree the way -m pypi
+      # does. Full node_modules (72 packages) was checked manually when this
+      # step was added: 0 forbidden licenses.
+      - name: Scan dependency licenses (npm)
+        run: fosslight_dependency -p frontend -m npm -o license-report-npm.csv -f csv
+
+      - name: Check forbidden licenses (npm, docs/LICENSE_POLICY.md)
+        run: python scripts/check_licenses.py license-report-npm.csv
+
+      - name: Upload license reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: license-report
-          path: license-report.csv
+          path: |
+            license-report.csv
+            license-report-npm.csv
 
       - name: Cache ScanCode Toolkit license index
         uses: actions/cache@v4

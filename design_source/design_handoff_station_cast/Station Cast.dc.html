@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-2ceaef01-9c01-4300-9ddb-4f3fa448e526/styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<script src="_ds/modernist-2ceaef01-9c01-4300-9ddb-4f3fa448e526/_ds_bundle.js"></script>
+<style>
+body, body *{font-family:"Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif !important}
+body{margin:0;background:#e9e6e2}
+a{color:var(--color-accent)} a:hover{color:var(--color-accent-700)}
+.dv-turn{padding:40px 44px 60px;border-bottom:2px solid rgba(32,30,29,.15)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 24px}
+.dv-tid{font:800 10px Pretendard;padding:3px 8px;background:#201e1d;color:#fff}
+.dv-tname{font:800 14px Pretendard;color:#201e1d;letter-spacing:.01em}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:12px}
+.dv-oid{font:800 11px Pretendard;padding:3px 8px;background:var(--color-accent);color:#fff;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 Pretendard;color:rgba(32,30,29,.6)}
+.dv-frames{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;--sc-on:#201e1d;--sc-onfg:#ffffff;--sc-road:#ffffff;--sc-float:#ffffff;--sc-cardline:var(--color-divider)}
+.dv-flabel{font:700 10px Pretendard;letter-spacing:.04em;color:rgba(32,30,29,.5);margin-bottom:6px}
+.dv-next{margin:24px 0 0;font:12px/1.6 Pretendard;color:rgba(32,30,29,.55)}
+.mapgrid{background-image:linear-gradient(rgba(32,30,29,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(32,30,29,.06) 1px,transparent 1px);background-size:26px 26px;background-color:var(--color-neutral-100);position:relative;overflow:hidden}
+.rd{position:absolute;background:var(--sc-road)}
+.mapdot{position:absolute;width:11px;height:11px;border-radius:50%;border:2px solid var(--sc-float);box-shadow:0 1px 3px rgba(0,0,0,.28)}
+.fl{background:var(--sc-float);box-shadow:0 2px 8px rgba(0,0,0,.16)}
+.ctl{width:38px;height:38px;background:var(--sc-float);box-shadow:0 2px 8px rgba(0,0,0,.16);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--color-text)}
+.chip{background:var(--sc-float);box-shadow:0 1px 5px rgba(0,0,0,.14);border-radius:9999px;padding:7px 14px;white-space:nowrap;font:600 12px Pretendard;color:var(--color-text)}
+.chip-on{background:var(--sc-on);color:var(--sc-onfg);font-weight:700}
+.est{display:inline-flex;align-items:center;gap:4px;font:700 10px Pretendard;padding:2px 7px;border-radius:5px;background:var(--color-neutral-200);color:var(--color-neutral-700)}
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:56px;background:var(--sc-float);border-top:1px solid var(--color-divider);display:flex;align-items:center;z-index:5}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font:600 10px Pretendard;color:var(--color-neutral-500)}
+.tab-on{color:var(--color-text);font-weight:800}
+.sheet{position:absolute;left:0;right:0;bottom:56px;background:var(--sc-float);border-top:1px solid var(--color-divider);border-radius:14px 14px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.14);display:flex;flex-direction:column;z-index:4}
+.grab{display:flex;justify-content:center;padding:9px 0 5px}
+.grab>div{width:38px;height:4px;background:var(--color-neutral-300);border-radius:2px}
+.sechd{font:700 11px Pretendard;letter-spacing:.04em;color:var(--color-neutral-600);margin-bottom:7px}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">다크 모드 — MVP 기능 6종 반영</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="5a">
+<div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>다크 모드</div>
+<div class="dv-frames" style="color:#f2efec;--color-bg:#2e2b29;--color-surface:#3a3633;--color-text:#f2efec;--color-divider:rgba(255,255,255,.18);--color-neutral-100:#3a3633;--color-neutral-200:#454039;--color-neutral-300:#5c564f;--color-neutral-400:#726b63;--color-neutral-500:#948c83;--color-neutral-600:#b0a89e;--color-neutral-700:#cbc4bb;--color-neutral-800:#e8e4de;--color-neutral-900:#f7f5f2;--sc-on:#1c1a18;--sc-onfg:#efece5;--sc-road:#4a453f;--sc-float:#38342f;--sc-cardline:rgba(255,255,255,.3)">
+<div>
+<div class="dv-flabel">⓪ 온보딩</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:#444141;color:#fff;padding:28px 24px 32px;box-sizing:border-box">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px">
+<div style="width:64px;height:64px;background:#fff;display:flex;align-items:center;justify-content:center;font:800 26px Pretendard;color:#444141;border-radius:10px">SC</div>
+<h1 style="font-size:30px;margin:0;line-height:1.15">정류장 혼잡도,<br>도착 전에 확인하세요</h1>
+<p style="font-size:14px;line-height:1.6;color:rgba(255,255,255,.85);margin:0">승·하차 실측 데이터로 정류장에 서 있는 대기 인원을 추정해 알려드립니다. 계정 없이 바로 사용할 수 있습니다.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<button class="btn btn-block" style="background:#fff;color:#444141;justify-content:center;border-radius:10px">위치 권한 허용하고 시작</button>
+<button class="btn btn-block" style="background:transparent;color:#fff;justify-content:center;border:1px solid rgba(255,255,255,.4);border-radius:10px">둘러보기</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">① 지도 기본 · 위치기반 (시트 Peek)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:var(--color-neutral-500)">⌕</span>
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+<span style="width:32px;height:32px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font:800 11px Pretendard">SC</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">즐겨찾기</span>
+<span class="chip" style="color:#dd3a3a;font-weight:800">혼잡 2</span>
+<span class="chip">환승 거점</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet">
+<div class="grab"><div></div></div>
+<div style="padding:0 16px 14px;display:flex;align-items:center;justify-content:space-between">
+<div><div style="font:800 14px Pretendard">내 주변 정류장 4곳</div><div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">가장 가까운 곳 · 강남역 정류장 120m</div></div>
+<span style="font:800 11px Pretendard;color:#fff;background:#dd3a3a;padding:4px 10px;border-radius:6px">혼잡</span>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">② 주변 정류장 목록 (시트 Half)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:var(--color-neutral-500)">⌕</span>
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+<span style="width:32px;height:32px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font:800 11px Pretendard">SC</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">즐겨찾기</span>
+<span class="chip" style="color:#dd3a3a;font-weight:800">혼잡 2</span>
+<span class="chip">환승 거점</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:46%">
+<div class="grab"><div></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
+<span style="font:800 13px Pretendard">내 주변 정류장</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">거리순 ⌄</span>
+</div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ stops }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ s.level.bg }}"></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;gap:10px">
+<div style="min-width:0">
+<div style="font:700 14px Pretendard;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">{{ s.route }}번 · {{ s.dist }} · 대기 약 {{ s.wait }}명</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ s.level.fg }};background:{{ s.level.bg }};padding:3px 10px;border-radius:6px">{{ s.level.label }}</span>
+<span style="font-size:15px;color:{{ s.starColor }}">{{ s.star }}</span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">③ 정류장 상세 (시트 Full) — 도착·날씨·추정</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div class="sheet" style="top:5%">
+<div class="grab"><div></div></div>
+<div style="padding:2px 20px 16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px;font-weight:700;color:var(--color-neutral-700)">← 목록</span>
+<span style="font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기 · ↗ 공유</span>
+</div>
+<div>
+<div style="font-size:12px;color:var(--color-neutral-600)">146, 402번 · 환승 거점</div>
+<h2 style="margin:2px 0 0;font-size:22px">강남역 정류장</h2>
+</div>
+<div class="card elev-md" style="padding:18px;background:#dd3a3a;border-radius:12px;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font:800 12px Pretendard;color:rgba(255,255,255,.85);letter-spacing:.06em">현재 혼잡도</span>
+<span class="est" style="background:rgba(255,255,255,.22);color:#fff">추정</span>
+</div>
+<div style="font:800 30px Pretendard;color:#fff">혼잡</div>
+<div style="font-size:12px;color:rgba(255,255,255,.85)">대기 약 42명 · 신뢰구간 34–51명</div>
+</div>
+<div class="card elev-sm" style="border-radius:10px;gap:6px;border:1px solid var(--sc-cardline)">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:16px">☂</span>
+<span style="font:700 13px Pretendard">비 · 평일 · 21°C</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--color-neutral-600)">비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.</div>
+</div>
+<div>
+<div class="sechd">버스 도착 정보</div>
+<div class="card elev-sm" style="border-radius:10px;padding:0;gap:0;border:1px solid var(--sc-cardline)">
+<sc-for list="{{ arrivals }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font:800 13px Pretendard;color:{{ a.routeColor }}">{{ a.route }}</span>
+<span style="font-size:11px;color:var(--color-neutral-600)">{{ a.stopsAway }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font:700 13px Pretendard">{{ a.eta }}</span>
+<span style="font:700 10px Pretendard;color:{{ a.load.fg }};background:{{ a.load.bg }};padding:2px 7px;border-radius:5px">{{ a.load.label }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div class="sechd" style="display:flex;align-items:center;gap:6px">시간대별 예상 대기인원 <span class="est">추정</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:70px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:4px;margin-top:4px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;text-align:center;font-size:9px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:10px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">오늘 평균</div><div class="card-title">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">최고 혼잡</div><div class="card-title">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">전일 대비</div><div class="card-title">+9%</div></div>
+</div>
+<div style="font-size:11px;line-height:1.45;color:var(--color-neutral-500);margin-top:-2px">대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장 OA-12913</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">④ 검색 — 빈 상태 (최근검색)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box">
+<div style="padding:0 12px 14px;display:flex;align-items:center;gap:10px">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;background:var(--color-surface);border:1px solid var(--color-divider)">
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+</div>
+</div>
+<div style="padding:0 20px 14px;display:flex;align-items:center;gap:18px">
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font-size:11px">⌂</span>집</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:6px;background:var(--color-surface);border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;font-size:11px">◫</span>회사</div>
+<span style="margin-left:auto;font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="display:flex;gap:7px;padding:13px 20px 11px;align-items:center;overflow:hidden">
+<span class="chip chip-on" style="box-shadow:none">최근검색</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">즐겨찾기</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">정류장</span>
+<span style="margin-left:auto;font-size:12px;color:var(--color-neutral-500);white-space:nowrap">편집</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ recentList }}" as="rec" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--color-divider)">
+<span style="font-size:15px;color:var(--color-neutral-600)">{{ rec.icon }}</span>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">{{ rec.name }}</div></div>
+<span style="font-size:12px;color:var(--color-neutral-500)">{{ rec.date }}</span>
+<span style="font-size:13px;color:var(--color-neutral-400)">✕</span>
+</div>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑤ 검색 — 입력 중 (검색 결과)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box">
+<div style="padding:0 12px 14px;display:flex;align-items:center;gap:10px">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;background:var(--color-surface);border:1px solid var(--color-neutral-700)">
+<span style="flex:1;font-size:14px;color:var(--color-text)">강남</span>
+<span style="width:18px;height:18px;border-radius:50%;background:var(--color-neutral-400);color:var(--sc-float);font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">✕</span>
+</div>
+</div>
+<div style="display:flex;gap:7px;padding:0 20px 12px;align-items:center;overflow:hidden">
+<span class="chip chip-on" style="box-shadow:none">전체</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">정류장</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">노선</span>
+<span style="margin-left:auto;font-size:12px;color:var(--color-neutral-500);white-space:nowrap">지도보기 ◈</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto">
+<div style="padding:13px 20px 6px;font:700 10px Pretendard;letter-spacing:.04em;color:var(--color-neutral-600)">검색 결과 · 4곳</div>
+<sc-for list="{{ stops }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ s.level.bg }}"></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;gap:10px">
+<div style="min-width:0">
+<div style="font:700 14px Pretendard;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">{{ s.route }}번 · {{ s.dist }} · 대기 약 {{ s.wait }}명</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ s.level.fg }};background:{{ s.level.bg }};padding:3px 10px;border-radius:6px">{{ s.level.label }}</span>
+<span style="font-size:15px;color:{{ s.starColor }}">{{ s.star }}</span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑥ 검색 결과 상세 (선택 정류장, 시트 Half)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:22%;top:26%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:66%;top:18%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:74%;top:62%;background:var(--color-neutral-400)"></div>
+<div style="position:absolute;left:50%;top:38%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:5px">
+<span class="fl" style="border-radius:9999px;padding:4px 10px;font:800 11px Pretendard;color:var(--color-text);white-space:nowrap">강남역 정류장</span>
+<span style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 3px 8px rgba(0,0,0,.3)"></span>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;display:flex;align-items:center;gap:10px;z-index:3">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div class="fl" style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;box-sizing:border-box">
+<span style="flex:1;font-size:14px;color:var(--color-text)">강남</span>
+<span style="width:18px;height:18px;border-radius:50%;background:var(--color-neutral-400);color:var(--sc-float);font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">✕</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:52%">
+<div class="grab"><div></div></div>
+<div style="padding:2px 20px 16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px;font-weight:700;color:var(--color-neutral-700)">← 목록</span>
+<span style="font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기 · ↗ 공유</span>
+</div>
+<div>
+<div style="font-size:12px;color:var(--color-neutral-600)">146, 402번 · 환승 거점</div>
+<h2 style="margin:2px 0 0;font-size:22px">강남역 정류장</h2>
+</div>
+<div class="card elev-md" style="padding:18px;background:#dd3a3a;border-radius:12px;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font:800 12px Pretendard;color:rgba(255,255,255,.85);letter-spacing:.06em">현재 혼잡도</span>
+<span class="est" style="background:rgba(255,255,255,.22);color:#fff">추정</span>
+</div>
+<div style="font:800 30px Pretendard;color:#fff">혼잡</div>
+<div style="font-size:12px;color:rgba(255,255,255,.85)">대기 약 42명 · 신뢰구간 34–51명</div>
+</div>
+<div class="card elev-sm" style="border-radius:10px;gap:6px;border:1px solid var(--sc-cardline)">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:16px">☂</span>
+<span style="font:700 13px Pretendard">비 · 평일 · 21°C</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--color-neutral-600)">비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.</div>
+</div>
+<div>
+<div class="sechd">버스 도착 정보</div>
+<div class="card elev-sm" style="border-radius:10px;padding:0;gap:0;border:1px solid var(--sc-cardline)">
+<sc-for list="{{ arrivals }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font:800 13px Pretendard;color:{{ a.routeColor }}">{{ a.route }}</span>
+<span style="font-size:11px;color:var(--color-neutral-600)">{{ a.stopsAway }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font:700 13px Pretendard">{{ a.eta }}</span>
+<span style="font:700 10px Pretendard;color:{{ a.load.fg }};background:{{ a.load.bg }};padding:2px 7px;border-radius:5px">{{ a.load.label }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div class="sechd" style="display:flex;align-items:center;gap:6px">시간대별 예상 대기인원 <span class="est">추정</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:70px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:4px;margin-top:4px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;text-align:center;font-size:9px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:10px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">오늘 평균</div><div class="card-title">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">최고 혼잡</div><div class="card-title">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">전일 대비</div><div class="card-title">+9%</div></div>
+</div>
+<div style="font-size:11px;line-height:1.45;color:var(--color-neutral-500);margin-top:-2px">대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장 OA-12913</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑦ 즐겨찾기 — 지도 + 드래그 시트</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:55%;top:38%;background:var(--color-neutral-400)"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">★ 강남역</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:70%;top:30%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">★ 서초구청</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:20%;top:40%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#35c96a;white-space:nowrap">★ 교대역</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#35c96a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:#e8bb2a">★</span>
+<span style="flex:1;font:700 14px Pretendard;color:var(--color-text)">즐겨찾기 3곳</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">편집</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">출근길</span>
+<span class="chip">퇴근길</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:46%">
+<div class="grab"><div></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px">
+<span style="font:800 13px Pretendard">저장한 정류장</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">혼잡도순 ⌄</span>
+</div>
+<div style="padding:0 16px 10px;font-size:11px;line-height:1.5;color:var(--color-neutral-500)">계정 없이 이 브라우저에만 저장됩니다. 기기 간 동기화는 지원하지 않습니다.</div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ favs }}" as="f" hint-placeholder-count="3">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ f.level.bg }}"></div>
+<div style="flex:1;padding:13px 16px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font:700 15px Pretendard;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.name }}</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ f.level.fg }};background:{{ f.level.bg }};padding:3px 10px;border-radius:6px">{{ f.level.label }}</span>
+<span style="font-size:15px;color:#e8bb2a">★</span>
+</div>
+</div>
+<div style="font-size:12px;color:var(--color-neutral-600)">{{ f.route }}번 · 대기 약 {{ f.wait }}명 · 다음 버스 {{ f.eta }}</div>
+</div>
+</div>
+</sc-for>
+<div style="padding:18px;display:flex;align-items:center;justify-content:center">
+<span style="font-size:12px;color:var(--color-neutral-500)">지도에서 ★를 눌러 정류장을 추가하세요</span>
+</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab tab-on"><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab"><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab"><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑧ 회랑 전체 보기 (운수업체 뷰)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box;position:relative">
+<div style="padding:0 20px 10px">
+<h2 style="margin:0;font-size:22px">버스 146번</h2>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:4px">정류장 21곳 · 오늘 18:00 기준 <span class="est">추정</span></div>
+</div>
+<div style="display:flex;gap:8px;padding:0 20px 12px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px"><div class="card-meta">평균 혼잡</div><div style="font:800 18px Pretendard">58%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px;background:#fbdada"><div class="card-meta" style="color:#b03535">경보</div><div style="font:800 18px Pretendard;color:#b03535">3곳</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px"><div class="card-meta">제약 위반</div><div style="font:800 18px Pretendard">0.4%</div></div>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto;padding:14px 20px 70px;display:flex;flex-direction:column;gap:0">
+<sc-for list="{{ corridorStops }}" as="c" hint-placeholder-count="7">
+<div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+<span style="width:9px;height:9px;border-radius:50%;background:{{ c.level.bg }};flex:none"></span>
+<span style="font:600 13px Pretendard;width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
+<div style="flex:1;height:8px;background:var(--color-neutral-200);border-radius:4px;overflow:hidden">
+<div style="height:100%;width:{{ c.pct }}%;background:{{ c.level.bg }}"></div>
+</div>
+<span style="font:700 12px Pretendard;width:34px;text-align:right;flex:none">{{ c.pct }}%</span>
+</div>
+</sc-for>
+</div>
+<div class="tabbar">
+<div class="tab "><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab tab-on"><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑨ 운영자 대시보드 (웹, /corridor)</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1180 }}" height="{{ 760 }}" url="operator.stationcast.kr/dashboard" hint-size="1180px,760px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg)">
+<div class="nav" style="border-bottom:2px solid var(--color-divider);padding:14px 28px;display:flex;align-items:center;justify-content:space-between">
+<div class="nav-brand" style="font:800 16px Pretendard">Station Cast <span style="color:var(--color-neutral-700)">Operator</span></div>
+<div style="display:flex;gap:16px;font-size:13px;color:var(--color-neutral-600)"><span>회랑 개요</span><span>정류장</span><span>검증 리포트</span><span>API 문서</span></div>
+</div>
+<div style="padding:28px;display:flex;flex-direction:column;gap:24px;overflow:auto">
+<div style="display:flex;gap:16px">
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">회랑 정류장</div><div class="card-title" style="font-size:28px">21</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">평균 혼잡도</div><div class="card-title" style="font-size:28px">58%</div></div>
+<div class="card elev-sm" style="flex:1;background:#fbdada;border-radius:10px"><div class="card-kicker" style="color:#b03535">혼잡 경보</div><div class="card-title" style="font-size:28px;color:#b03535">3곳</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">승차 재현 MAPE</div><div class="card-title" style="font-size:28px">8.7%</div></div>
+</div>
+<div>
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:12px;display:flex;align-items:center;gap:8px">정류장별 대기 혼잡도 <span class="est">추정</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+<sc-for list="{{ opStops }}" as="o" hint-placeholder-count="6">
+<div class="card elev-sm" style="border-radius:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="card-title" style="font-size:15px">{{ o.name }}</span><span class="tag tag-neutral" style="border-radius:6px">{{ o.route }}</span></div>
+<div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font:800 24px Pretendard">{{ o.avg }}</span><span class="tag" style="background:{{ o.level.bg }};color:{{ o.level.fg }};font-weight:700;border-radius:6px">{{ o.level.label }}</span></div>
+<div class="card-meta">대기 약 {{ o.wait }}명 · 전일 대비 {{ o.trend }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑩ 정류장 상세 통계 · 검증 리포트</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1180 }}" height="{{ 760 }}" url="operator.stationcast.kr/stops/gangnam" hint-size="1180px,760px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg)">
+<div class="nav" style="border-bottom:2px solid var(--color-divider);padding:14px 28px;display:flex;align-items:center;gap:12px">
+<span style="color:var(--color-neutral-800);font-weight:700;font-size:13px">← 회랑 개요</span>
+<div class="nav-brand" style="font:800 16px Pretendard">강남역 정류장</div>
+<span class="tag tag-outline" style="border-radius:6px;border-color:var(--color-neutral-500);color:var(--color-neutral-700)">146, 402</span>
+<span class="est" style="margin-left:auto">큐 수지 추정 · OA-12913</span>
+</div>
+<div style="padding:28px;display:flex;flex-direction:column;gap:24px;overflow:auto">
+<div class="card elev-md" style="padding:24px;border-radius:12px">
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:16px">시간대별 대기인원 곡선 W(s,t) — 오늘</div>
+<div style="display:flex;align-items:flex-end;gap:8px;height:160px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+<div style="font-size:10px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:16px">
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">오늘 평균</div><div class="card-title" style="font-size:24px">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">최고 혼잡 시간대</div><div class="card-title" style="font-size:24px">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">전일 대비</div><div class="card-title" style="font-size:24px">+9%</div></div>
+</div>
+<div>
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:12px">물리 제약 검증</div>
+<table class="table" style="width:100%">
+<thead><tr><th>제약</th><th>기준</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td>비음수 W(s,t) ≥ 0</td><td>위반 0건</td><td>0건</td></tr>
+<tr><td>일 마감 조건 W(s,막차) ≈ 0</td><td>잔차 &lt; 3명</td><td>1.2명</td></tr>
+<tr><td>용량 제약 B(s,t) ≤ Σ 잔여좌석</td><td>위반율 &lt; 1%</td><td>0.4%</td></tr>
+<tr><td>승차 재현 오차 (MAPE)</td><td>&lt; 12%</td><td>8.7%</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">라이트 모드 — 개발계획 MVP 기능 6종 (지도·상세·즐겨찾기·위치기반·날씨컨텍스트·도착정보) + 회랑/운영자 뷰</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="4a">
+<div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>라이트 모드</div>
+<div class="dv-frames">
+<div>
+<div class="dv-flabel">⓪ 온보딩</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:#ffffff;color:var(--color-text);padding:28px 24px 32px;box-sizing:border-box">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px">
+<div style="width:64px;height:64px;background:var(--color-neutral-800);display:flex;align-items:center;justify-content:center;font:800 26px Pretendard;color:#fff;border-radius:10px">SC</div>
+<h1 style="font-size:30px;margin:0;line-height:1.15">정류장 혼잡도,<br>도착 전에 확인하세요</h1>
+<p style="font-size:14px;line-height:1.6;color:var(--color-neutral-600);margin:0">승·하차 실측 데이터로 정류장에 서 있는 대기 인원을 추정해 알려드립니다. 계정 없이 바로 사용할 수 있습니다.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<button class="btn btn-block" style="background:var(--color-neutral-800);color:#fff;justify-content:center;border-radius:10px">위치 권한 허용하고 시작</button>
+<button class="btn btn-block" style="background:transparent;color:var(--color-text);justify-content:center;border:1px solid var(--color-divider);border-radius:10px">둘러보기</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">① 지도 기본 · 위치기반 (시트 Peek)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:var(--color-neutral-500)">⌕</span>
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+<span style="width:32px;height:32px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font:800 11px Pretendard">SC</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">즐겨찾기</span>
+<span class="chip" style="color:#dd3a3a;font-weight:800">혼잡 2</span>
+<span class="chip">환승 거점</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet">
+<div class="grab"><div></div></div>
+<div style="padding:0 16px 14px;display:flex;align-items:center;justify-content:space-between">
+<div><div style="font:800 14px Pretendard">내 주변 정류장 4곳</div><div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">가장 가까운 곳 · 강남역 정류장 120m</div></div>
+<span style="font:800 11px Pretendard;color:#fff;background:#dd3a3a;padding:4px 10px;border-radius:6px">혼잡</span>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">② 주변 정류장 목록 (시트 Half)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 8px 0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:var(--color-neutral-500)">⌕</span>
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+<span style="width:32px;height:32px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font:800 11px Pretendard">SC</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">즐겨찾기</span>
+<span class="chip" style="color:#dd3a3a;font-weight:800">혼잡 2</span>
+<span class="chip">환승 거점</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:46%">
+<div class="grab"><div></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
+<span style="font:800 13px Pretendard">내 주변 정류장</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">거리순 ⌄</span>
+</div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ stops }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ s.level.bg }}"></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;gap:10px">
+<div style="min-width:0">
+<div style="font:700 14px Pretendard;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">{{ s.route }}번 · {{ s.dist }} · 대기 약 {{ s.wait }}명</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ s.level.fg }};background:{{ s.level.bg }};padding:3px 10px;border-radius:6px">{{ s.level.label }}</span>
+<span style="font-size:15px;color:{{ s.starColor }}">{{ s.star }}</span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">③ 정류장 상세 (시트 Full) — 도착·날씨·추정</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:#35c96a"></div>
+<div class="mapdot" style="left:55%;top:38%;background:#e8bb2a"></div>
+<div class="mapdot" style="left:70%;top:60%;background:#dd3a3a"></div>
+<div class="mapdot" style="left:45%;top:72%;background:#dd3a3a"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">강남역 · 혼잡</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div class="sheet" style="top:5%">
+<div class="grab"><div></div></div>
+<div style="padding:2px 20px 16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px;font-weight:700;color:var(--color-neutral-700)">← 목록</span>
+<span style="font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기 · ↗ 공유</span>
+</div>
+<div>
+<div style="font-size:12px;color:var(--color-neutral-600)">146, 402번 · 환승 거점</div>
+<h2 style="margin:2px 0 0;font-size:22px">강남역 정류장</h2>
+</div>
+<div class="card elev-md" style="padding:18px;background:#dd3a3a;border-radius:12px;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font:800 12px Pretendard;color:rgba(255,255,255,.85);letter-spacing:.06em">현재 혼잡도</span>
+<span class="est" style="background:rgba(255,255,255,.22);color:#fff">추정</span>
+</div>
+<div style="font:800 30px Pretendard;color:#fff">혼잡</div>
+<div style="font-size:12px;color:rgba(255,255,255,.85)">대기 약 42명 · 신뢰구간 34–51명</div>
+</div>
+<div class="card elev-sm" style="border-radius:10px;gap:6px;border:1px solid var(--sc-cardline)">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:16px">☂</span>
+<span style="font:700 13px Pretendard">비 · 평일 · 21°C</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--color-neutral-600)">비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.</div>
+</div>
+<div>
+<div class="sechd">버스 도착 정보</div>
+<div class="card elev-sm" style="border-radius:10px;padding:0;gap:0;border:1px solid var(--sc-cardline)">
+<sc-for list="{{ arrivals }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font:800 13px Pretendard;color:{{ a.routeColor }}">{{ a.route }}</span>
+<span style="font-size:11px;color:var(--color-neutral-600)">{{ a.stopsAway }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font:700 13px Pretendard">{{ a.eta }}</span>
+<span style="font:700 10px Pretendard;color:{{ a.load.fg }};background:{{ a.load.bg }};padding:2px 7px;border-radius:5px">{{ a.load.label }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div class="sechd" style="display:flex;align-items:center;gap:6px">시간대별 예상 대기인원 <span class="est">추정</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:70px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:4px;margin-top:4px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;text-align:center;font-size:9px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:10px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">오늘 평균</div><div class="card-title">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">최고 혼잡</div><div class="card-title">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">전일 대비</div><div class="card-title">+9%</div></div>
+</div>
+<div style="font-size:11px;line-height:1.45;color:var(--color-neutral-500);margin-top:-2px">대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장 OA-12913</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">④ 검색 — 빈 상태 (최근검색)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box">
+<div style="padding:0 12px 14px;display:flex;align-items:center;gap:10px">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;background:var(--color-surface);border:1px solid var(--color-divider)">
+<span style="flex:1;font-size:14px;color:var(--color-neutral-500)">정류장, 노선, 주소 검색</span>
+</div>
+</div>
+<div style="padding:0 20px 14px;display:flex;align-items:center;gap:18px">
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:50%;background:var(--sc-on);color:var(--sc-onfg);display:flex;align-items:center;justify-content:center;font-size:11px">⌂</span>집</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><span style="width:22px;height:22px;border-radius:6px;background:var(--color-surface);border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;font-size:11px">◫</span>회사</div>
+<span style="margin-left:auto;font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="display:flex;gap:7px;padding:13px 20px 11px;align-items:center;overflow:hidden">
+<span class="chip chip-on" style="box-shadow:none">최근검색</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">즐겨찾기</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">정류장</span>
+<span style="margin-left:auto;font-size:12px;color:var(--color-neutral-500);white-space:nowrap">편집</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ recentList }}" as="rec" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--color-divider)">
+<span style="font-size:15px;color:var(--color-neutral-600)">{{ rec.icon }}</span>
+<div style="flex:1"><div style="font-size:15px;font-weight:700">{{ rec.name }}</div></div>
+<span style="font-size:12px;color:var(--color-neutral-500)">{{ rec.date }}</span>
+<span style="font-size:13px;color:var(--color-neutral-400)">✕</span>
+</div>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑤ 검색 — 입력 중 (검색 결과)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box">
+<div style="padding:0 12px 14px;display:flex;align-items:center;gap:10px">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;background:var(--color-surface);border:1px solid var(--color-neutral-700)">
+<span style="flex:1;font-size:14px;color:var(--color-text)">강남</span>
+<span style="width:18px;height:18px;border-radius:50%;background:var(--color-neutral-400);color:var(--sc-float);font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">✕</span>
+</div>
+</div>
+<div style="display:flex;gap:7px;padding:0 20px 12px;align-items:center;overflow:hidden">
+<span class="chip chip-on" style="box-shadow:none">전체</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">정류장</span>
+<span class="chip" style="box-shadow:none;background:var(--color-surface);border:1px solid var(--color-divider);color:var(--color-neutral-600)">노선</span>
+<span style="margin-left:auto;font-size:12px;color:var(--color-neutral-500);white-space:nowrap">지도보기 ◈</span>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto">
+<div style="padding:13px 20px 6px;font:700 10px Pretendard;letter-spacing:.04em;color:var(--color-neutral-600)">검색 결과 · 4곳</div>
+<sc-for list="{{ stops }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ s.level.bg }}"></div>
+<div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;gap:10px">
+<div style="min-width:0">
+<div style="font:700 14px Pretendard;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.name }}</div>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:2px">{{ s.route }}번 · {{ s.dist }} · 대기 약 {{ s.wait }}명</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ s.level.fg }};background:{{ s.level.bg }};padding:3px 10px;border-radius:6px">{{ s.level.label }}</span>
+<span style="font-size:15px;color:{{ s.starColor }}">{{ s.star }}</span>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑥ 검색 결과 상세 (선택 정류장, 시트 Half)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:22%;top:26%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:66%;top:18%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:74%;top:62%;background:var(--color-neutral-400)"></div>
+<div style="position:absolute;left:50%;top:38%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:5px">
+<span class="fl" style="border-radius:9999px;padding:4px 10px;font:800 11px Pretendard;color:var(--color-text);white-space:nowrap">강남역 정류장</span>
+<span style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 3px 8px rgba(0,0,0,.3)"></span>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;display:flex;align-items:center;gap:10px;z-index:3">
+<span style="font-size:20px;font-weight:700;color:var(--color-text);width:24px;text-align:center">←</span>
+<div class="fl" style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border-radius:9999px;box-sizing:border-box">
+<span style="flex:1;font-size:14px;color:var(--color-text)">강남</span>
+<span style="width:18px;height:18px;border-radius:50%;background:var(--color-neutral-400);color:var(--sc-float);font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">✕</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:52%">
+<div class="grab"><div></div></div>
+<div style="padding:2px 20px 16px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:13px;font-weight:700;color:var(--color-neutral-700)">← 목록</span>
+<span style="font-size:13px;color:var(--color-neutral-600)">★ 즐겨찾기 · ↗ 공유</span>
+</div>
+<div>
+<div style="font-size:12px;color:var(--color-neutral-600)">146, 402번 · 환승 거점</div>
+<h2 style="margin:2px 0 0;font-size:22px">강남역 정류장</h2>
+</div>
+<div class="card elev-md" style="padding:18px;background:#dd3a3a;border-radius:12px;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font:800 12px Pretendard;color:rgba(255,255,255,.85);letter-spacing:.06em">현재 혼잡도</span>
+<span class="est" style="background:rgba(255,255,255,.22);color:#fff">추정</span>
+</div>
+<div style="font:800 30px Pretendard;color:#fff">혼잡</div>
+<div style="font-size:12px;color:rgba(255,255,255,.85)">대기 약 42명 · 신뢰구간 34–51명</div>
+</div>
+<div class="card elev-sm" style="border-radius:10px;gap:6px;border:1px solid var(--sc-cardline)">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font-size:16px">☂</span>
+<span style="font:700 13px Pretendard">비 · 평일 · 21°C</span>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--color-neutral-600)">비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.</div>
+</div>
+<div>
+<div class="sechd">버스 도착 정보</div>
+<div class="card elev-sm" style="border-radius:10px;padding:0;gap:0;border:1px solid var(--sc-cardline)">
+<sc-for list="{{ arrivals }}" as="a" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font:800 13px Pretendard;color:{{ a.routeColor }}">{{ a.route }}</span>
+<span style="font-size:11px;color:var(--color-neutral-600)">{{ a.stopsAway }}</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span style="font:700 13px Pretendard">{{ a.eta }}</span>
+<span style="font:700 10px Pretendard;color:{{ a.load.fg }};background:{{ a.load.bg }};padding:2px 7px;border-radius:5px">{{ a.load.label }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div class="sechd" style="display:flex;align-items:center;gap:6px">시간대별 예상 대기인원 <span class="est">추정</span></div>
+<div style="display:flex;align-items:flex-end;gap:4px;height:70px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:4px;margin-top:4px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;text-align:center;font-size:9px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:10px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">오늘 평균</div><div class="card-title">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">최고 혼잡</div><div class="card-title">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;border:1px solid var(--sc-cardline)"><div class="card-meta">전일 대비</div><div class="card-title">+9%</div></div>
+</div>
+<div style="font-size:11px;line-height:1.45;color:var(--color-neutral-500);margin-top:-2px">대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장 OA-12913</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab tab-on"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab "><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑦ 즐겨찾기 — 지도 + 드래그 시트</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="height:100%;position:relative;background:var(--color-bg)">
+<div class="mapgrid" style="position:absolute;inset:0">
+<div class="rd" style="left:0;right:0;top:31%;height:14px"></div>
+<div class="rd" style="left:0;right:0;top:64%;height:9px"></div>
+<div class="rd" style="left:38%;top:0;bottom:0;width:12px"></div>
+<div class="rd" style="left:78%;top:0;bottom:0;width:8px"></div>
+<div class="rd" style="left:-10%;top:44%;width:130%;height:7px;transform:rotate(-13deg)"></div>
+<div class="mapdot" style="left:20%;top:55%;background:var(--color-neutral-400)"></div>
+<div class="mapdot" style="left:55%;top:38%;background:var(--color-neutral-400)"></div>
+<div style="position:absolute;left:30%;top:22%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">★ 강남역</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:70%;top:30%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#dd3a3a;white-space:nowrap">★ 서초구청</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#dd3a3a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:20%;top:40%;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:4px">
+<span class="fl" style="border-radius:9999px;padding:3px 9px;font:800 10px Pretendard;color:#35c96a;white-space:nowrap">★ 교대역</span>
+<span style="width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#35c96a;border:2px solid var(--sc-float);box-shadow:0 2px 6px rgba(0,0,0,.3)"></span>
+</div>
+<div style="position:absolute;left:47%;top:58%;transform:translate(-50%,-50%);z-index:2">
+<div style="width:44px;height:44px;border-radius:50%;background:rgba(32,30,29,.12);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+<div style="width:14px;height:14px;border-radius:50%;background:#2f6fe4;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);position:relative"></div>
+</div>
+</div>
+<div style="position:absolute;top:56px;left:12px;right:12px;z-index:3;display:flex;flex-direction:column;gap:9px">
+<div class="fl" style="border-radius:9999px;height:48px;display:flex;align-items:center;gap:10px;padding:0 16px;box-sizing:border-box">
+<span style="font-size:15px;color:#e8bb2a">★</span>
+<span style="flex:1;font:700 14px Pretendard;color:var(--color-text)">즐겨찾기 3곳</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">편집</span>
+</div>
+<div style="display:flex;gap:7px;overflow:hidden">
+<span class="chip chip-on">전체</span>
+<span class="chip">출근길</span>
+<span class="chip">퇴근길</span>
+</div>
+</div>
+<div style="position:absolute;right:12px;top:180px;display:flex;flex-direction:column;gap:9px;z-index:3">
+<div class="fl" style="border-radius:9px;width:38px;display:flex;flex-direction:column;align-items:center">
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">＋</span>
+<span style="width:22px;height:1px;background:var(--color-divider)"></span>
+<span style="height:36px;display:flex;align-items:center;font-size:15px;color:var(--color-text)">−</span>
+</div>
+<div class="ctl">☰</div>
+<div class="ctl" style="background:var(--sc-on);color:var(--sc-onfg)">◎</div>
+</div>
+<div class="sheet" style="top:46%">
+<div class="grab"><div></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px">
+<span style="font:800 13px Pretendard">저장한 정류장</span>
+<span style="font-size:12px;color:var(--color-neutral-600)">혼잡도순 ⌄</span>
+</div>
+<div style="padding:0 16px 10px;font-size:11px;line-height:1.5;color:var(--color-neutral-500)">계정 없이 이 브라우저에만 저장됩니다. 기기 간 동기화는 지원하지 않습니다.</div>
+<div style="flex:1;overflow:auto;padding-bottom:8px">
+<sc-for list="{{ favs }}" as="f" hint-placeholder-count="3">
+<div style="display:flex;align-items:stretch;border-bottom:1px solid var(--color-divider)">
+<div style="width:5px;background:{{ f.level.bg }}"></div>
+<div style="flex:1;padding:13px 16px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font:700 15px Pretendard;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.name }}</div>
+<div style="display:flex;align-items:center;gap:8px;flex:none">
+<span style="font:800 12px Pretendard;color:{{ f.level.fg }};background:{{ f.level.bg }};padding:3px 10px;border-radius:6px">{{ f.level.label }}</span>
+<span style="font-size:15px;color:#e8bb2a">★</span>
+</div>
+</div>
+<div style="font-size:12px;color:var(--color-neutral-600)">{{ f.route }}번 · 대기 약 {{ f.wait }}명 · 다음 버스 {{ f.eta }}</div>
+</div>
+</div>
+</sc-for>
+<div style="padding:18px;display:flex;align-items:center;justify-content:center">
+<span style="font-size:12px;color:var(--color-neutral-500)">지도에서 ★를 눌러 정류장을 추가하세요</span>
+</div>
+</div>
+</div>
+<div class="tabbar">
+<div class="tab"><span style="font-size:16px">◈</span>지도</div>
+<div class="tab tab-on"><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab"><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab"><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑧ 회랑 전체 보기 (운수업체 뷰)</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg);padding-top:56px;box-sizing:border-box;position:relative">
+<div style="padding:0 20px 10px">
+<h2 style="margin:0;font-size:22px">버스 146번</h2>
+<div style="font-size:12px;color:var(--color-neutral-600);margin-top:4px">정류장 21곳 · 오늘 18:00 기준 <span class="est">추정</span></div>
+</div>
+<div style="display:flex;gap:8px;padding:0 20px 12px">
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px"><div class="card-meta">평균 혼잡</div><div style="font:800 18px Pretendard">58%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px;background:#fbdada"><div class="card-meta" style="color:#b03535">경보</div><div style="font:800 18px Pretendard;color:#b03535">3곳</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px;padding:10px 12px"><div class="card-meta">제약 위반</div><div style="font:800 18px Pretendard">0.4%</div></div>
+</div>
+<div class="hr" style="margin:0"></div>
+<div style="flex:1;overflow:auto;padding:14px 20px 70px;display:flex;flex-direction:column;gap:0">
+<sc-for list="{{ corridorStops }}" as="c" hint-placeholder-count="7">
+<div style="display:flex;align-items:center;gap:12px;padding:9px 0">
+<span style="width:9px;height:9px;border-radius:50%;background:{{ c.level.bg }};flex:none"></span>
+<span style="font:600 13px Pretendard;width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
+<div style="flex:1;height:8px;background:var(--color-neutral-200);border-radius:4px;overflow:hidden">
+<div style="height:100%;width:{{ c.pct }}%;background:{{ c.level.bg }}"></div>
+</div>
+<span style="font:700 12px Pretendard;width:34px;text-align:right;flex:none">{{ c.pct }}%</span>
+</div>
+</sc-for>
+</div>
+<div class="tabbar">
+<div class="tab "><span style="font-size:16px">◈</span>지도</div>
+<div class="tab "><span style="font-size:16px">★</span>즐겨찾기</div>
+<div class="tab tab-on"><span style="font-size:16px">≡</span>회랑</div>
+<div class="tab "><span style="font-size:16px">⚙</span>설정</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑨ 운영자 대시보드 (웹, /corridor)</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1180 }}" height="{{ 760 }}" url="operator.stationcast.kr/dashboard" hint-size="1180px,760px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg)">
+<div class="nav" style="border-bottom:2px solid var(--color-divider);padding:14px 28px;display:flex;align-items:center;justify-content:space-between">
+<div class="nav-brand" style="font:800 16px Pretendard">Station Cast <span style="color:var(--color-neutral-700)">Operator</span></div>
+<div style="display:flex;gap:16px;font-size:13px;color:var(--color-neutral-600)"><span>회랑 개요</span><span>정류장</span><span>검증 리포트</span><span>API 문서</span></div>
+</div>
+<div style="padding:28px;display:flex;flex-direction:column;gap:24px;overflow:auto">
+<div style="display:flex;gap:16px">
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">회랑 정류장</div><div class="card-title" style="font-size:28px">21</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">평균 혼잡도</div><div class="card-title" style="font-size:28px">58%</div></div>
+<div class="card elev-sm" style="flex:1;background:#fbdada;border-radius:10px"><div class="card-kicker" style="color:#b03535">혼잡 경보</div><div class="card-title" style="font-size:28px;color:#b03535">3곳</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">승차 재현 MAPE</div><div class="card-title" style="font-size:28px">8.7%</div></div>
+</div>
+<div>
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:12px;display:flex;align-items:center;gap:8px">정류장별 대기 혼잡도 <span class="est">추정</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+<sc-for list="{{ opStops }}" as="o" hint-placeholder-count="6">
+<div class="card elev-sm" style="border-radius:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="card-title" style="font-size:15px">{{ o.name }}</span><span class="tag tag-neutral" style="border-radius:6px">{{ o.route }}</span></div>
+<div style="display:flex;align-items:baseline;gap:8px;margin-top:4px"><span style="font:800 24px Pretendard">{{ o.avg }}</span><span class="tag" style="background:{{ o.level.bg }};color:{{ o.level.fg }};font-weight:700;border-radius:6px">{{ o.level.label }}</span></div>
+<div class="card-meta">대기 약 {{ o.wait }}명 · 전일 대비 {{ o.trend }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div>
+<div class="dv-flabel">⑩ 정류장 상세 통계 · 검증 리포트</div>
+<x-import component-from-global-scope="ChromeWindow" from="./browser-window.jsx" width="{{ 1180 }}" height="{{ 760 }}" url="operator.stationcast.kr/stops/gangnam" hint-size="1180px,760px">
+<div style="display:flex;flex-direction:column;height:100%;background:var(--color-bg)">
+<div class="nav" style="border-bottom:2px solid var(--color-divider);padding:14px 28px;display:flex;align-items:center;gap:12px">
+<span style="color:var(--color-neutral-800);font-weight:700;font-size:13px">← 회랑 개요</span>
+<div class="nav-brand" style="font:800 16px Pretendard">강남역 정류장</div>
+<span class="tag tag-outline" style="border-radius:6px;border-color:var(--color-neutral-500);color:var(--color-neutral-700)">146, 402</span>
+<span class="est" style="margin-left:auto">큐 수지 추정 · OA-12913</span>
+</div>
+<div style="padding:28px;display:flex;flex-direction:column;gap:24px;overflow:auto">
+<div class="card elev-md" style="padding:24px;border-radius:12px">
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:16px">시간대별 대기인원 곡선 W(s,t) — 오늘</div>
+<div style="display:flex;align-items:flex-end;gap:8px;height:160px">
+<sc-for list="{{ hourly }}" as="h" hint-placeholder-count="16">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+<div style="width:100%;background:{{ h.color }};height:{{ h.v }}%"></div>
+<div style="font-size:10px;color:var(--color-neutral-600)">{{ h.h }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:16px">
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">오늘 평균</div><div class="card-title" style="font-size:24px">63%</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">최고 혼잡 시간대</div><div class="card-title" style="font-size:24px">18시</div></div>
+<div class="card elev-sm" style="flex:1;border-radius:10px"><div class="card-kicker" style="color:var(--color-neutral-600)">전일 대비</div><div class="card-title" style="font-size:24px">+9%</div></div>
+</div>
+<div>
+<div style="font:800 13px Pretendard;letter-spacing:.03em;margin-bottom:12px">물리 제약 검증</div>
+<table class="table" style="width:100%">
+<thead><tr><th>제약</th><th>기준</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td>비음수 W(s,t) ≥ 0</td><td>위반 0건</td><td>0건</td></tr>
+<tr><td>일 마감 조건 W(s,막차) ≈ 0</td><td>잔차 &lt; 3명</td><td>1.2명</td></tr>
+<tr><td>용량 제약 B(s,t) ≤ Σ 잔여좌석</td><td>위반율 &lt; 1%</td><td>0.4%</td></tr>
+<tr><td>승차 재현 오차 (MAPE)</td><td>&lt; 12%</td><td>8.7%</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</x-import>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">다음: "설정 화면 추가" · "혼잡 알림 설정 팝업" · "TAGO 장애 시 폴백 UI"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  levels = {
+    free: {label:'여유', bg:'#35c96a', fg:'#ffffff'},
+    normal: {label:'보통', bg:'#e8bb2a', fg:'#3f2d00'},
+    busy: {label:'혼잡', bg:'#dd3a3a', fg:'#ffffff'}
+  };
+  levelColor(v) { return v>=70?'#dd3a3a':v>=40?'#e8bb2a':'#35c96a'; }
+
+  renderVals() {
+    const L = this.levels;
+    const star = (on) => on ? '★' : '☆';
+    const stops = [
+      {name:'강남역 정류장', route:'146, 402', level:L.busy, dist:'120m', wait:'28', fav:true},
+      {name:'역삼동 우체국', route:'340', level:L.normal, dist:'280m', wait:'14', fav:false},
+      {name:'서초구청', route:'740, 641', level:L.busy, dist:'410m', wait:'46', fav:true},
+      {name:'교대역 6번 출구', route:'405', level:L.free, dist:'560m', wait:'5', fav:false}
+    ].map(s => ({...s, star: star(s.fav), starColor: s.fav ? '#e8bb2a' : 'var(--color-neutral-400)'}));
+    const favs = [
+      {name:'강남역 정류장', route:'146, 402', level:L.busy, wait:'42', eta:'3분 후'},
+      {name:'서초구청', route:'740, 641', level:L.busy, wait:'25', eta:'6분 후'},
+      {name:'교대역 6번 출구', route:'405', level:L.free, wait:'5', eta:'1분 후'}
+    ];
+    const recentList = [
+      {icon:'◎', name:'강남역 정류장', date:'07.25.'},
+      {icon:'⌕', name:'146번', date:'07.25.'},
+      {icon:'⌕', name:'방배동카페골목', date:'07.24.'},
+      {icon:'◎', name:'서초구청 정류장', date:'07.24.'},
+      {icon:'⌕', name:'교대역 6번 출구', date:'07.23.'}
+    ];
+    const arrivals = [
+      {route:'146번', stopsAway:'2 정류장 전', eta:'3분', load:{label:'혼잡', bg:'#dd3a3a', fg:'#ffffff'}, routeColor:'var(--color-text)'},
+      {route:'402번', stopsAway:'5 정류장 전', eta:'8분', load:{label:'보통', bg:'#e8bb2a', fg:'#3f2d00'}, routeColor:'var(--color-text)'},
+      {route:'740번', stopsAway:'8 정류장 전', eta:'12분', load:{label:'여유', bg:'#35c96a', fg:'#ffffff'}, routeColor:'var(--color-text)'}
+    ];
+    const opStops = [
+      {name:'강남역', route:'146', avg:'82%', level:L.busy, trend:'+12%', wait:'42'},
+      {name:'역삼역', route:'340', avg:'54%', level:L.normal, trend:'-3%', wait:'19'},
+      {name:'서초역', route:'740', avg:'91%', level:L.busy, trend:'+18%', wait:'58'},
+      {name:'교대역', route:'405', avg:'23%', level:L.free, trend:'-8%', wait:'6'},
+      {name:'양재역', route:'641', avg:'67%', level:L.busy, trend:'+5%', wait:'31'},
+      {name:'청계산입구', route:'402', avg:'38%', level:L.normal, trend:'+1%', wait:'11'}
+    ];
+    const corridorStops = [
+      {name:'강남역', pct:82, level:L.busy},
+      {name:'역삼역', pct:54, level:L.normal},
+      {name:'선릉역', pct:71, level:L.busy},
+      {name:'삼성역', pct:88, level:L.busy},
+      {name:'교대역', pct:23, level:L.free},
+      {name:'서초역', pct:91, level:L.busy},
+      {name:'양재역', pct:67, level:L.busy}
+    ];
+    const hourly = [
+      {h:'07',v:60},{h:'08',v:88},{h:'09',v:95},{h:'10',v:55},{h:'11',v:40},
+      {h:'12',v:58},{h:'13',v:45},{h:'14',v:38},{h:'15',v:42},{h:'16',v:60},
+      {h:'17',v:80},{h:'18',v:98},{h:'19',v:90},{h:'20',v:65},{h:'21',v:48},{h:'22',v:30}
+    ].map(x => ({...x, color: this.levelColor(x.v)}));
+    return { stops, favs, arrivals, opStops, corridorStops, hourly, recentList };
+  }
+}
+</script>
+</body>
+</html>

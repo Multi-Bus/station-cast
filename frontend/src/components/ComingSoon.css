@@ -1,0 +1,10 @@
+.coming-soon {
+  position: fixed;
+  inset: 0;
+  bottom: var(--tabbar-total);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
