@@ -7,8 +7,8 @@
 ## 문제
 
 버스 정류장에 몇 명이 서서 기다리고 있는지는 어떤 공개 데이터에도 없습니다. 공개된 것은
-실제로 탄 사람(승차)과 내린 사람(하차)뿐입니다. Station Cast는 이 승하차 실데이터로부터
-대기인원을 역추정하는 큐 수지(queue balance) 방정식을 사용합니다.
+실제로 탄 사람(승차)뿐입니다. Station Cast는 이 승차 실데이터와 노선별 배차간격으로부터
+대기인원을 역추정합니다(Little's Law 기반).
 
 문제 정의와 접근 방식은 [ARCHITECTURE.md](./ARCHITECTURE.md)에 정리합니다. 작성 중입니다.
 
@@ -51,9 +51,9 @@ npm run dev
 station-cast/
   src/stationcast/
     ingest/       # 공개 데이터 수집 (서울 열린데이터광장 OA-12913 등)
-    features/     # λ(도착률)·환승률 추정, 날씨·공휴일 피처
-    estimator/    # 큐 수지 방정식 — 대기인원 W(s,t) 추정
-    validate/     # 물리 제약 검증 (비음수·마감조건·용량·환승 정합성)
+    features/     # 날씨·공휴일 피처
+    estimator/    # 대기인원 추정 (Little's Law 기반) — 정류장 대기인원 W(s,t)
+    validate/     # 물리 제약 검증 (비음수·용량)
     api/          # FastAPI 서비스
   frontend/       # React + Vite + TypeScript 모바일 웹 UI
   design_source/  # 디자인 핸드오프 원본 (frontend/README.md 참고)

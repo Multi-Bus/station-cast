@@ -70,7 +70,7 @@ def build_corridor_route_schedule(
     instead of silently disappearing.
 
     Excludes CORRIDOR_NIGHT_BUS_ROUTES (same exclusion as
-    build_corridor_hourly in oa12913.py).
+    build_corridor_route_hourly in oa12913.py).
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]

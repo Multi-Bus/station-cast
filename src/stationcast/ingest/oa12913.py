@@ -78,52 +78,50 @@ def _days_in_month(year_month: int) -> int:
     return calendar.monthrange(year, month)[1]
 
 
-def build_corridor_hourly(
+def build_corridor_route_hourly(
     boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] = CORRIDOR_STOP_IDS
 ) -> pd.DataFrame:
-    """Aggregate route-level rows into stop x hour daily-average boarding/alighting.
+    """Aggregate to stop x route x hour daily-average boarding, keeping 노선번호.
 
-    Sums across every route serving a stop, since the queue balance model
-    is stop-independent (see data/README.md section 3). Excludes
-    CORRIDOR_NIGHT_BUS_ROUTES: those routes only run after midnight on a
-    sparse, irregular schedule and are out of the model's scope.
+    Keeps 노선번호 as its own grouping key (rather than summing across every
+    route serving a stop) because estimator/wait_population.py pairs each
+    route's own boarding with that route's own headway -- a passenger
+    waiting for one route can't board a different route just because that
+    one has empty seats.
 
-    The raw hourly columns are a full month's cumulative total for that
-    hour-of-day (data/README.md section 1), not one day's. The queue
-    balance model is a single day (W starts at 0 at hour 0 and should
-    return to ~0 by hour 23), so feeding it a month's worth of boarding
-    inflates W by roughly the number of days in the month. Dividing by
-    that day count here turns the monthly total into the daily average the
-    model actually needs.
+    Only 승차 is kept -- the wait-population model has no use for 하차.
+    Excludes CORRIDOR_NIGHT_BUS_ROUTES (see CORRIDOR_NIGHT_BUS_ROUTES's own
+    docstring). The raw hourly columns are a full month's cumulative total
+    for that hour-of-day (data/README.md section 1); dividing by the month's
+    day count here turns that into the daily average the model needs.
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
     sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+    sub["노선번호"] = sub["노선번호"].astype(str)
 
     days = _days_in_month(boarding_df["사용년월"].iloc[0])
 
     on_cols = [c for c in boarding_df.columns if c.endswith("시승차총승객수")]
-    off_cols = [c for c in boarding_df.columns if c.endswith("시하차총승객수")]
 
     frames = []
-    for on_col, off_col in zip(on_cols, off_cols, strict=True):
+    for on_col in on_cols:
         match = _HOUR_RE.match(on_col)
         assert match is not None, f"unexpected hour column name: {on_col}"
         hour = int(match.group(1))
         grp = (
-            sub.groupby(["표준버스정류장ID", "정류장명"])
-            .agg(승차=(on_col, "sum"), 하차=(off_col, "sum"))
+            sub.groupby(["표준버스정류장ID", "정류장명", "노선번호"])
+            .agg(승차=(on_col, "sum"))
             .reset_index()
         )
         grp["승차"] = grp["승차"] / days
-        grp["하차"] = grp["하차"] / days
         grp["시간대"] = hour
         frames.append(grp)
 
     result = pd.concat(frames, ignore_index=True)
     return (
-        result[["표준버스정류장ID", "정류장명", "시간대", "승차", "하차"]]
-        .sort_values(["표준버스정류장ID", "시간대"])
+        result[["표준버스정류장ID", "정류장명", "노선번호", "시간대", "승차"]]
+        .sort_values(["표준버스정류장ID", "노선번호", "시간대"])
         .reset_index(drop=True)
     )
 
@@ -160,11 +158,11 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     boarding_df = load_boarding_alighting(boarding_csv)
     coord_df = load_stop_coordinates(coord_csv)
 
-    hourly = build_corridor_hourly(boarding_df)
+    route_hourly = build_corridor_route_hourly(boarding_df)
     stops = build_corridor_stops(boarding_df, coord_df)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    hourly.to_parquet(out_dir / "corridor_hourly.parquet", index=False)
+    route_hourly.to_parquet(out_dir / "corridor_route_hourly.parquet", index=False)
     stops.to_parquet(out_dir / "corridor_stops.parquet", index=False)
 
 
