@@ -2,15 +2,8 @@
 
 Replaces the queue-balance reservoir model (formerly estimator/
 queue_balance.py + features/calibration.py + estimator/scipy_calibration.py).
-That model required genuine carryover -- unmet demand from a full bus
-rolling into the next hour -- to be meaningful, but this corridor has
-essentially zero bus-capacity saturation (real headway data puts every
-stop-route-hour's utilization far under 100%), so the carryover term it was
-built around is always ~0 in reality. It also had a lag mismatch between its
-lambda calibration and its recursion that was the only thing keeping its
-output away from that same ~0.
 
-This estimator instead applies Little's Law (L = lambda * W) per route,
+This estimator applies Little's Law (L = lambda * W) per route,
 using only real per-route boarding (OA-12913) and real per-route headway
 (route_schedule.py's corridor_route_schedule.parquet) -- no calibrated or
 optimized free parameters:
@@ -57,9 +50,7 @@ def estimate_wait(
     boarding count.
 
     Returns 표준버스정류장ID, 정류장명, 시간대, W -- one row per (stop, hour),
-    summed across every route serving that stop. W is always >= 0 by
-    construction (a sum of non-negative boarding times non-negative wait),
-    so callers no longer need to clamp it.
+    summed across every route serving that stop.
     """
     schedule = route_schedule[route_schedule["요일유형"] == day_type]
     schedule = schedule[~schedule["배차정보없음"]][["표준버스정류장ID", "노선번호", "배차간격"]]
