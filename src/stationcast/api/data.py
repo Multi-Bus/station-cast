@@ -5,8 +5,8 @@ teammate regenerates it locally by running the ingest/estimator pipeline.
 Endpoints depend on get_corridor_data() via FastAPI's Depends so tests can
 override it with in-memory fixtures instead of touching disk.
 
-``wait`` reads corridor_wait_scipy.parquet, the SciPy-refined W(s,t)
-estimate (issue #11). ``capacity`` comes from the field survey's
+``wait`` reads corridor_wait.parquet, the per-route wait-population
+estimate (estimator/wait_population.py). ``capacity`` comes from the field survey's
 build_stop_capacity() (issue #12) rather than a parquet file, since it's
 a plain in-memory constant with no ingest step to run.
 
@@ -32,7 +32,7 @@ DATA_DIR = Path("data/processed")
 class CorridorData:
     """
     stops: 표준버스정류장ID·정류장명·ARS번호·X좌표·Y좌표·정류소 타입 (corridor_stops.parquet)
-    wait: 표준버스정류장ID·정류장명·시간대·W (corridor_wait_scipy.parquet)
+    wait: 표준버스정류장ID·정류장명·시간대·W (corridor_wait.parquet)
     capacity: 표준버스정류장ID·포용인원 (build_stop_capacity())
     weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속 (weather_daily.parquet)
     holiday: 사용일자·공휴일명 (holiday_daily.parquet)
@@ -50,7 +50,7 @@ class CorridorData:
 def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     """Read the corridor's stop metadata and estimated-wait time series from disk."""
     stops = pd.read_parquet(data_dir / "corridor_stops.parquet")
-    wait = pd.read_parquet(data_dir / "corridor_wait_scipy.parquet")
+    wait = pd.read_parquet(data_dir / "corridor_wait.parquet")
     capacity = build_stop_capacity()
     weather = pd.read_parquet(data_dir / "weather_daily.parquet")
     holiday = pd.read_parquet(data_dir / "holiday_daily.parquet")

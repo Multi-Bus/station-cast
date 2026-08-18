@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from stationcast.ingest.oa12913 import build_corridor_hourly, build_corridor_stops
+from stationcast.ingest.oa12913 import build_corridor_route_hourly, build_corridor_stops
 
 
 def _boarding_df() -> pd.DataFrame:
@@ -36,25 +36,7 @@ def _coord_df() -> pd.DataFrame:
     )
 
 
-def test_build_corridor_hourly_sums_across_routes_and_excludes_night_buses() -> None:
-    result = build_corridor_hourly(_boarding_df(), stop_ids=(100000389,))
-
-    assert list(result["표준버스정류장ID"].unique()) == [100000389]
-    assert set(result["정류장명"]) == {"종로2가"}
-    assert len(result) == 2  # two hours
-
-    # N15's huge values (9000) must not appear in either hour's total --
-    # if the night-bus filter breaks, these assertions catch it.
-    hour0 = result[result["시간대"] == 0].iloc[0]
-    assert hour0["승차"] == 15  # (300 + 150) / 30, N15 excluded
-    assert hour0["하차"] == 3  # (30 + 60) / 30, N15 excluded
-
-    hour1 = result[result["시간대"] == 1].iloc[0]
-    assert hour1["승차"] == 10  # (210 + 90) / 30, N15 excluded
-    assert hour1["하차"] == 1  # (0 + 30) / 30, N15 excluded
-
-
-def test_build_corridor_hourly_normalizes_by_days_in_month() -> None:
+def test_build_corridor_route_hourly_normalizes_by_days_in_month() -> None:
     # 202602 = Feb 2026 (not a leap year -> 28 days). Values only divide
     # evenly by 28, not 30, to catch any code that hardcodes 30.
     df = pd.DataFrame(
@@ -65,14 +47,28 @@ def test_build_corridor_hourly_normalizes_by_days_in_month() -> None:
             "버스정류장ARS번호": ["01014"],
             "사용년월": [202602],
             "0시승차총승객수": [280],
-            "0시하차총승객수": [56],
         }
     )
 
-    result = build_corridor_hourly(df, stop_ids=(100000389,))
+    result = build_corridor_route_hourly(df, stop_ids=(100000389,))
 
     assert result.iloc[0]["승차"] == 10.0  # 280 / 28
-    assert result.iloc[0]["하차"] == 2.0  # 56 / 28
+
+
+def test_build_corridor_route_hourly_keeps_routes_separate_and_excludes_night_buses() -> None:
+    result = build_corridor_route_hourly(_boarding_df(), stop_ids=(100000389,))
+
+    assert list(result["표준버스정류장ID"].unique()) == [100000389]
+    assert set(result["정류장명"]) == {"종로2가"}
+    # 2 routes (150, 271; N15 excluded) x 2 hours = 4 rows, not summed together.
+    assert len(result) == 4
+    assert set(result["노선번호"]) == {"150", "271"}
+
+    hour0_150 = result[(result["시간대"] == 0) & (result["노선번호"] == "150")].iloc[0]
+    assert hour0_150["승차"] == 10  # 300 / 30, not summed with 271's 150
+
+    hour0_271 = result[(result["시간대"] == 0) & (result["노선번호"] == "271")].iloc[0]
+    assert hour0_271["승차"] == 5  # 150 / 30
 
 
 def test_build_corridor_stops_merges_name_ars_and_coordinates() -> None:

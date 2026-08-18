@@ -46,7 +46,7 @@ def grade_wait(w: float, capacity: float) -> str:
 def add_congestion_grade(wait_df: pd.DataFrame, capacity_df: pd.DataFrame) -> pd.DataFrame:
     """Attach a 혼잡도등급 column to wait_df using per-stop capacity.
 
-    wait_df: 표준버스정류장ID, ..., W (see estimator/scipy_calibration.py output)
+    wait_df: 표준버스정류장ID, ..., W (see estimator/wait_population.py output)
     capacity_df: 표준버스정류장ID, 포용인원 (one row per stop)
     """
     merged = wait_df.merge(
@@ -80,7 +80,7 @@ def run(wait_path: Path, capacity_path: Path, out_path: Path) -> None:
 
 if __name__ == "__main__":
     run(
-        Path("data/processed/corridor_wait_scipy.parquet"),
+        Path("data/processed/corridor_wait.parquet"),
         Path("data/processed/stop_capacity.parquet"),
         Path("data/processed/corridor_wait_graded.parquet"),
     )

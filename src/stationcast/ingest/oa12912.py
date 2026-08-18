@@ -31,10 +31,10 @@ def build_corridor_daily(
 ) -> pd.DataFrame:
     """Aggregate route-level daily rows into stop x date boarding/alighting totals.
 
-    Sums across every route serving a stop, same rationale as
-    build_corridor_hourly in oa12913.py: the queue balance model is
-    stop-scoped, not route-scoped. ``boarding_df`` may span multiple
-    months concatenated together (see run()).
+    Sums across every route serving a stop: this dataset only feeds
+    features/ (issue #10)'s weekday/weekend/holiday correction factors,
+    which are stop-scoped, not route-scoped. ``boarding_df`` may span
+    multiple months concatenated together (see run()).
 
     Grouped by 표준버스정류장ID alone (not also by name): a stop's
     registered name can change mid-period (e.g., ID 101000042 was renamed
@@ -44,7 +44,7 @@ def build_corridor_daily(
     attached afterward as a single representative label.
 
     Excludes CORRIDOR_NIGHT_BUS_ROUTES (same exclusion as
-    build_corridor_hourly in oa12913.py) -- this dataset has no
+    build_corridor_route_hourly in oa12913.py) -- this dataset has no
     교통수단타입명 column, so night-bus routes are filtered by number here
     instead.
 

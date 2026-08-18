@@ -110,7 +110,7 @@ def get_congestion(
         raise HTTPException(
             status_code=404, detail=f"hour {target_hour} not found for stop {stop_id}"
         )
-    estimated_wait = max(float(row["W"].iloc[0]), 0.0)
+    estimated_wait = float(row["W"].iloc[0])
     return CongestionResponse(
         stop_id=stop_id,
         name=str(row["정류장명"].iloc[0]),
@@ -133,8 +133,8 @@ def get_timeline(
         timeline=[
             TimelinePoint(
                 hour=int(row["시간대"]),
-                estimated_wait=(clamped := max(float(row["W"]), 0.0)),
-                grade=grade_wait(clamped, capacity),
+                estimated_wait=(wait_value := float(row["W"])),
+                grade=grade_wait(wait_value, capacity),
             )
             for _, row in wait.iterrows()
         ],
@@ -153,7 +153,7 @@ def get_corridor(
         CorridorStopSnapshot(
             stop_id=int(row["표준버스정류장ID"]),
             name=str(row["정류장명"]),
-            estimated_wait=max(float(row["W"]), 0.0),
+            estimated_wait=float(row["W"]),
         )
         for _, row in snapshot.iterrows()
     ]
