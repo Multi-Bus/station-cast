@@ -32,10 +32,6 @@ app = FastAPI(title="Station Cast API")
 @app.middleware("http")
 async def enforce_request_timeout(request: Request, call_next):
     """Cut off any request that overruns the response-time budget (issue #18).
-
-    Set tighter than the issue's 2s DoD -- measured actual latency is
-    10-160ms (parquet reads, no network calls), so 1.5s is still a wide
-    safety margin, not a realistic expected duration.
     """
     try:
         return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
