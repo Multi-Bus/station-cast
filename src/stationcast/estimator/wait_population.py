@@ -8,18 +8,24 @@ using only real per-route boarding (OA-12913) and real per-route headway
 (route_schedule.py's corridor_route_schedule.parquet) -- no calibrated or
 optimized free parameters:
 
-    W(s,t) = sum_r B_r(s,t) * (headway_r / 2) / 60
+    W(s,t) = sum_r B_r(s,t) * (headway_r / 2) * (1 + cv_r**2) / 60
 
 B_r(s,t) is route r's boarding at stop s in hour t (people/hour); dividing
 by 60 turns it into people/minute, the arrival rate Little's Law expects.
 headway_r/2 is the textbook average wait for a passenger arriving at a
 random time relative to a perfectly regular schedule (the inspection/
-waiting-time paradox's zero-variance case).
+waiting-time paradox's zero-variance case). (1 + cv_r**2) corrects for
+irregular (bunched) headways: a schedule whose inter-arrival times have
+coefficient of variation cv_r has expected wait (headway/2)(1+cv_r**2), not
+just headway/2.
 
-``cv`` optionally accounts for irregular (bunched) headways: a schedule with
-coefficient-of-variation ``cv`` on inter-arrival times has expected wait
-(headway/2)(1+cv**2), not just headway/2. Left at the default 0.0, this
-reduces to the regular-schedule formula above.
+cv_r is derived per route from corridor_route_schedule.parquet's 최소배차/
+최대배차 (that route's registered headway range, 서울시버스노선기본정보) --
+no separate calibration or real-time polling needed. Assuming headway is
+uniformly distributed over [최소배차, 최대배차], its std is
+(최대배차-최소배차)/sqrt(12), so cv_r = std / 배차간격. Routes missing
+최소배차/최대배차 fall back to the median of the stop's other routes that
+hour, same fallback as 배차간격.
 """
 
 from pathlib import Path
@@ -33,33 +39,37 @@ def estimate_wait(
     route_hourly: pd.DataFrame,
     route_schedule: pd.DataFrame,
     day_type: str = DEFAULT_DAY_TYPE,
-    cv: float = 0.0,
 ) -> pd.DataFrame:
     """Compute W(s,t) for every stop and hour from per-route boarding and headway.
 
     route_hourly: 표준버스정류장ID, 정류장명, 노선번호, 시간대, 승차
         (see ingest/oa12913.py's build_corridor_route_hourly).
-    route_schedule: 표준버스정류장ID, 노선번호, 요일유형, 배차간격, 배차정보없음
-        (see ingest/route_schedule.py's build_corridor_route_schedule),
-        filtered here to ``day_type`` (평일 by default -- the corridor's
-        weekday routes have full headway coverage; see data/README.md).
+    route_schedule: 표준버스정류장ID, 노선번호, 요일유형, 배차간격, 최소배차,
+        최대배차, 배차정보없음 (see ingest/route_schedule.py's
+        build_corridor_route_schedule), filtered here to ``day_type`` (평일
+        by default -- the corridor's weekday routes have full headway
+        coverage; see data/README.md).
 
     Routes with no schedule row, or flagged 배차정보없음, fall back to the
-    median headway of the *other* routes serving the same stop that hour --
-    a single missing route shouldn't zero out or drop that route's real
-    boarding count.
+    median headway/registered-range of the *other* routes serving the same
+    stop that hour -- a single missing route shouldn't zero out or drop
+    that route's real boarding count.
 
     Returns 표준버스정류장ID, 정류장명, 시간대, W -- one row per (stop, hour),
     summed across every route serving that stop.
     """
     schedule = route_schedule[route_schedule["요일유형"] == day_type]
-    schedule = schedule[~schedule["배차정보없음"]][["표준버스정류장ID", "노선번호", "배차간격"]]
+    schedule = schedule[~schedule["배차정보없음"]][
+        ["표준버스정류장ID", "노선번호", "배차간격", "최소배차", "최대배차"]
+    ]
 
     merged = route_hourly.merge(schedule, on=["표준버스정류장ID", "노선번호"], how="left")
-    merged["배차간격"] = merged["배차간격"].fillna(
-        merged.groupby("표준버스정류장ID")["배차간격"].transform("median")
-    )
+    for col in ("배차간격", "최소배차", "최대배차"):
+        merged[col] = merged[col].fillna(
+            merged.groupby("표준버스정류장ID")[col].transform("median")
+        )
 
+    cv = ((merged["최대배차"] - merged["최소배차"]) / (12**0.5)) / merged["배차간격"]
     merged["평균대기_분"] = (merged["배차간격"] / 2) * (1 + cv**2)
     merged["W_r"] = merged["승차"] * merged["평균대기_분"] / 60
 
@@ -76,12 +86,11 @@ def run(
     route_schedule_path: Path,
     out_path: Path,
     day_type: str = DEFAULT_DAY_TYPE,
-    cv: float = 0.0,
 ) -> None:
     """Read corridor_route_hourly/corridor_route_schedule, compute W(s,t), write it."""
     route_hourly = pd.read_parquet(route_hourly_path)
     route_schedule = pd.read_parquet(route_schedule_path)
-    result = estimate_wait(route_hourly, route_schedule, day_type=day_type, cv=cv)
+    result = estimate_wait(route_hourly, route_schedule, day_type=day_type)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     result.to_parquet(out_path, index=False)
