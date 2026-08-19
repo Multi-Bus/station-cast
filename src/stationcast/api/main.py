@@ -4,10 +4,12 @@
 S2 (issue #13). /stops/{id}/context added in S3 (issue #47).
 """
 
+import asyncio
 from datetime import datetime
 
 import pandas as pd
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from stationcast.api.data import CorridorData, get_corridor_data
 from stationcast.api.schemas import (
@@ -22,7 +24,23 @@ from stationcast.api.schemas import (
 )
 from stationcast.estimator.congestion import grade_wait
 
+REQUEST_TIMEOUT_SECONDS = 1.5
+
 app = FastAPI(title="Station Cast API")
+
+
+@app.middleware("http")
+async def enforce_request_timeout(request: Request, call_next):
+    """Cut off any request that overruns the response-time budget (issue #18).
+
+    Set tighter than the issue's 2s DoD -- measured actual latency is
+    10-160ms (parquet reads, no network calls), so 1.5s is still a wide
+    safety margin, not a realistic expected duration.
+    """
+    try:
+        return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
+    except TimeoutError:
+        return JSONResponse(status_code=504, content={"detail": "request timed out"})
 
 
 @app.get("/health")
