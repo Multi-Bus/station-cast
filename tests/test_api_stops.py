@@ -54,10 +54,22 @@ def corridor_data() -> CorridorData:
         }
     )
     holiday = pd.DataFrame({"사용일자": [20260101], "공휴일명": ["신정"]})
-    weekday_holiday_factor = pd.DataFrame(
+    # 사전 계산된 요일/날씨/기온 라벨 (corridor_features_daily.parquet 형태) --
+    # 20260101은 공휴일+맑음, 20260102는 평일+강수, 둘 다 기온구분은 저온으로 둔다.
+    features_daily = pd.DataFrame(
         {
             "표준버스정류장ID": [STOP_A, STOP_B],
-            "보정계수_승차": [0.85, 1.2],
+            "사용일자": [20260101, 20260102],
+            "요일구분": ["주말+공휴일", "평일"],
+            "날씨구분": ["맑음", "강수"],
+            "기온구분": ["저온", "저온"],
+        }
+    )
+    weekday_weather_factor = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP_A, STOP_B],
+            "보정계수_승차_주말+공휴일_맑음_저온": [0.85, None],
+            "보정계수_승차_평일_강수_저온": [None, 1.2],
         }
     )
     return CorridorData(
@@ -66,7 +78,8 @@ def corridor_data() -> CorridorData:
         capacity=capacity,
         weather=weather,
         holiday=holiday,
-        weekday_holiday_factor=weekday_holiday_factor,
+        features_daily=features_daily,
+        weekday_weather_factor=weekday_weather_factor,
     )
 
 

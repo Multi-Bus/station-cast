@@ -75,6 +75,25 @@ def _stop_name(data: CorridorData, stop_id: int) -> str:
     return str(row["정류장명"].iloc[0])
 
 
+def _boarding_factor(data: CorridorData, stop_id: int, date: int) -> float:
+    features_row = data.features_daily[
+        (data.features_daily["표준버스정류장ID"] == stop_id)
+        & (data.features_daily["사용일자"] == date)
+    ].iloc[0]
+    weekday_group = str(features_row["요일구분"])
+    weather_group = str(features_row["날씨구분"])
+    temp_group = str(features_row["기온구분"])
+
+    if (weekday_group, weather_group, temp_group) == ("평일", "맑음", "보통"):
+        return 1.0
+
+    factor_row = data.weekday_weather_factor[
+        data.weekday_weather_factor["표준버스정류장ID"] == stop_id
+    ]
+    column = f"보정계수_승차_{weekday_group}_{weather_group}_{temp_group}"
+    return float(factor_row[column].iloc[0])
+
+
 def _day_type(date: int, holiday_dates: set[int]) -> str:
     """Classify a date as 공휴일 > 주말 > 평일 (holiday takes priority over weekend)."""
     if date in holiday_dates:
@@ -86,8 +105,8 @@ def _day_type(date: int, holiday_dates: set[int]) -> str:
 def _congestion_note(day_type: str, boarding_factor: float) -> str:
     """Human-readable explanation of the day-type correction factor.
 
-    boarding_factor is 보정계수_승차 (주말+공휴일 평균승차 / 평일 평균승차) from
-    weekday_holiday_factor.parquet
+    boarding_factor is 보정계수_승차 (해당 요일×날씨×기온 그룹 평균승차 / 기준선
+    평균승차) from weekday_weather_factor.parquet, via _boarding_factor()
     """
     if day_type == "평일":
         return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
@@ -175,10 +194,7 @@ def get_context(
         raise HTTPException(status_code=404, detail=f"weather for date {target_date} not found")
 
     day_type = _day_type(target_date, set(data.holiday["사용일자"]))
-    factor_row = data.weekday_holiday_factor[
-        data.weekday_holiday_factor["표준버스정류장ID"] == stop_id
-    ]
-    boarding_factor = float(factor_row["보정계수_승차"].iloc[0])
+    boarding_factor = _boarding_factor(data, stop_id, target_date)
 
     return StopContextResponse(
         stop_id=stop_id,
