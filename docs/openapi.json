@@ -60,7 +60,7 @@
         "type": "object"
       },
       "ArrivalsResponse": {
-        "description": "Real-time arrivals for every route serving one stop.\n\nIndependent of the wait-population estimate: ``available=False`` means\nTOPIS couldn't be reached (timeout/error), not that W(s,t) is unknown.",
+        "description": "Real-time arrivals for every route serving one stop.\n\nIndependent of the wait-population estimate: ``available=False`` means\nTOPIS couldn't be reached (timeout/error).",
         "properties": {
           "arrivals": {
             "items": {
@@ -497,7 +497,7 @@
     },
     "/stops/{stop_id}/arrivals": {
       "get": {
-        "description": "Real-time next-arrival info for every route serving one stop (issue #48).\n\nBacked by Seoul TOPIS (ws.bus.go.kr) -- a live display feature, entirely\nseparate from the wait-population estimate. On TOPIS timeout/error this\nreturns available=False with a message instead of a 500 (issue #48 DoD).",
+        "description": "Real-time next-arrival info for every route serving one stop (issue #48).\nBacked by Seoul TOPIS (ws.bus.go.kr) -- a live display feature.",
         "operationId": "get_arrivals_stops__stop_id__arrivals_get",
         "parameters": [
           {
