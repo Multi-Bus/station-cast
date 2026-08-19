@@ -88,9 +88,8 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
 
     Baseline is 평일·맑음·보통 (largest sample, and the natural "business
     as usual" reference point). Separate from build_weekday_holiday_factor's
-    2-group (요일구분 only) output -- this is a distinct file so the
-    existing weekday_holiday_factor.parquet consumers (e.g. the
-    /stops/{id}/context API) are unaffected.
+    2-group (요일구분 only) output -- this is a distinct file (the
+    /stops/{id}/context API now reads this one instead, see issue #78).
 
     12 groups over a 3-year corridor (issue: temperature added, 2023-07
     range extension) keeps every group's sample size >= ~30 days; the
