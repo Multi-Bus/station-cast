@@ -151,7 +151,7 @@ def build_corridor_stops(
 
 
 def run(raw_dir: Path, out_dir: Path) -> None:
-    """Build corridor_hourly.parquet and corridor_stops.parquet from raw_dir CSVs."""
+    """Build corridor_route_hourly.parquet and corridor_stops.parquet from raw_dir CSVs."""
     boarding_csv = next(raw_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
     coord_csv = next(raw_dir.glob("*버스정류소*위치정보*.csv"))
 

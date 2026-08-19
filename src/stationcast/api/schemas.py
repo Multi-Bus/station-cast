@@ -49,6 +49,32 @@ class CorridorResponse(BaseModel):
     stops: list[CorridorStopSnapshot]
 
 
+class ArrivalInfo(BaseModel):
+    """One route's next-arrival estimate at a stop (issue #48, Seoul TOPIS)."""
+
+    route_name: str
+    route_id: str
+    direction: str
+    arrival_message_1: str
+    arrival_message_2: str
+    congestion_1: str | None
+    congestion_2: str | None
+
+
+class ArrivalsResponse(BaseModel):
+    """Real-time arrivals for every route serving one stop.
+
+    Independent of the wait-population estimate: ``available=False`` means
+    TOPIS couldn't be reached (timeout/error).
+    """
+
+    stop_id: int
+    name: str
+    available: bool
+    message: str | None
+    arrivals: list[ArrivalInfo]
+
+
 class StopContextResponse(BaseModel):
     """Weather + day-type context for one stop on one date (issue #47)."""
 
