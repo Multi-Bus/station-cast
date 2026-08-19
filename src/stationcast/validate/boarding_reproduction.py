@@ -9,26 +9,44 @@ What can be validated instead is the *demand characterization* that feeds
 the whole pipeline: how well a single per-stop "typical day" boarding
 figure reproduces real day-to-day boarding (corridor_daily.parquet, 3
 years), and how much the weekday/weather/temperature correction factors
-(features/demand_factors.py) actually improve that reproduction. Three
-progressively-corrected predictions give both the MAPE (item 3) and a
-natural sensitivity comparison (item 4) from one analysis:
+(features/demand_factors.py) actually improve that reproduction.
 
-1. 무보정: each stop's overall 3-year daily mean boarding.
-2. 요일보정: weekday_holiday_factor.parquet's 2-group (평일 / 주말+공휴일) mean.
-3. 요일+날씨+기온보정: weekday_weather_factor.parquet's 12-group mean.
+Both predictions are fit on a 2-year train split and evaluated only on the
+held-out final year (TRAIN_TEST_CUTOFF) rather than on the same days they
+were fit from. Fitting and evaluating on the same days would let each
+day's own value leak into its own prediction (the correction factors are
+just group means over corridor_daily), which systematically understates
+the real reproduction error (see issue #16 review discussion):
+
+1. 무보정: each stop's train-period daily mean boarding.
+2. 요일+날씨+기온보정: weekday_weather_factor's 12-group train mean.
+
+Only weekday_weather_factor.parquet's 12-group correction is used, not
+weekday_holiday_factor.parquet's 2-group (요일구분 only) correction --
+weekday_weather_factor's grouping already includes 요일구분 as one of its
+three axes, so it's a strict superset and the 2-group table adds nothing
+a comparison against it wouldn't already show (see review discussion,
+issue #16; also noted in data/README.md §8).
 """
 
 from pathlib import Path
 
 import pandas as pd
 
-_TEMP_LABELS = ["저온", "보통", "고온"]
+from stationcast.features.demand_factors import build_weekday_weather_factor
+
+TRAIN_TEST_CUTOFF = 20250701
+"""First 사용일자 of the held-out test year. Correction factors are fit on
+days before this (2023-07-01~2025-06-30, ~2 years) and evaluated against
+actual boarding on/after this date (2025-07-01~2026-06-30, ~1 year), so
+MAPE measures reproduction on days the factors never saw."""
 
 KNOWN_NIGHT_BUS_ONLY_DATES: tuple[int, ...] = (20260113, 20260114)
-"""사용일자에서 해당 날짜에 그 정류장을 지나는 노선이 전부 심야버스뿐이라, 심야버스
-제외 필터 적용 후 승차가 거의 0에 가깝게 남는 날(data/README.md §7에 문서화된 현상,
-버그 아님). MAPE는 실측값이 0에 가까우면 퍼센트 오차가 발산하므로, 이 날짜들을 빼고
-계산해야 그 왜곡 없이 "전형적인 하루" 재현력을 정직하게 잴 수 있다."""
+"""Dates where every route passing the stop was night-bus-only, so boarding
+drops to near zero after the night-bus exclusion filter (documented,
+pre-existing phenomenon -- see data/README.md §7, not a bug). MAPE diverges
+when the actual value is near zero, so excluding these dates is necessary to
+get an honest read on "typical day" reproduction without that distortion."""
 
 
 def _long_group_means(
@@ -52,42 +70,33 @@ def _long_group_means(
 def build_boarding_reproduction_report(
     corridor_daily: pd.DataFrame,
     features_daily: pd.DataFrame,
-    weekday_holiday_factor: pd.DataFrame,
-    weekday_weather_factor: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Per (stop, day) actual boarding vs three progressively-corrected predictions.
+    """Per (stop, test-day) actual boarding vs two train-fit predictions.
 
     corridor_daily: 표준버스정류장ID, 정류장명, 사용일자, 승차, 하차 (3-year real series).
     features_daily: corridor_daily joined with 요일구분/날씨구분/기온구분 labels
         (features/demand_factors.py's build_features_daily output).
-    weekday_holiday_factor: features/demand_factors.py's 2-group (요일구분 only) output.
-    weekday_weather_factor: features/demand_factors.py's 12-group output.
 
-    Returns one row per (stop, day) with 실측_승차 and the three predictions,
-    ready for MAPE aggregation.
+    Both inputs cover the full 3-year range; this function splits them at
+    TRAIN_TEST_CUTOFF itself, fits both predictions on the train split
+    only, and returns one row per (stop, day) for the test split only, with
+    실측_승차 and the two predictions, ready for MAPE aggregation.
     """
+    train_daily = corridor_daily[corridor_daily["사용일자"] < TRAIN_TEST_CUTOFF]
+    train_features = features_daily[features_daily["사용일자"] < TRAIN_TEST_CUTOFF]
+    test_features = features_daily[features_daily["사용일자"] >= TRAIN_TEST_CUTOFF]
+
     overall_mean = (
-        corridor_daily.groupby(["표준버스정류장ID", "정류장명"])["승차"]
+        train_daily.groupby(["표준버스정류장ID", "정류장명"])["승차"]
         .mean()
         .rename("무보정_예측승차")
         .reset_index()
     )
 
-    holiday_means = weekday_holiday_factor.melt(
-        id_vars=["표준버스정류장ID", "정류장명"],
-        value_vars=["평균승차_평일", "평균승차_주말+공휴일"],
-        var_name="_group",
-        value_name="요일보정_예측승차",
-    )
-    holiday_means["요일구분"] = holiday_means["_group"].str.removeprefix("평균승차_")
-    holiday_means = holiday_means.drop(columns="_group")
-
+    weekday_weather_factor = build_weekday_weather_factor(train_features)
     full_means = _long_group_means(weekday_weather_factor, "평균승차", "요일날씨기온보정_예측승차")
 
-    merged = features_daily.merge(overall_mean, on=["표준버스정류장ID", "정류장명"], how="left")
-    merged = merged.merge(
-        holiday_means, on=["표준버스정류장ID", "정류장명", "요일구분"], how="left"
-    )
+    merged = test_features.merge(overall_mean, on=["표준버스정류장ID", "정류장명"], how="left")
     merged = merged.merge(
         full_means,
         on=["표준버스정류장ID", "정류장명", "요일구분", "날씨구분", "기온구분"],
@@ -103,7 +112,6 @@ def build_boarding_reproduction_report(
         "기온구분",
         "승차",
         "무보정_예측승차",
-        "요일보정_예측승차",
         "요일날씨기온보정_예측승차",
     ]
     return merged[cols].rename(columns={"승차": "실측_승차"}).sort_values(
@@ -122,20 +130,20 @@ def _exclude_known_anomalies(report: pd.DataFrame) -> pd.DataFrame:
 
 
 def summarize_mape(report: pd.DataFrame, exclude_known_anomalies: bool = True) -> dict[str, float]:
-    """Corridor-wide MAPE for each of the three prediction versions.
+    """Corridor-wide MAPE for each of the two prediction versions.
 
     A single near-zero 실측_승차 day makes MAPE's percentage error diverge
     (e.g. 종로3가.탑골공원 on 2026-01-14: 실측 2명 vs 예측 ~3,345명 is a
-    162,291% error, alone worth +148pp on that stop's 1,096-day average).
-    KNOWN_NIGHT_BUS_ONLY_DATES excludes the specific dates this happens on
-    (documented, not a silent data-cleaning choice) by default; pass
-    ``exclude_known_anomalies=False`` to see the raw, undistorted-view MAPE.
+    162,291% error, alone worth a large share of that stop's test-period
+    average). KNOWN_NIGHT_BUS_ONLY_DATES excludes the specific dates this
+    happens on (documented, not a silent data-cleaning choice) by default;
+    pass ``exclude_known_anomalies=False`` to see the raw, undistorted-view
+    MAPE.
     """
     if exclude_known_anomalies:
         report = _exclude_known_anomalies(report)
     return {
         "무보정_MAPE": _mape(report["실측_승차"], report["무보정_예측승차"]),
-        "요일보정_MAPE": _mape(report["실측_승차"], report["요일보정_예측승차"]),
         "요일날씨기온보정_MAPE": _mape(report["실측_승차"], report["요일날씨기온보정_예측승차"]),
     }
 
@@ -151,7 +159,6 @@ def per_stop_mape(report: pd.DataFrame, exclude_known_anomalies: bool = True) ->
                 "표준버스정류장ID": stop_id,
                 "정류장명": name,
                 "무보정_MAPE": _mape(group["실측_승차"], group["무보정_예측승차"]),
-                "요일보정_MAPE": _mape(group["실측_승차"], group["요일보정_예측승차"]),
                 "요일날씨기온보정_MAPE": _mape(
                     group["실측_승차"], group["요일날씨기온보정_예측승차"]
                 ),
@@ -163,12 +170,8 @@ def per_stop_mape(report: pd.DataFrame, exclude_known_anomalies: bool = True) ->
 def run(processed_dir: Path, out_dir: Path) -> None:
     corridor_daily = pd.read_parquet(processed_dir / "corridor_daily.parquet")
     features_daily = pd.read_parquet(processed_dir / "corridor_features_daily.parquet")
-    weekday_holiday_factor = pd.read_parquet(processed_dir / "weekday_holiday_factor.parquet")
-    weekday_weather_factor = pd.read_parquet(processed_dir / "weekday_weather_factor.parquet")
 
-    report = build_boarding_reproduction_report(
-        corridor_daily, features_daily, weekday_holiday_factor, weekday_weather_factor
-    )
+    report = build_boarding_reproduction_report(corridor_daily, features_daily)
     summary_raw = summarize_mape(report, exclude_known_anomalies=False)
     summary = summarize_mape(report, exclude_known_anomalies=True)
     by_stop = per_stop_mape(report)
@@ -177,7 +180,10 @@ def run(processed_dir: Path, out_dir: Path) -> None:
     report.to_parquet(out_dir / "boarding_reproduction_report.parquet", index=False)
     by_stop.to_csv(out_dir / "boarding_reproduction_by_stop.csv", index=False, encoding="utf-8-sig")
 
-    print(f"=== 승차 재현 MAPE (원본, {KNOWN_NIGHT_BUS_ONLY_DATES} 포함) ===")
+    print(
+        f"=== 승차 재현 MAPE (원본, {KNOWN_NIGHT_BUS_ONLY_DATES} 포함, "
+        f"{TRAIN_TEST_CUTOFF} 이후 held-out 1년 기준) ==="
+    )
     for k, v in summary_raw.items():
         print(f"{k}: {v:.1f}%")
     print()
