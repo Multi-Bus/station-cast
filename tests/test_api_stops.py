@@ -284,3 +284,86 @@ def test_context_unknown_date_returns_404(client: TestClient) -> None:
     response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260201})
 
     assert response.status_code == 404
+
+
+def test_arrivals_returns_routes_for_stop(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "stationcast.api.main.fetch_arrivals",
+        lambda ars_id: [
+            {
+                "busRouteAbrv": "101",
+                "busRouteId": "100100006",
+                "adirection": "서소문",
+                "arrmsg1": "3분후[1번째 전]",
+                "arrmsg2": "11분후[5번째 전]",
+                "congestion1": "3",
+                "congestion2": "3",
+            }
+        ],
+    )
+
+    response = client.get(f"/stops/{STOP_A}/arrivals")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "stop_id": STOP_A,
+        "name": "명동성당",
+        "available": True,
+        "message": None,
+        "arrivals": [
+            {
+                "route_name": "101",
+                "route_id": "100100006",
+                "direction": "서소문",
+                "arrival_message_1": "3분후[1번째 전]",
+                "arrival_message_2": "11분후[5번째 전]",
+                "congestion_1": "3",
+                "congestion_2": "3",
+            }
+        ],
+    }
+
+
+def test_arrivals_uses_stop_ars_number_not_stop_id(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured = {}
+
+    def _fake_fetch(ars_id: str) -> list[dict]:
+        captured["ars_id"] = ars_id
+        return []
+
+    monkeypatch.setattr("stationcast.api.main.fetch_arrivals", _fake_fetch)
+
+    client.get(f"/stops/{STOP_A}/arrivals")
+
+    assert captured["ars_id"] == "01010"  # STOP_A's ARS번호, not its 표준버스정류장ID
+
+
+def test_arrivals_available_false_when_topis_unavailable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from stationcast.ingest.realtime_arrival import ArrivalInfoUnavailable
+
+    def _raise(ars_id: str) -> list[dict]:
+        raise ArrivalInfoUnavailable("timed out")
+
+    monkeypatch.setattr("stationcast.api.main.fetch_arrivals", _raise)
+
+    response = client.get(f"/stops/{STOP_A}/arrivals")
+
+    # A TOPIS outage must not surface as a 500 -- issue #48's graceful
+    # degradation requirement.
+    assert response.status_code == 200
+    body = response.json()
+    assert body["available"] is False
+    assert body["arrivals"] == []
+    assert body["message"] == "일시적으로 도착정보를 가져올 수 없습니다."
+
+
+def test_arrivals_unknown_stop_returns_404(client: TestClient) -> None:
+    response = client.get("/stops/999999999/arrivals")
+
+    assert response.status_code == 404
