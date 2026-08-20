@@ -21,8 +21,26 @@ pip install -e ".[dev]"
 pytest
 ```
 
-데이터 파이프라인(`ingest/`, `features/`, `estimator/`)을 먼저 로컬에서 실행해
-`data/processed/`를 채운 뒤(각 모듈의 `if __name__ == "__main__"` 참고), API 서버를 띄웁니다.
+### 데이터 파이프라인 재현 (issue #20)
+
+`data/processed/`의 parquet은 커밋되지 않으므로(용량·라이선스), 각자 로컬에서 재생성합니다.
+원본 CSV/XLSX는 기상청 로그인·공공데이터포털 인증키가 필요해 자동화할 수 없으니, 먼저
+[`data/README.md`](./data/README.md) §1~§7을 보고 `data/raw/`에 내려받습니다. 그 다음:
+
+```bash
+python scripts/build_processed.py
+```
+
+`ingest/`·`features/` 산출물(정류장·노선별 승하차, 날씨, 공휴일, 요일×날씨×기온 보정계수)이
+한 번에 만들어집니다. 원본이 빠져 있으면 어떤 파일이 왜 필요한지 먼저 알려주고 멈춥니다.
+
+이어서 대기인원 추정치(`corridor_wait.parquet`, API가 서빙하는 `W(s,t)`)를 만듭니다.
+
+```bash
+python -m stationcast.estimator.wait_population
+```
+
+두 단계를 마치면 API 서버를 띄울 수 있습니다.
 
 ```bash
 uvicorn stationcast.api.main:app --reload
