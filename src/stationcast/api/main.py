@@ -25,7 +25,13 @@ from stationcast.api.schemas import (
     TimelineResponse,
 )
 from stationcast.estimator.congestion import grade_wait
+from stationcast.features.demand_factors import classify_temperature
 from stationcast.ingest.realtime_arrival import ArrivalInfoUnavailable, fetch_arrivals
+from stationcast.ingest.weather_forecast import (
+    ForecastUnavailable,
+    build_daily_forecast,
+    fetch_forecast_items,
+)
 
 REQUEST_TIMEOUT_SECONDS = 1.5
 
@@ -92,15 +98,9 @@ def _stop_name(data: CorridorData, stop_id: int) -> str:
     return str(row["정류장명"].iloc[0])
 
 
-def _boarding_factor(data: CorridorData, stop_id: int, date: int) -> float:
-    features_row = data.features_daily[
-        (data.features_daily["표준버스정류장ID"] == stop_id)
-        & (data.features_daily["사용일자"] == date)
-    ].iloc[0]
-    weekday_group = str(features_row["요일구분"])
-    weather_group = str(features_row["날씨구분"])
-    temp_group = str(features_row["기온구분"])
-
+def _boarding_factor_for_labels(
+    data: CorridorData, stop_id: int, weekday_group: str, weather_group: str, temp_group: str
+) -> float:
     if (weekday_group, weather_group, temp_group) == ("평일", "맑음", "보통"):
         return 1.0
 
@@ -109,6 +109,29 @@ def _boarding_factor(data: CorridorData, stop_id: int, date: int) -> float:
     ]
     column = f"보정계수_승차_{weekday_group}_{weather_group}_{temp_group}"
     return float(factor_row[column].iloc[0])
+
+
+def _boarding_factor(data: CorridorData, stop_id: int, date: int) -> float:
+    features_row = data.features_daily[
+        (data.features_daily["표준버스정류장ID"] == stop_id)
+        & (data.features_daily["사용일자"] == date)
+    ].iloc[0]
+    return _boarding_factor_for_labels(
+        data,
+        stop_id,
+        str(features_row["요일구분"]),
+        str(features_row["날씨구분"]),
+        str(features_row["기온구분"]),
+    )
+
+
+def _precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) -> str:
+    """맑음/비/눈 근사 라벨(과거 관측 ASOS 데이터 기준)."""
+    if snowfall_cm > 0:
+        return "눈"
+    if precipitation_mm > 0:
+        return "비"
+    return "맑음"
 
 
 def _stop_ars_number(data: CorridorData, stop_id: int) -> str:
@@ -221,27 +244,63 @@ def get_context(
     date: int | None = Query(default=None),
     data: CorridorData = Depends(get_corridor_data),
 ) -> StopContextResponse:
-    """Weather + day-type context for one stop on one date (default: today)."""
+    """Weather + day-type context for one stop on one date (default: today).
+
+    Historical dates (within weather_daily.parquet's collection window) use
+    observed ASOS data. Dates outside that window -- typically "오늘" once the
+    window rolls past its end date -- fall back to KMA's short-range forecast
+    (ingest/weather_forecast.py), flagged is_forecast=True.
+    """
     name = _stop_name(data, stop_id)
     target_date = _current_date() if date is None else date
+    day_type = _day_type(target_date, set(data.holiday["사용일자"]))
 
     weather_row = data.weather[data.weather["사용일자"] == target_date]
-    if weather_row.empty:
-        raise HTTPException(status_code=404, detail=f"weather for date {target_date} not found")
+    if not weather_row.empty:
+        precipitation = float(weather_row["강수량"].iloc[0])
+        snowfall = float(weather_row["신적설"].iloc[0])
+        boarding_factor = _boarding_factor(data, stop_id, target_date)
+        return StopContextResponse(
+            stop_id=stop_id,
+            name=name,
+            date=target_date,
+            day_type=day_type,
+            temperature=float(weather_row["평균기온"].iloc[0]),
+            precipitation=precipitation,
+            humidity=float(weather_row["습도"].iloc[0]),
+            snowfall=snowfall,
+            wind_speed=float(weather_row["평균풍속"].iloc[0]),
+            precipitation_type=_precipitation_type_from_asos(precipitation, snowfall),
+            is_forecast=False,
+            congestion_note=_congestion_note(day_type, boarding_factor),
+        )
 
-    day_type = _day_type(target_date, set(data.holiday["사용일자"]))
-    boarding_factor = _boarding_factor(data, stop_id, target_date)
+    try:
+        forecast = build_daily_forecast(fetch_forecast_items(), target_date)
+    except ForecastUnavailable as exc:
+        raise HTTPException(
+            status_code=404, detail=f"weather for date {target_date} not found"
+        ) from exc
+
+    weekday_group = "평일" if day_type == "평일" else "주말+공휴일"
+    weather_group = "강수" if forecast.is_precipitating else "맑음"
+    temp_group = classify_temperature(forecast.high_temp)
+    boarding_factor = _boarding_factor_for_labels(
+        data, stop_id, weekday_group, weather_group, temp_group
+    )
 
     return StopContextResponse(
         stop_id=stop_id,
         name=name,
         date=target_date,
         day_type=day_type,
-        temperature=float(weather_row["평균기온"].iloc[0]),
-        precipitation=float(weather_row["강수량"].iloc[0]),
-        humidity=float(weather_row["습도"].iloc[0]),
-        snowfall=float(weather_row["신적설"].iloc[0]),
-        wind_speed=float(weather_row["평균풍속"].iloc[0]),
+        temperature=forecast.temperature,
+        precipitation=0.0,
+        humidity=forecast.humidity,
+        snowfall=0.0,
+        wind_speed=forecast.wind_speed,
+        precipitation_type=forecast.precipitation_type,
+        is_forecast=True,
         congestion_note=_congestion_note(day_type, boarding_factor),
     )
 
