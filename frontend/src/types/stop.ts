@@ -14,6 +14,12 @@ export function congestionLevelFromValue(value: number): CongestionLevel {
   return "relaxed";
 }
 
+export function congestionLevelFromGrade(grade: string): CongestionLevel {
+  if (grade === "혼잡") return "heavy";
+  if (grade === "보통") return "moderate";
+  return "relaxed";
+}
+
 export type FilterKey = "heavy" | "transferHub";
 
 /** Shared by MapScreen (markers) and NearbyStopsPanel (list) so the two
@@ -30,26 +36,27 @@ export function applyStopFilters(stops: NearbyStop[], activeFilters: Set<FilterK
 export interface NearbyStop {
   id: string;
   name: string;
+  arsNumber?: string;
   routes: string[];
   distanceM: number;
   waitEstimate: number;
   congestionValue: number;
   isTransferHub: boolean;
   isFavorite: boolean;
-  /** Placeholder map position as a percentage of the map area (no real map SDK yet). */
   mapPosition: { xPct: number; yPct: number };
+  latLng: { lat: number; lng: number };
 }
 
 export interface Arrival {
   route: string;
-  stopsAway: number;
-  etaMin: number;
-  inVehicleLevel: CongestionLevel;
+  direction: string;
+  message: string;
 }
 
 export interface HourlyPoint {
   hour: number;
   value: number;
+  level: CongestionLevel;
 }
 
 export interface StopDetail extends NearbyStop {

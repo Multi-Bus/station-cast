@@ -1,11 +1,7 @@
 /** Sample data from design_source/design_handoff_station_cast/design-data.md.
- * Real /stops, /stops/{id}/congestion (grade included, issue #57),
- * /stops/{id}/timeline, /stops/{id}/context (weather, issue #47) all exist,
- * but the design's 0-100 congestion value and arrivals (issue #48, in
- * progress) have no backend source yet -- so this screen runs on the
- * design's own sample data until those land. Swapping to real fetches only
- * touches this file. */
-import type { NearbyStop, StopDetail } from "../types/stop";
+ * Used by useCorridorStops/useStopDetail as the offline fallback when the
+ * backend is unreachable. */
+import { congestionLevelFromValue, type NearbyStop, type StopDetail } from "../types/stop";
 
 export const NEARBY_STOPS: NearbyStop[] = [
   {
@@ -18,6 +14,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     isTransferHub: true,
     isFavorite: true,
     mapPosition: { xPct: 52, yPct: 44 },
+    latLng: { lat: 37.4979, lng: 127.0276 },
   },
   {
     id: "yeoksam-post",
@@ -29,6 +26,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     isTransferHub: false,
     isFavorite: false,
     mapPosition: { xPct: 30, yPct: 60 },
+    latLng: { lat: 37.5007, lng: 127.0364 },
   },
   {
     id: "seocho-office",
@@ -40,6 +38,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     isTransferHub: false,
     isFavorite: true,
     mapPosition: { xPct: 68, yPct: 70 },
+    latLng: { lat: 37.4836, lng: 127.0326 },
   },
   {
     id: "seoul-natl-univ-of-edu",
@@ -51,6 +50,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     isTransferHub: false,
     isFavorite: false,
     mapPosition: { xPct: 40, yPct: 22 },
+    latLng: { lat: 37.4935, lng: 127.0144 },
   },
 ];
 
@@ -83,11 +83,15 @@ export const STOP_DETAILS: Record<string, StopDetail> = {
       note: "비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.",
     },
     arrivals: [
-      { route: "146번", stopsAway: 2, etaMin: 3, inVehicleLevel: "heavy" },
-      { route: "402번", stopsAway: 5, etaMin: 8, inVehicleLevel: "moderate" },
-      { route: "740번", stopsAway: 8, etaMin: 12, inVehicleLevel: "relaxed" },
+      { route: "146번", direction: "청계산입구", message: "3분후[2번째 전]" },
+      { route: "402번", direction: "염곡동", message: "8분후[5번째 전]" },
+      { route: "740번", direction: "국민대", message: "12분후[8번째 전]" },
     ],
-    hourly: HOURLY_VALUES.map(([hour, value]) => ({ hour, value })),
+    hourly: HOURLY_VALUES.map(([hour, value]) => ({
+      hour,
+      value,
+      level: congestionLevelFromValue(value),
+    })),
     stats: { todayAvgPct: 63, peakHour: 18, dayOverDayPct: 9 },
   },
 };
