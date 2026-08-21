@@ -76,7 +76,12 @@ class ArrivalsResponse(BaseModel):
 
 
 class StopContextResponse(BaseModel):
-    """Weather + day-type context for one stop on one date (issue #47)."""
+    """Weather + day-type context for one stop on one date (issue #47).
+
+    precipitation_type is a normalized display label (맑음/비/눈 등). is_forecast=True
+    means the fields came from a short-range forecast rather than an observed
+    reading; precipitation/snowfall are 0.0 on forecast rows.
+    """
 
     stop_id: int
     name: str
@@ -87,4 +92,6 @@ class StopContextResponse(BaseModel):
     humidity: float
     snowfall: float
     wind_speed: float
+    precipitation_type: str
+    is_forecast: bool
     congestion_note: str

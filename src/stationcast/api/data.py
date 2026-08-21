@@ -12,9 +12,9 @@ a plain in-memory constant with no ingest step to run.
 
 ``weather``, ``holiday``, ``features_daily``, ``weekday_weather_factor``
 back the /stops/{id}/context endpoint (issue #47, #78) and are the direct
-parquet outputs of features/demand_factors.py (issue #10, #69):
-- weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속
-- holiday: 사용일자·공휴일명
+parquet outputs of features/demand_factors.py and ingest/holiday.py:
+- weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속 (weather_daily.parquet)
+- holiday: 사용일자·공휴일명 (holiday_daily_all.parquet, 범위 무제한)
 - features_daily: 표준버스정류장ID·사용일자·요일구분·날씨구분·기온구분 등
   (요일×날씨×기온 라벨 조회용 -- 12그룹 보정계수의 컬럼명을 구성하는 데 씀)
 - weekday_weather_factor: 표준버스정류장ID·정류장명·요일구분×날씨구분×기온구분
@@ -38,7 +38,7 @@ class CorridorData:
     wait: 표준버스정류장ID·정류장명·시간대·W (corridor_wait.parquet)
     capacity: 표준버스정류장ID·포용인원 (build_stop_capacity())
     weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속 (weather_daily.parquet)
-    holiday: 사용일자·공휴일명 (holiday_daily.parquet)
+    holiday: 사용일자·공휴일명 (holiday_daily_all.parquet, 범위 무제한)
     features_daily: 표준버스정류장ID·사용일자·요일구분·날씨구분·기온구분 등
         (corridor_features_daily.parquet)
     weekday_weather_factor: 표준버스정류장ID·보정계수_승차_<요일구분>_<날씨구분>_<기온구분> 등
@@ -60,7 +60,7 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     wait = pd.read_parquet(data_dir / "corridor_wait.parquet")
     capacity = build_stop_capacity()
     weather = pd.read_parquet(data_dir / "weather_daily.parquet")
-    holiday = pd.read_parquet(data_dir / "holiday_daily.parquet")
+    holiday = pd.read_parquet(data_dir / "holiday_daily_all.parquet")
     features_daily = pd.read_parquet(data_dir / "corridor_features_daily.parquet")
     weekday_weather_factor = pd.read_parquet(data_dir / "weekday_weather_factor.parquet")
     return CorridorData(

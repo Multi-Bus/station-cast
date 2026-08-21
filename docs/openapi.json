@@ -233,7 +233,7 @@
         "type": "object"
       },
       "StopContextResponse": {
-        "description": "Weather + day-type context for one stop on one date (issue #47).",
+        "description": "Weather + day-type context for one stop on one date (issue #47).\n\nprecipitation_type is a normalized display label (맑음/비/눈 등). is_forecast=True\nmeans the fields came from a short-range forecast rather than an observed\nreading; precipitation/snowfall are 0.0 on forecast rows.",
         "properties": {
           "congestion_note": {
             "title": "Congestion Note",
@@ -251,6 +251,10 @@
             "title": "Humidity",
             "type": "number"
           },
+          "is_forecast": {
+            "title": "Is Forecast",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -258,6 +262,10 @@
           "precipitation": {
             "title": "Precipitation",
             "type": "number"
+          },
+          "precipitation_type": {
+            "title": "Precipitation Type",
+            "type": "string"
           },
           "snowfall": {
             "title": "Snowfall",
@@ -286,6 +294,8 @@
           "humidity",
           "snowfall",
           "wind_speed",
+          "precipitation_type",
+          "is_forecast",
           "congestion_note"
         ],
         "title": "StopContextResponse",
@@ -595,7 +605,7 @@
     },
     "/stops/{stop_id}/context": {
       "get": {
-        "description": "Weather + day-type context for one stop on one date (default: today).",
+        "description": "Weather + day-type context for one stop on one date (default: today).\n\nHistorical dates (within weather_daily.parquet's collection window) use\nobserved ASOS data. Dates outside that window -- typically \"오늘\" once the\nwindow rolls past its end date -- fall back to KMA's short-range forecast\n(ingest/weather_forecast.py), flagged is_forecast=True.",
         "operationId": "get_context_stops__stop_id__context_get",
         "parameters": [
           {

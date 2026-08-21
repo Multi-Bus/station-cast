@@ -35,3 +35,25 @@ def test_build_holiday_daily_collapses_same_day_holidays() -> None:
     row = result[result["사용일자"] == 20260505].iloc[0]
     assert row["공휴일명"] == "어린이날·부처님오신날"
     assert len(result[result["사용일자"] == 20260505]) == 1  # one row, not two
+
+
+def test_build_holiday_daily_drops_non_holiday_rows() -> None:
+    raw = pd.DataFrame(
+        {
+            "dateKind": ["01", "01"],
+            "dateName": ["광복절", "식목일"],
+            "isHoliday": ["Y", "N"],
+            "locdate": [20250815, 20250405],
+            "seq": [1, 1],
+        }
+    )
+
+    result = build_holiday_daily(raw, start=20250101, end=20251231)
+
+    assert set(result["사용일자"]) == {20250815}
+
+
+def test_build_holiday_daily_unbounded_keeps_dates_past_the_corridor_range() -> None:
+    result = build_holiday_daily(_raw_holiday_df(), start=None, end=None)
+
+    assert 20250101 in set(result["사용일자"])  # would be dropped by the corridor range
