@@ -108,7 +108,7 @@ def main() -> int:
         ("holiday_daily", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
         ("stop_capacity", lambda: run_stop_capacity(PROCESSED_DIR)),
         (
-            "corridor_features_daily, weekday_holiday_factor, weekday_weather_factor",
+            "corridor_features_daily, weekday_weather_factor",
             lambda: run_demand_factors(PROCESSED_DIR),
         ),
     ]
