@@ -19,12 +19,16 @@ function toArrivals(arrivals: ApiArrivalInfo[]): Arrival[] {
 
 function weatherFromContext(context: StopContextResponse | null): StopDetail["weather"] {
   if (!context) {
-    return { summary: "날씨 정보 없음", note: "이 날짜의 날씨 데이터가 아직 없습니다." };
+    return { summary: "날씨 정보 없음", note: "이 날짜의 날씨 데이터가 아직 없습니다.", sky: "맑음", isForecast: false };
   }
-  const sky = context.precipitation > 0 ? "비" : context.snowfall > 0 ? "눈" : "맑음";
+  const sky =
+    context.precipitation_type ??
+    (context.precipitation > 0 ? "비" : context.snowfall > 0 ? "눈" : "맑음");
   return {
     summary: `${sky} · ${context.day_type} · ${Math.round(context.temperature)}°C`,
     note: context.congestion_note,
+    sky,
+    isForecast: context.is_forecast ?? false,
   };
 }
 

@@ -42,6 +42,8 @@ export interface StopContextResponse {
   snowfall: number;
   wind_speed: number;
   congestion_note: string;
+  precipitation_type?: string;
+  is_forecast?: boolean;
 }
 
 export interface ApiArrivalInfo {

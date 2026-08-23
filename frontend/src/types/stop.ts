@@ -33,6 +33,15 @@ export function applyStopFilters(stops: NearbyStop[], activeFilters: Set<FilterK
   });
 }
 
+/** Name-only: per-stop route lists aren't available from the backend for the
+ * full corridor (only for a selected stop's live arrivals), so route-number
+ * search isn't feasible here. */
+export function applySearchQuery(stops: NearbyStop[], query: string): NearbyStop[] {
+  const trimmed = query.trim();
+  if (!trimmed) return stops;
+  return stops.filter((s) => s.name.includes(trimmed));
+}
+
 export interface NearbyStop {
   id: string;
   name: string;
@@ -65,6 +74,8 @@ export interface StopDetail extends NearbyStop {
   weather: {
     summary: string;
     note: string;
+    sky: string;
+    isForecast: boolean;
   };
   arrivals: Arrival[];
   hourly: HourlyPoint[];

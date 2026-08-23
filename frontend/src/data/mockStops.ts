@@ -81,6 +81,8 @@ export const STOP_DETAILS: Record<string, StopDetail> = {
     weather: {
       summary: "비 · 평일 · 21°C",
       note: "비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.",
+      sky: "비",
+      isForecast: false,
     },
     arrivals: [
       { route: "146번", direction: "청계산입구", message: "3분후[2번째 전]" },
