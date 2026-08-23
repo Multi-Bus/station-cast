@@ -1,14 +1,18 @@
 import { ChevronLeft, CloudRain, Share2, Star } from "lucide-react";
-import { CongestionBadge } from "./CongestionBadge";
 import { EstimateBadge } from "./EstimateBadge";
-import { CONGESTION_LABEL, congestionLevelFromValue, type StopDetail } from "../types/stop";
+import {
+  CONGESTION_LABEL,
+  congestionLevelFromValue,
+  type CongestionLevel,
+  type StopDetail,
+} from "../types/stop";
 import "./StopDetailView.css";
 
-function barColor(value: number): string {
-  if (value >= 70) return "var(--congestion-heavy-bg)";
-  if (value >= 40) return "var(--congestion-moderate-bg)";
-  return "var(--congestion-relaxed-bg)";
-}
+const BAR_COLOR: Record<CongestionLevel, string> = {
+  heavy: "var(--congestion-heavy-bg)",
+  moderate: "var(--congestion-moderate-bg)",
+  relaxed: "var(--congestion-relaxed-bg)",
+};
 
 export function StopDetailView({
   stop,
@@ -44,10 +48,11 @@ export function StopDetailView({
         </div>
       </div>
 
-      <p className="stop-detail-routes">
-        {stop.routes.join(", ")}번{stop.isTransferHub ? " · 환승 거점" : ""}
-      </p>
-      <h1 className="stop-detail-title">{stop.name}</h1>
+      {stop.isTransferHub && <p className="stop-detail-routes">환승 거점</p>}
+      <h1 className="stop-detail-title">
+        {stop.name}
+        {stop.arsNumber && <span className="stop-detail-ars-number">{stop.arsNumber}</span>}
+      </h1>
 
       <section className={`stop-hero congestion-${level}`}>
         <div className="stop-hero-top">
@@ -70,11 +75,10 @@ export function StopDetailView({
       <section className="card stop-arrivals">
         <h3 className="section-header">버스 도착 정보</h3>
         {stop.arrivals.map((a) => (
-          <div key={a.route} className="stop-arrival-row">
+          <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
             <span className="stop-arrival-route">{a.route}</span>
-            <span className="stop-arrival-meta">{a.stopsAway} 정류장 전</span>
-            <span className="stop-arrival-eta">{a.etaMin}분</span>
-            <CongestionBadge level={a.inVehicleLevel} />
+            <span className="stop-arrival-meta">{a.direction}행</span>
+            <span className="stop-arrival-eta">{a.message}</span>
           </div>
         ))}
       </section>
@@ -94,7 +98,7 @@ export function StopDetailView({
                 className="stop-hourly-bar"
                 style={{
                   height: `${Math.max(4, (h.value / peakBarValue) * 100)}%`,
-                  background: barColor(h.value),
+                  background: BAR_COLOR[h.level],
                 }}
               />
               <span className="stop-hourly-hour">{h.hour}</span>

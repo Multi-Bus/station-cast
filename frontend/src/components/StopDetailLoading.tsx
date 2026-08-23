@@ -1,16 +1,8 @@
-import { ChevronLeft, Star } from "lucide-react";
-import { CongestionBadge } from "./CongestionBadge";
-import { congestionLevelFromValue, type NearbyStop } from "../types/stop";
-// Shares StopDetailView's layout classes, so it must pull that stylesheet in
-// itself rather than relying on the sibling happening to be imported first.
+import { ChevronLeft, LoaderCircle, Star } from "lucide-react";
+import type { NearbyStop } from "../types/stop";
 import "./StopDetailView.css";
 
-/** design-data.md only has full detail sample data for one stop (강남역).
- * Other stops fall back to this instead of either fabricating detail
- * numbers or silently ignoring the tap. Still carries the same topbar
- * (back + favorite) as StopDetailView so favoriting works the same way
- * regardless of which stop the user opened. */
-export function StopDetailPending({
+export function StopDetailLoading({
   stop,
   onBack,
   onToggleFavorite,
@@ -37,8 +29,10 @@ export function StopDetailPending({
         </div>
       </div>
       <h1 className="stop-detail-title">{stop.name}</h1>
-      <CongestionBadge level={congestionLevelFromValue(stop.congestionValue)} />
-      <p className="stop-disclaimer">이 정류장의 상세 데이터는 준비 중입니다.</p>
+      <div className="stop-detail-loading">
+        <LoaderCircle className="stop-detail-loading-spinner" size={22} />
+        <span>혼잡도 정보를 불러오는 중...</span>
+      </div>
     </div>
   );
 }
