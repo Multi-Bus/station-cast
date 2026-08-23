@@ -7,6 +7,7 @@ from stationcast.features.demand_factors import (
     build_features_daily,
     build_weekday_holiday_factor,
     build_weekday_weather_factor,
+    classify_temperature,
 )
 
 
@@ -63,13 +64,18 @@ def test_build_weekday_holiday_factor_computes_ratio_and_flags_outliers() -> Non
     assert bool(row["극단치주의"]) is True  # 0.35 is below the 0.5 threshold
 
 
-def test_temp_type_splits_into_terciles() -> None:
-    temps = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0])
+def test_temp_type_uses_fixed_boundaries() -> None:
+    temps = pd.Series([-8.2, 13.9, 14.0, 25.9, 26.0, 38.0])
     labels = _temp_type(temps)
 
-    assert set(labels[:4]) == {"저온"}
-    assert set(labels[4:8]) == {"보통"}
-    assert set(labels[8:]) == {"고온"}
+    assert list(labels) == ["저온", "저온", "보통", "보통", "고온", "고온"]
+
+
+def test_classify_temperature_matches_temp_type_at_the_same_boundaries() -> None:
+    assert classify_temperature(13.9) == "저온"
+    assert classify_temperature(14.0) == "보통"
+    assert classify_temperature(25.9) == "보통"
+    assert classify_temperature(26.0) == "고온"
 
 
 def _corridor_daily_weather_temp_mix() -> pd.DataFrame:
@@ -115,9 +121,8 @@ def _weather_daily_weather_temp_mix() -> pd.DataFrame:
         20260620,
         20260621,
     ]
-    # 최고기온 1..12, one per date, chosen so an even tercile split lands
-    # exactly on the intended 저온/보통/고온 group for each row above.
-    temps = [1.0, 2.0, 3.0, 4.0, 6.0, 5.0, 7.0, 8.0, 10.0, 9.0, 11.0, 12.0]
+    # 최고기온, straddling the fixed 13.9/25.9 boundaries for each intended group.
+    temps = [5.0, 6.0, 7.0, 8.0, 18.0, 17.0, 19.0, 20.0, 30.0, 29.0, 31.0, 32.0]
     precip = [0.0, 5.0, 0.0, 10.0, 0.0, 3.0, 0.0, 6.0, 0.0, 2.0, 0.0, 4.0]
     return pd.DataFrame(
         {
