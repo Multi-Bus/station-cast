@@ -33,9 +33,9 @@ from stationcast.ingest.weather_forecast import (
     fetch_forecast_items,
 )
 
-# Must clear weather_forecast.py's own KMA call timeout (3.0s) with margin --
-# /stops/{id}/context can fall back to that live call, observed up to 1.9s.
-REQUEST_TIMEOUT_SECONDS = 3.5
+# Matches weather_forecast.py's own KMA call timeout (3.0s) -- /stops/{id}/context
+# can fall back to that live call, observed up to 1.9s.
+REQUEST_TIMEOUT_SECONDS = 3.0
 
 app = FastAPI(title="Station Cast API")
 
