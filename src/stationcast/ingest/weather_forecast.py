@@ -21,6 +21,8 @@ load_dotenv()
 FORECAST_URL = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst"
 DEFAULT_TIMEOUT = 3.0
 
+_client = httpx.Client(timeout=DEFAULT_TIMEOUT)
+
 _BASE_TIMES = ("0200", "0500", "0800", "1100", "1400", "1700", "2000", "2300")
 _BASE_TIME_PUBLISH_DELAY_MIN = 10
 
@@ -136,7 +138,7 @@ def fetch_forecast_items(
             return items
 
     try:
-        response = httpx.get(
+        response = _client.get(
             FORECAST_URL,
             params={
                 "serviceKey": _service_key(),
