@@ -27,6 +27,53 @@
   transform: translate(-50%, -50%);
 }
 
+.user-location-dot {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-user-location);
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.16),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.user-location-dot::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: var(--color-user-location);
+  animation: user-location-pulse 2.2s ease-out infinite;
+}
+
+@keyframes user-location-pulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.4;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 0.06;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-location-dot::before {
+    animation: none;
+    opacity: 0.18;
+  }
+}
+
 .map-marker-anchor {
   position: absolute;
   transform: translate(-50%, -100%);
