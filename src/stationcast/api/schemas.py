@@ -42,6 +42,7 @@ class CorridorStopSnapshot(BaseModel):
     stop_id: int
     name: str
     estimated_wait: float
+    grade: str
 
 
 class CorridorResponse(BaseModel):

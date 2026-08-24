@@ -86,7 +86,6 @@ export function StopDetailView({
         </div>
       </div>
 
-      {stop.isTransferHub && <p className="stop-detail-routes">환승 거점</p>}
       <h1 className="stop-detail-title">
         {stop.name}
         {stop.arsNumber && <span className="stop-detail-ars-number">{stop.arsNumber}</span>}
@@ -97,9 +96,7 @@ export function StopDetailView({
           <span className="stop-hero-label">{CONGESTION_LABEL[level]}</span>
           <EstimateBadge />
         </div>
-        <p className="stop-hero-body">
-          대기 약 {stop.waitEstimate}명 · 신뢰구간 {stop.waitConfidenceLow}–{stop.waitConfidenceHigh}명
-        </p>
+        <p className="stop-hero-body">대기 약 {stop.waitEstimate}명</p>
       </section>
 
       <section className="card stop-weather">
@@ -150,19 +147,8 @@ export function StopDetailView({
 
       <section className="stop-stats">
         <div className="stop-stat card">
-          <span className="stop-stat-label">오늘 평균</span>
-          <span className="stop-stat-value">{stop.stats.todayAvgPct}%</span>
-        </div>
-        <div className="stop-stat card">
           <span className="stop-stat-label">최고 혼잡</span>
           <span className="stop-stat-value">{stop.stats.peakHour}시</span>
-        </div>
-        <div className="stop-stat card">
-          <span className="stop-stat-label">전일 대비</span>
-          <span className="stop-stat-value">
-            {stop.stats.dayOverDayPct > 0 ? "+" : ""}
-            {stop.stats.dayOverDayPct}%
-          </span>
         </div>
       </section>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getCongestion, getStops } from "../api/client";
+import { getCorridor, getStops } from "../api/client";
 import { NEARBY_STOPS } from "../data/mockStops";
 import type { NearbyStop } from "../types/stop";
 
@@ -34,25 +34,30 @@ export function useCorridorStops(): {
 
     async function run() {
       try {
-        const { stops: apiStops } = await getStops();
-        const built = await Promise.all(
-          apiStops.map(async (s, index) => {
-            const congestion = await getCongestion(s.stop_id);
-            return {
+        const [{ stops: apiStops }, { stops: snapshots }] = await Promise.all([
+          getStops(),
+          getCorridor(),
+        ]);
+        const snapshotByStopId = new Map(snapshots.map((s) => [s.stop_id, s]));
+
+        const built = apiStops.flatMap((s, index) => {
+          const snapshot = snapshotByStopId.get(s.stop_id);
+          if (!snapshot) return [];
+          return [
+            {
               id: String(s.stop_id),
               name: s.name,
               arsNumber: s.ars_number,
               routes: PLACEHOLDER_ROUTES,
               distanceM: PLACEHOLDER_DISTANCE_M,
-              waitEstimate: Math.round(congestion.estimated_wait),
-              congestionValue: congestionValueFromGrade(congestion.grade),
-              isTransferHub: false,
+              waitEstimate: Math.round(snapshot.estimated_wait),
+              congestionValue: congestionValueFromGrade(snapshot.grade),
               isFavorite: false,
               mapPosition: placeholderMapPosition(index),
               latLng: { lat: s.lat, lng: s.lon },
-            } satisfies NearbyStop;
-          }),
-        );
+            } satisfies NearbyStop,
+          ];
+        });
         if (!cancelled) {
           setStops(built);
           setUsingMock(false);

@@ -220,13 +220,6 @@ export function MapScreen({
           >
             혼잡 {heavyCount}
           </button>
-          <button
-            className={`chip ${activeFilters.has("transferHub") ? "chip-on" : ""}`}
-            aria-pressed={activeFilters.has("transferHub")}
-            onClick={() => onToggleFilter("transferHub")}
-          >
-            환승 거점
-          </button>
         </div>
       </div>
 

@@ -11,7 +11,6 @@ export const NEARBY_STOPS: NearbyStop[] = [
     distanceM: 120,
     waitEstimate: 42,
     congestionValue: 82,
-    isTransferHub: true,
     isFavorite: true,
     mapPosition: { xPct: 52, yPct: 44 },
     latLng: { lat: 37.4979, lng: 127.0276 },
@@ -23,7 +22,6 @@ export const NEARBY_STOPS: NearbyStop[] = [
     distanceM: 280,
     waitEstimate: 14,
     congestionValue: 54,
-    isTransferHub: false,
     isFavorite: false,
     mapPosition: { xPct: 30, yPct: 60 },
     latLng: { lat: 37.5007, lng: 127.0364 },
@@ -35,7 +33,6 @@ export const NEARBY_STOPS: NearbyStop[] = [
     distanceM: 410,
     waitEstimate: 46,
     congestionValue: 91,
-    isTransferHub: false,
     isFavorite: true,
     mapPosition: { xPct: 68, yPct: 70 },
     latLng: { lat: 37.4836, lng: 127.0326 },
@@ -47,7 +44,6 @@ export const NEARBY_STOPS: NearbyStop[] = [
     distanceM: 560,
     waitEstimate: 5,
     congestionValue: 23,
-    isTransferHub: false,
     isFavorite: false,
     mapPosition: { xPct: 40, yPct: 22 },
     latLng: { lat: 37.4935, lng: 127.0144 },
@@ -76,8 +72,6 @@ const HOURLY_VALUES: [number, number][] = [
 export const STOP_DETAILS: Record<string, StopDetail> = {
   gangnam: {
     ...NEARBY_STOPS[0],
-    waitConfidenceLow: 34,
-    waitConfidenceHigh: 51,
     weather: {
       summary: "비 · 평일 · 21°C",
       note: "비 오는 평일 저녁은 평소보다 대기 인원이 12% 늘어나는 경향이 있습니다.",
@@ -94,6 +88,6 @@ export const STOP_DETAILS: Record<string, StopDetail> = {
       value,
       level: congestionLevelFromValue(value),
     })),
-    stats: { todayAvgPct: 63, peakHour: 18, dayOverDayPct: 9 },
+    stats: { peakHour: 18 },
   },
 };
