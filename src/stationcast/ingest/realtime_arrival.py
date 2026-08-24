@@ -21,6 +21,8 @@ load_dotenv()
 ARRIVAL_URL = "http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid"
 DEFAULT_TIMEOUT = 3.0
 
+_client = httpx.Client(timeout=DEFAULT_TIMEOUT)
+
 _NO_DATA_HEADER_CD = "4"
 """TOPIS's own code for "결과가 없습니다" -- no buses currently scheduled for
 this stop, not a service failure. Returned as an empty arrival list rather
@@ -56,7 +58,7 @@ def fetch_arrivals(ars_id: str, timeout: float = DEFAULT_TIMEOUT) -> list[dict[s
     plain HTTP 401 rather than a headerCd -- caught by raise_for_status()).
     """
     try:
-        response = httpx.get(
+        response = _client.get(
             ARRIVAL_URL,
             params={"serviceKey": _service_key(), "arsId": ars_id},
             timeout=timeout,

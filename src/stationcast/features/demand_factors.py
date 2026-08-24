@@ -111,6 +111,82 @@ def factor_column_name(value: str, day_type: str, weather_type: str, temp_type: 
     return f"{value}_{day_type}_{weather_type}_{temp_type}"
 
 
+def classify_day_type(date: int, holiday_dates: set[int]) -> str:
+    """Classify a date as 공휴일 > 주말 > 평일 (holiday takes priority over weekend).
+
+    Single-value, 3-way counterpart to _day_type() (moved from api/main.py,
+    issue #107) -- used by /stops/{id}/context, which needs the display
+    label (공휴일 vs 주말 kept separate), unlike _day_type()'s 2-way
+    평일/주말+공휴일 grouping used for the correction-factor tables.
+    """
+    if date in holiday_dates:
+        return "공휴일"
+    dow = pd.to_datetime(str(date), format="%Y%m%d").dayofweek
+    return "주말" if dow >= 5 else "평일"
+
+
+def precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) -> str:
+    """맑음/비/눈 근사 라벨(과거 관측 ASOS 데이터 기준). Moved from api/main.py (issue #107)."""
+    if snowfall_cm > 0:
+        return "눈"
+    if precipitation_mm > 0:
+        return "비"
+    return "맑음"
+
+
+def boarding_factor_for_labels(
+    weekday_weather_factor: pd.DataFrame,
+    stop_id: int,
+    weekday_group: str,
+    weather_group: str,
+    temp_group: str,
+) -> float:
+    """보정계수_승차 for one stop's (요일구분, 날씨구분, 기온구분) group. Moved from
+    api/main.py (issue #107); takes the parquet DataFrame directly rather
+    than api/data.py's CorridorData, so features/ doesn't depend on api/.
+    """
+    if (weekday_group, weather_group, temp_group) == ("평일", "맑음", "보통"):
+        return 1.0
+
+    factor_row = weekday_weather_factor[weekday_weather_factor["표준버스정류장ID"] == stop_id]
+    column = factor_column_name("보정계수_승차", weekday_group, weather_group, temp_group)
+    return float(factor_row[column].iloc[0])
+
+
+def boarding_factor(
+    features_daily: pd.DataFrame,
+    weekday_weather_factor: pd.DataFrame,
+    stop_id: int,
+    date: int,
+) -> float:
+    """boarding_factor_for_labels(), looking up the date's labels from
+    features_daily. Moved from api/main.py (issue #107)."""
+    features_row = features_daily[
+        (features_daily["표준버스정류장ID"] == stop_id) & (features_daily["사용일자"] == date)
+    ].iloc[0]
+    return boarding_factor_for_labels(
+        weekday_weather_factor,
+        stop_id,
+        str(features_row["요일구분"]),
+        str(features_row["날씨구분"]),
+        str(features_row["기온구분"]),
+    )
+
+
+def congestion_note(day_type: str, boarding_factor: float) -> str:
+    """Human-readable explanation of the day-type correction factor. Moved
+    from api/main.py (issue #107).
+
+    boarding_factor is 보정계수_승차 (해당 요일×날씨×기온 그룹 평균승차 / 기준선
+    평균승차) from weekday_weather_factor.parquet, via boarding_factor() above.
+    """
+    if day_type == "평일":
+        return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
+    percent = round(abs(boarding_factor - 1.0) * 100)
+    direction = "낮을" if boarding_factor < 1.0 else "높을"
+    return f"{day_type}이라 평소보다 혼잡도가 약 {percent}% {direction} 것으로 예상됩니다."
+
+
 def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     """Per-stop 요일구분×날씨구분×기온구분(12그룹) average ratio for 승차/하차.
 
