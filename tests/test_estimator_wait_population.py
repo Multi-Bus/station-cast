@@ -132,6 +132,25 @@ def test_flagged_no_schedule_route_also_falls_back_to_median() -> None:
     assert result.iloc[0]["W"] == pytest.approx(expected_total)
 
 
+def test_stop_with_no_schedule_data_on_any_route_raises_instead_of_nan() -> None:
+    # Every route serving STOP has no schedule row -- the median fallback
+    # itself has nothing to fall back to. Should raise, not silently produce
+    # a NaN W (issue #109: a fully-missing stop used to pass through as NaN).
+    hourly = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP, STOP],
+            "정류장명": ["종로2가", "종로2가"],
+            "노선번호": ["777", "888"],
+            "시간대": [8, 8],
+            "승차": [30.0, 20.0],
+        }
+    )
+    empty_schedule = _route_schedule().iloc[0:0]
+
+    with pytest.raises(ValueError, match=str(STOP)):
+        estimate_wait(hourly, empty_schedule)
+
+
 def test_filters_by_day_type() -> None:
     schedule = pd.DataFrame(
         {

@@ -114,13 +114,22 @@ def fill_missing_headway(
     apart was the risk (each module's own tests would still pass even if the
     fallback diverged, since neither compares against the other).
 
-    A stop with no route carrying a value in some column falls back to NaN
-    (median of an all-missing group) -- issue #109 covers guarding that case
-    explicitly instead of letting it flow through silently.
+    Raises ValueError if a stop has *no* route with a value in some column
+    (issue #109): the median itself is then undefined (NaN), and letting
+    that NaN flow through would silently turn into a NaN W or capacity
+    figure downstream instead of a visible failure.
     """
     merged = merged.copy()
     for col in columns:
         merged[col] = merged[col].fillna(merged.groupby(group_col)[col].transform("median"))
+
+    still_missing = merged[merged[list(columns)].isna().any(axis=1)]
+    if not still_missing.empty:
+        stop_ids = sorted(int(s) for s in still_missing[group_col].unique())
+        raise ValueError(
+            f"no schedule data for any route at stop(s) {stop_ids} in columns "
+            f"{list(columns)} -- median fallback has nothing to fall back to"
+        )
     return merged
 
 
