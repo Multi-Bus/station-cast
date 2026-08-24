@@ -6,14 +6,12 @@ oa12913.py) with that route's headway and fleet size
 (서울시버스노선기본정보).
 """
 
-import re
 from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest._common import clean_stop_name, read_cp949_csv
 from stationcast.ingest.oa12913 import CORRIDOR_NIGHT_BUS_ROUTES, CORRIDOR_STOP_IDS
-
-_NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
 
 _SHEET_TO_DAY_TYPE = {
     "평일공동배차": "평일",
@@ -22,11 +20,6 @@ _SHEET_TO_DAY_TYPE = {
 }
 
 _SCHEDULE_COLUMNS = ["노선번호", "요일유형", "배차간격", "인가대수", "최소배차", "최대배차"]
-
-
-def _clean_stop_name(name: object) -> str:
-    """Strip the trailing per-route sequence number from a raw 역명 value."""
-    return _NAME_SUFFIX_RE.sub("", str(name))
 
 
 def load_route_schedule(xlsx_path: Path) -> pd.DataFrame:
@@ -74,7 +67,7 @@ def build_corridor_route_schedule(
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
-    sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     sub["노선번호"] = sub["노선번호"].astype(str)
     corridor_routes = sub[["표준버스정류장ID", "정류장명", "노선번호"]].drop_duplicates()
 
@@ -106,7 +99,7 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     boarding_csv = next(raw_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
     schedule_xlsx = next(raw_dir.glob("*버스노선기본정보*.xlsx"))
 
-    boarding_df = pd.read_csv(boarding_csv, encoding="cp949", low_memory=False)
+    boarding_df = read_cp949_csv(boarding_csv, low_memory=False)
     route_schedule = load_route_schedule(schedule_xlsx)
 
     schedule = build_corridor_route_schedule(boarding_df, route_schedule)

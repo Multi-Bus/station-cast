@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest._common import clean_stop_name, read_cp949_csv
+
 # Jongno-Myeongdong-Euljiro corridor: 21 stops confirmed in data/README.md
 CORRIDOR_STOP_IDS: tuple[int, ...] = (
     100000385,
@@ -53,23 +55,17 @@ CORRIDOR_NIGHT_BUS_ROUTES: tuple[str, ...] = (
     "N75",
 )
 
-_NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
 _HOUR_RE = re.compile(r"(\d+)시")
-
-
-def _clean_stop_name(name: object) -> str:
-    """Strip the trailing per-route sequence number from a raw 역명 value."""
-    return _NAME_SUFFIX_RE.sub("", str(name))
 
 
 def load_boarding_alighting(csv_path: Path) -> pd.DataFrame:
     """Load the raw OA-12913 monthly CSV (cp949-encoded)."""
-    return pd.read_csv(csv_path, encoding="cp949", low_memory=False)
+    return read_cp949_csv(csv_path, low_memory=False)
 
 
 def load_stop_coordinates(csv_path: Path) -> pd.DataFrame:
     """Load the Seoul bus stop coordinate CSV (cp949-encoded)."""
-    return pd.read_csv(csv_path, encoding="cp949", low_memory=False)
+    return read_cp949_csv(csv_path, low_memory=False)
 
 
 def _days_in_month(year_month: int) -> int:
@@ -97,7 +93,7 @@ def build_corridor_route_hourly(
     """
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
-    sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     sub["노선번호"] = sub["노선번호"].astype(str)
 
     days = _days_in_month(boarding_df["사용년월"].iloc[0])
@@ -133,7 +129,7 @@ def build_corridor_stops(
 ) -> pd.DataFrame:
     """Build per-stop metadata (name, ARS number, coordinates) for the corridor."""
     sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
-    sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     meta = sub[["표준버스정류장ID", "정류장명", "버스정류장ARS번호"]].drop_duplicates(
         subset="표준버스정류장ID"
     )
