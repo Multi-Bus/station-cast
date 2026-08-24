@@ -139,6 +139,8 @@ export function MapScreen({
   visibleStops,
   activeFilters,
   onToggleFilter,
+  searchQuery,
+  onSearchQueryChange,
   selectedStopId,
   sheetHeightPx,
   controlsHidden,
@@ -152,6 +154,8 @@ export function MapScreen({
   visibleStops: NearbyStop[];
   activeFilters: Set<FilterKey>;
   onToggleFilter: (key: FilterKey) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
   selectedStopId: string | null;
   sheetHeightPx: number;
   controlsHidden: boolean;
@@ -198,7 +202,14 @@ export function MapScreen({
       <div className="map-floating-top">
         <div className="search-bar">
           <Search size={15} color="var(--neutral-500)" />
-          <span className="search-bar-placeholder">정류장, 노선, 주소 검색</span>
+          <input
+            className="search-bar-input"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            placeholder="정류장 이름 검색"
+            aria-label="정류장 이름 검색"
+          />
           <span className="search-bar-profile">SC</span>
         </div>
         <div className="filter-chip-row">

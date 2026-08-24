@@ -1,4 +1,5 @@
-import { ChevronLeft, CloudRain, Share2, Star } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, Cloud, CloudRain, CloudSnow, Share2, Star, Sun } from "lucide-react";
 import { EstimateBadge } from "./EstimateBadge";
 import {
   CONGESTION_LABEL,
@@ -14,6 +15,34 @@ const BAR_COLOR: Record<CongestionLevel, string> = {
   relaxed: "var(--congestion-relaxed-bg)",
 };
 
+function WeatherIcon({ sky }: { sky: string }) {
+  if (sky.includes("눈")) return <CloudSnow size={20} />;
+  if (sky.includes("비")) return <CloudRain size={20} />;
+  if (sky === "맑음") return <Sun size={20} />;
+  return <Cloud size={20} />;
+}
+
+async function shareStop(stop: StopDetail): Promise<"shared" | "copied" | "failed"> {
+  const level = congestionLevelFromValue(stop.congestionValue);
+  const text = `${stop.name} - 현재 ${CONGESTION_LABEL[level]}, 대기 약 ${stop.waitEstimate}명`;
+  const url = window.location.href;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: stop.name, text, url });
+      return "shared";
+    } catch {
+      return "failed";
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`);
+    return "copied";
+  } catch {
+    return "failed";
+  }
+}
+
 export function StopDetailView({
   stop,
   onBack,
@@ -25,6 +54,15 @@ export function StopDetailView({
 }) {
   const level = congestionLevelFromValue(stop.congestionValue);
   const peakBarValue = Math.max(...stop.hourly.map((h) => h.value));
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
+
+  async function handleShare() {
+    const result = await shareStop(stop);
+    if (result === "copied") {
+      setShareStatus("copied");
+      setTimeout(() => setShareStatus("idle"), 2000);
+    }
+  }
 
   return (
     <div className="stop-detail">
@@ -42,8 +80,8 @@ export function StopDetailView({
             즐겨찾기
           </button>
           <span aria-hidden="true">·</span>
-          <button aria-label="공유 (준비 중)" disabled>
-            <Share2 size={14} /> 공유
+          <button aria-label="정류장 정보 공유" onClick={handleShare}>
+            <Share2 size={14} /> {shareStatus === "copied" ? "복사됨" : "공유"}
           </button>
         </div>
       </div>
@@ -65,9 +103,12 @@ export function StopDetailView({
       </section>
 
       <section className="card stop-weather">
-        <CloudRain size={20} />
+        <WeatherIcon sky={stop.weather.sky} />
         <div>
-          <p className="stop-weather-summary">{stop.weather.summary}</p>
+          <p className="stop-weather-summary">
+            {stop.weather.summary}
+            {stop.weather.isForecast && <span className="forecast-badge">예보</span>}
+          </p>
           <p className="stop-weather-note">{stop.weather.note}</p>
         </div>
       </section>

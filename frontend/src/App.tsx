@@ -11,27 +11,36 @@ import { useBottomSheet } from "./hooks/useBottomSheet";
 import { useCorridorStops } from "./hooks/useCorridorStops";
 import { useFavorites } from "./hooks/useFavorites";
 import { useStopDetail } from "./hooks/useStopDetail";
-import { applyStopFilters, type FilterKey } from "./types/stop";
+import { useUserLocation } from "./hooks/useUserLocation";
+import { applySearchQuery, applyStopFilters, type FilterKey } from "./types/stop";
+import { haversineDistanceM } from "./utils/geo";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("map");
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
   const sheet = useBottomSheet("peek");
   const { favorites, toggle: toggleFavorite } = useFavorites([]);
   const { stops: corridorStops, loading: stopsLoading, usingMock } = useCorridorStops();
+  const location = useUserLocation();
 
-  const stops = useMemo(
-    () => corridorStops.map((s) => ({ ...s, isFavorite: favorites.includes(s.id) })),
-    [corridorStops, favorites],
-  );
+  const stops = useMemo(() => {
+    const withFavorites = corridorStops.map((s) => ({ ...s, isFavorite: favorites.includes(s.id) }));
+    if (!location.position) return withFavorites;
+    const withDistance = withFavorites.map((s) => ({
+      ...s,
+      distanceM: haversineDistanceM(location.position!, s.latLng),
+    }));
+    return withDistance.sort((a, b) => a.distanceM - b.distanceM);
+  }, [corridorStops, favorites, location.position]);
 
   // Filters live here, not inside MapScreen, so the sheet's list (screen ②)
   // and the map's markers can never disagree about which stops are shown.
-  const visibleStops = useMemo(
-    () => applyStopFilters(stops, activeFilters),
-    [stops, activeFilters],
-  );
+  const visibleStops = useMemo(() => {
+    const filtered = applyStopFilters(stops, activeFilters);
+    return applySearchQuery(filtered, searchQuery);
+  }, [stops, activeFilters, searchQuery]);
 
   function toggleFilter(key: FilterKey) {
     setActiveFilters((prev) => {
@@ -70,6 +79,7 @@ export default function App() {
   function recenter() {
     setSelectedStopId(null);
     sheet.setSnap("peek");
+    location.retry();
   }
 
   const selectedStop = selectedStopId ? stops.find((s) => s.id === selectedStopId) : undefined;
@@ -84,6 +94,8 @@ export default function App() {
             visibleStops={visibleStops}
             activeFilters={activeFilters}
             onToggleFilter={toggleFilter}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
             selectedStopId={selectedStopId}
             sheetHeightPx={sheet.heightPx}
             controlsHidden={sheet.snap === "full"}

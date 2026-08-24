@@ -93,11 +93,20 @@
   box-shadow: var(--shadow-floating);
 }
 
-.search-bar-placeholder {
+.search-bar-input {
   flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
   font-size: 14px;
-  color: var(--neutral-500);
+  color: var(--color-text);
   text-align: left;
+}
+
+.search-bar-input::placeholder {
+  color: var(--neutral-500);
 }
 
 .search-bar-profile {
