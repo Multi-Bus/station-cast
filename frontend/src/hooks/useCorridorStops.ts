@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
 import { getCorridor, getStops } from "../api/client";
 import { NEARBY_STOPS } from "../data/mockStops";
-import type { NearbyStop } from "../types/stop";
+import { congestionLevelFromGrade, type NearbyStop } from "../types/stop";
 
 const PLACEHOLDER_ROUTES: string[] = [];
 const PLACEHOLDER_DISTANCE_M = 0;
-
-function congestionValueFromGrade(grade: string): number {
-  if (grade === "혼잡") return 85;
-  if (grade === "보통") return 55;
-  return 15;
-}
 
 function placeholderMapPosition(index: number): { xPct: number; yPct: number } {
   const cols = 4;
@@ -51,7 +45,7 @@ export function useCorridorStops(): {
               routes: PLACEHOLDER_ROUTES,
               distanceM: PLACEHOLDER_DISTANCE_M,
               waitEstimate: Math.round(snapshot.estimated_wait),
-              congestionValue: congestionValueFromGrade(snapshot.grade),
+              congestionLevel: congestionLevelFromGrade(snapshot.grade),
               isFavorite: false,
               mapPosition: placeholderMapPosition(index),
               latLng: { lat: s.lat, lng: s.lon },

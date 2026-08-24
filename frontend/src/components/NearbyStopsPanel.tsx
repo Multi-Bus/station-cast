@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { CongestionBadge } from "./CongestionBadge";
 import { EstimateBadge } from "./EstimateBadge";
-import { congestionLevelFromValue, type NearbyStop } from "../types/stop";
+import type { NearbyStop } from "../types/stop";
 import "./NearbyStopsPanel.css";
 
 export function NearbyStopsPanel({
@@ -47,7 +47,7 @@ export function NearbyStopsPanel({
       )}
       <ul className="nearby-rows">
         {stops.map((stop) => {
-          const level = congestionLevelFromValue(stop.congestionValue);
+          const level = stop.congestionLevel;
           return (
             <li key={stop.id} className="nearby-row">
               {/* The star is a sibling, not a child: nesting a button inside a
