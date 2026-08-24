@@ -6,6 +6,7 @@ oa12913.py) with that route's headway and fleet size
 (서울시버스노선기본정보).
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 
 import pandas as pd
@@ -92,6 +93,35 @@ def build_corridor_route_schedule(
         .sort_values(["표준버스정류장ID", "요일유형", "노선번호"])
         .reset_index(drop=True)
     )
+
+
+def fill_missing_headway(
+    merged: pd.DataFrame, columns: Sequence[str], group_col: str = "표준버스정류장ID"
+) -> pd.DataFrame:
+    """Fill missing headway-derived columns with the same stop's other routes' median.
+
+    ``merged`` is route_hourly (or route_hourly x route_schedule for a
+    capacity check) left-joined against corridor_route_schedule -- rows with
+    no matching schedule, or flagged 배차정보없음 and pre-filtered out before
+    the join, land here with NaN in ``columns`` (e.g. 배차간격, 최소배차,
+    최대배차). A single route missing schedule data shouldn't zero out or
+    drop that route's real boarding count, so it borrows the median of the
+    *other* routes serving the same stop that hour instead.
+
+    Shared by estimator/wait_population.py's W(s,t) calculation and
+    validate/physical_constraints.py's capacity check, which used to
+    reimplement this fallback separately -- letting the two silently drift
+    apart was the risk (each module's own tests would still pass even if the
+    fallback diverged, since neither compares against the other).
+
+    A stop with no route carrying a value in some column falls back to NaN
+    (median of an all-missing group) -- issue #109 covers guarding that case
+    explicitly instead of letting it flow through silently.
+    """
+    merged = merged.copy()
+    for col in columns:
+        merged[col] = merged[col].fillna(merged.groupby(group_col)[col].transform("median"))
+    return merged
 
 
 def run(raw_dir: Path, out_dir: Path) -> None:
