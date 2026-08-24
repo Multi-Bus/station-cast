@@ -66,14 +66,18 @@ def missing_inputs() -> list[str]:
 
 
 def newest_match(directory: Path, pattern: str) -> Path:
-    """Pick the newest file matching ``pattern``, by filename.
+    """Pick the most recently downloaded file matching ``pattern``, by mtime.
 
-    The 기상청 download names files OBS_ASOS_DD_<yyyymmddhhmmss>.csv, so a
-    re-download leaves the superseded file sitting next to the new one and
-    the timestamps sort chronologically. Taking the newest keeps a stale
-    download from silently becoming the pipeline's input.
+    Re-downloading leaves the superseded file sitting next to the new one,
+    so something has to break the tie. Filename order can't: 기상청 names
+    files OBS_ASOS_DD_<yyyymmddhhmmss>.csv (sorts chronologically) but the
+    특일정보 dump is named by the year range it covers, so the 3-year
+    SPCDE_HOLIDAY_2023_2026.csv sorts *before* the 1-year
+    SPCDE_HOLIDAY_2025_2026.csv it replaced -- picking by name would feed
+    the pipeline the stale, narrower file. Modification time is the one
+    signal that means the same thing for every source.
     """
-    return max(sorted(directory.glob(pattern)))
+    return max(directory.glob(pattern), key=lambda path: path.stat().st_mtime)
 
 
 def main() -> int:
