@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest.route_schedule import fill_missing_headway
+
 BUS_CAPACITY = 46.0
 """Assumed 정원 (seated + standing) for every route in the corridor, since
 no per-route vehicle-capacity data exists yet -- parallel to
@@ -79,16 +81,16 @@ def capacity_violation_report(
     have been left behind, because there was room to spare.
 
     Missing headway (no schedule row, or flagged 배차정보없음) falls back
-    to the median headway of the stop's other routes that hour, same as
-    estimator/wait_population.py.
+    to the median headway of the stop's other routes that hour via
+    ingest.route_schedule.fill_missing_headway, shared with
+    estimator/wait_population.py so the two can't silently apply different
+    fallback rules to the same gap.
     """
     schedule = route_schedule[route_schedule["요일유형"] == day_type]
     schedule = schedule[~schedule["배차정보없음"]][["표준버스정류장ID", "노선번호", "배차간격"]]
 
     merged = route_hourly.merge(schedule, on=["표준버스정류장ID", "노선번호"], how="left")
-    merged["배차간격"] = merged["배차간격"].fillna(
-        merged.groupby("표준버스정류장ID")["배차간격"].transform("median")
-    )
+    merged = fill_missing_headway(merged, ["배차간격"])
 
     merged["수송능력"] = (60 / merged["배차간격"]) * bus_capacity
     merged["이월"] = (merged["승차"] - merged["수송능력"]).clip(lower=0.0)
