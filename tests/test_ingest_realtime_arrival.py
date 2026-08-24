@@ -3,6 +3,7 @@
 import httpx
 import pytest
 
+from stationcast.ingest import realtime_arrival
 from stationcast.ingest.realtime_arrival import ArrivalInfoUnavailable, fetch_arrivals
 
 _SUCCESS_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -40,7 +41,9 @@ def _set_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_fetch_arrivals_parses_items_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse(_SUCCESS_XML))
+    monkeypatch.setattr(
+        realtime_arrival._client, "get", lambda *a, **kw: _FakeResponse(_SUCCESS_XML)
+    )
 
     items = fetch_arrivals("01014")
 
@@ -52,13 +55,15 @@ def test_fetch_arrivals_parses_items_on_success(monkeypatch: pytest.MonkeyPatch)
 def test_fetch_arrivals_returns_empty_list_when_no_data(monkeypatch: pytest.MonkeyPatch) -> None:
     # headerCd=4 ("결과가 없습니다") is a legitimate "nothing scheduled right
     # now" state, not a failure -- must not raise.
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse(_NO_DATA_XML))
+    monkeypatch.setattr(
+        realtime_arrival._client, "get", lambda *a, **kw: _FakeResponse(_NO_DATA_XML)
+    )
 
     assert fetch_arrivals("01014") == []
 
 
 def test_fetch_arrivals_raises_on_unknown_header_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse(_ERROR_XML))
+    monkeypatch.setattr(realtime_arrival._client, "get", lambda *a, **kw: _FakeResponse(_ERROR_XML))
 
     with pytest.raises(ArrivalInfoUnavailable, match="headerCd=7"):
         fetch_arrivals("01014")
@@ -66,7 +71,9 @@ def test_fetch_arrivals_raises_on_unknown_header_code(monkeypatch: pytest.Monkey
 
 def test_fetch_arrivals_raises_on_http_error_status(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "httpx.get", lambda *a, **kw: _FakeResponse('{"error":"Unauthorized"}', status_code=401)
+        realtime_arrival._client,
+        "get",
+        lambda *a, **kw: _FakeResponse('{"error":"Unauthorized"}', status_code=401),
     )
 
     with pytest.raises(ArrivalInfoUnavailable):
@@ -77,14 +84,16 @@ def test_fetch_arrivals_raises_on_timeout(monkeypatch: pytest.MonkeyPatch) -> No
     def _raise_timeout(*a: object, **kw: object) -> None:
         raise httpx.TimeoutException("timed out")
 
-    monkeypatch.setattr("httpx.get", _raise_timeout)
+    monkeypatch.setattr(realtime_arrival._client, "get", _raise_timeout)
 
     with pytest.raises(ArrivalInfoUnavailable):
         fetch_arrivals("01014")
 
 
 def test_fetch_arrivals_raises_on_malformed_xml(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse("not xml at all <<<"))
+    monkeypatch.setattr(
+        realtime_arrival._client, "get", lambda *a, **kw: _FakeResponse("not xml at all <<<")
+    )
 
     with pytest.raises(ArrivalInfoUnavailable, match="not valid XML"):
         fetch_arrivals("01014")
@@ -108,7 +117,7 @@ def test_fetch_arrivals_sends_url_decoded_key(monkeypatch: pytest.MonkeyPatch) -
         captured["serviceKey"] = params["serviceKey"]
         return _FakeResponse(_NO_DATA_XML)
 
-    monkeypatch.setattr("httpx.get", _fake_get)
+    monkeypatch.setattr(realtime_arrival._client, "get", _fake_get)
 
     fetch_arrivals("01014")
 

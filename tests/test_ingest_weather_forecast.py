@@ -73,7 +73,9 @@ def test_is_precipitating_true_for_any_nonzero_pty() -> None:
 
 def test_fetch_forecast_items_returns_items_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
     items = [{"category": "TMP", "fcstDate": "20260821", "fcstTime": "1200", "fcstValue": "28"}]
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse(_success_body(items)))
+    monkeypatch.setattr(
+        weather_forecast._client, "get", lambda *a, **kw: _FakeResponse(_success_body(items))
+    )
 
     result = fetch_forecast_items(now=datetime(2026, 8, 21, 12, 0))
 
@@ -87,7 +89,7 @@ def test_fetch_forecast_items_caches_within_ttl(monkeypatch: pytest.MonkeyPatch)
         calls["count"] += 1
         return _FakeResponse(_success_body([]))
 
-    monkeypatch.setattr("httpx.get", _fake_get)
+    monkeypatch.setattr(weather_forecast._client, "get", _fake_get)
 
     now = datetime(2026, 8, 21, 12, 0)
     fetch_forecast_items(now=now)
@@ -100,7 +102,7 @@ def test_fetch_forecast_items_raises_on_result_code_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     body = {"response": {"header": {"resultCode": "03", "resultMsg": "NODATA"}, "body": {}}}
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse(body))
+    monkeypatch.setattr(weather_forecast._client, "get", lambda *a, **kw: _FakeResponse(body))
 
     with pytest.raises(ForecastUnavailable, match="resultCode=03"):
         fetch_forecast_items(now=datetime(2026, 8, 21, 12, 0))
@@ -110,7 +112,9 @@ def test_fetch_forecast_items_raises_on_http_error_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "httpx.get", lambda *a, **kw: _FakeResponse({"error": "Unauthorized"}, status_code=401)
+        weather_forecast._client,
+        "get",
+        lambda *a, **kw: _FakeResponse({"error": "Unauthorized"}, status_code=401),
     )
 
     with pytest.raises(ForecastUnavailable):
@@ -121,14 +125,16 @@ def test_fetch_forecast_items_raises_on_timeout(monkeypatch: pytest.MonkeyPatch)
     def _raise_timeout(*a: object, **kw: object) -> None:
         raise httpx.TimeoutException("timed out")
 
-    monkeypatch.setattr("httpx.get", _raise_timeout)
+    monkeypatch.setattr(weather_forecast._client, "get", _raise_timeout)
 
     with pytest.raises(ForecastUnavailable):
         fetch_forecast_items(now=datetime(2026, 8, 21, 12, 0))
 
 
 def test_fetch_forecast_items_raises_on_malformed_body(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("httpx.get", lambda *a, **kw: _FakeResponse({"unexpected": "shape"}))
+    monkeypatch.setattr(
+        weather_forecast._client, "get", lambda *a, **kw: _FakeResponse({"unexpected": "shape"})
+    )
 
     with pytest.raises(ForecastUnavailable, match="not parseable"):
         fetch_forecast_items(now=datetime(2026, 8, 21, 12, 0))
