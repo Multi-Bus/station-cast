@@ -2,7 +2,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 import { Layers, Navigation, Search } from "lucide-react";
 import { CustomOverlayMap, Map } from "react-kakao-maps-sdk";
 import type { UserLocationState } from "../hooks/useUserLocation";
-import { congestionLevelFromValue, type FilterKey, type NearbyStop } from "../types/stop";
+import type { FilterKey, NearbyStop } from "../types/stop";
 import "./MapScreen.css";
 
 const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
@@ -67,7 +67,7 @@ function StopMarker({
   selected: boolean;
   onSelectStop: (id: string) => void;
 }) {
-  const level = congestionLevelFromValue(stop.congestionValue);
+  const level = stop.congestionLevel;
   return (
     <button
       className={`map-marker ${selected ? "map-marker-selected" : ""}`}
@@ -185,9 +185,7 @@ export function MapScreen({
     }
   }, [stops, corridorCenter]);
 
-  const heavyCount = stops.filter(
-    (s) => congestionLevelFromValue(s.congestionValue) === "heavy",
-  ).length;
+  const heavyCount = stops.filter((s) => s.congestionLevel === "heavy").length;
 
   // Gating on "granted" is load-bearing: retry() flips the status to "pending"
   // first, and reading that as an answer would end the wait before the fix lands.

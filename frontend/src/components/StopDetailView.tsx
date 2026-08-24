@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, Cloud, CloudRain, CloudSnow, Share2, Star, Sun } from "lucide-react";
 import { EstimateBadge } from "./EstimateBadge";
-import {
-  CONGESTION_LABEL,
-  congestionLevelFromValue,
-  type CongestionLevel,
-  type StopDetail,
-} from "../types/stop";
+import { CONGESTION_LABEL, type CongestionLevel, type StopDetail } from "../types/stop";
 import "./StopDetailView.css";
 
 const BAR_COLOR: Record<CongestionLevel, string> = {
@@ -23,8 +18,7 @@ function WeatherIcon({ sky }: { sky: string }) {
 }
 
 async function shareStop(stop: StopDetail): Promise<"shared" | "copied" | "failed"> {
-  const level = congestionLevelFromValue(stop.congestionValue);
-  const text = `${stop.name} - 현재 ${CONGESTION_LABEL[level]}, 대기 약 ${stop.waitEstimate}명`;
+  const text = `${stop.name} - 현재 ${CONGESTION_LABEL[stop.congestionLevel]}, 대기 약 ${stop.waitEstimate}명`;
   const url = window.location.href;
 
   if (navigator.share) {
@@ -52,7 +46,7 @@ export function StopDetailView({
   onBack: () => void;
   onToggleFavorite: (id: string) => void;
 }) {
-  const level = congestionLevelFromValue(stop.congestionValue);
+  const level = stop.congestionLevel;
   const peakBarValue = Math.max(...stop.hourly.map((h) => h.value));
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
 
