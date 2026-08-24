@@ -164,6 +164,25 @@ def test_capacity_violation_filters_by_day_type() -> None:
     assert saturday.iloc[0]["수송능력"] == pytest.approx((60 / 20) * 46.0)
 
 
+def test_capacity_violation_no_schedule_data_on_any_route_raises() -> None:
+    # Neither route serving STOP has a matching schedule row -- same guard
+    # as estimate_wait() (issue #109), reached here via the shared
+    # fill_missing_headway().
+    hourly = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP, STOP],
+            "정류장명": ["종로2가", "종로2가"],
+            "노선번호": ["777", "888"],
+            "시간대": [18, 18],
+            "승차": [30.0, 20.0],
+        }
+    )
+    empty_schedule = _route_schedule().iloc[0:0]
+
+    with pytest.raises(ValueError, match=str(STOP)):
+        capacity_violation_report(hourly, empty_schedule)
+
+
 def test_build_validation_report_aggregates_both_metrics() -> None:
     summary = build_validation_report(_wait_df(), _route_hourly(), _route_schedule())
 
