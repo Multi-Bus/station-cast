@@ -1,7 +1,7 @@
 /** Sample data from design_source/design_handoff_station_cast/design-data.md.
  * Used by useCorridorStops/useStopDetail as the offline fallback when the
  * backend is unreachable. */
-import { congestionLevelFromValue, type NearbyStop, type StopDetail } from "../types/stop";
+import type { CongestionLevel, NearbyStop, StopDetail } from "../types/stop";
 
 export const NEARBY_STOPS: NearbyStop[] = [
   {
@@ -10,7 +10,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     routes: ["146", "402"],
     distanceM: 120,
     waitEstimate: 42,
-    congestionValue: 82,
+    congestionLevel: "heavy",
     isFavorite: true,
     mapPosition: { xPct: 52, yPct: 44 },
     latLng: { lat: 37.4979, lng: 127.0276 },
@@ -21,7 +21,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     routes: ["340"],
     distanceM: 280,
     waitEstimate: 14,
-    congestionValue: 54,
+    congestionLevel: "moderate",
     isFavorite: false,
     mapPosition: { xPct: 30, yPct: 60 },
     latLng: { lat: 37.5007, lng: 127.0364 },
@@ -32,7 +32,7 @@ export const NEARBY_STOPS: NearbyStop[] = [
     routes: ["740", "641"],
     distanceM: 410,
     waitEstimate: 46,
-    congestionValue: 91,
+    congestionLevel: "heavy",
     isFavorite: true,
     mapPosition: { xPct: 68, yPct: 70 },
     latLng: { lat: 37.4836, lng: 127.0326 },
@@ -43,30 +43,30 @@ export const NEARBY_STOPS: NearbyStop[] = [
     routes: ["405"],
     distanceM: 560,
     waitEstimate: 5,
-    congestionValue: 23,
+    congestionLevel: "relaxed",
     isFavorite: false,
     mapPosition: { xPct: 40, yPct: 22 },
     latLng: { lat: 37.4935, lng: 127.0144 },
   },
 ];
 
-const HOURLY_VALUES: [number, number][] = [
-  [7, 60],
-  [8, 88],
-  [9, 95],
-  [10, 55],
-  [11, 40],
-  [12, 58],
-  [13, 45],
-  [14, 38],
-  [15, 42],
-  [16, 60],
-  [17, 80],
-  [18, 98],
-  [19, 90],
-  [20, 65],
-  [21, 48],
-  [22, 30],
+const HOURLY_VALUES: [number, number, CongestionLevel][] = [
+  [7, 60, "moderate"],
+  [8, 88, "heavy"],
+  [9, 95, "heavy"],
+  [10, 55, "moderate"],
+  [11, 40, "moderate"],
+  [12, 58, "moderate"],
+  [13, 45, "moderate"],
+  [14, 38, "relaxed"],
+  [15, 42, "moderate"],
+  [16, 60, "moderate"],
+  [17, 80, "heavy"],
+  [18, 98, "heavy"],
+  [19, 90, "heavy"],
+  [20, 65, "moderate"],
+  [21, 48, "moderate"],
+  [22, 30, "relaxed"],
 ];
 
 export const STOP_DETAILS: Record<string, StopDetail> = {
@@ -83,10 +83,10 @@ export const STOP_DETAILS: Record<string, StopDetail> = {
       { route: "402번", direction: "염곡동", message: "8분후[5번째 전]" },
       { route: "740번", direction: "국민대", message: "12분후[8번째 전]" },
     ],
-    hourly: HOURLY_VALUES.map(([hour, value]) => ({
+    hourly: HOURLY_VALUES.map(([hour, value, level]) => ({
       hour,
       value,
-      level: congestionLevelFromValue(value),
+      level,
     })),
     stats: { peakHour: 18 },
   },

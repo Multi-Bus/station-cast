@@ -1,6 +1,6 @@
 import { ChevronLeft, Star } from "lucide-react";
 import { CongestionBadge } from "./CongestionBadge";
-import { congestionLevelFromValue, type NearbyStop } from "../types/stop";
+import type { NearbyStop } from "../types/stop";
 // Shares StopDetailView's layout classes, so it must pull that stylesheet in
 // itself rather than relying on the sibling happening to be imported first.
 import "./StopDetailView.css";
@@ -37,7 +37,7 @@ export function StopDetailPending({
         </div>
       </div>
       <h1 className="stop-detail-title">{stop.name}</h1>
-      <CongestionBadge level={congestionLevelFromValue(stop.congestionValue)} />
+      <CongestionBadge level={stop.congestionLevel} />
       <p className="stop-disclaimer">이 정류장의 상세 데이터는 준비 중입니다.</p>
     </div>
   );

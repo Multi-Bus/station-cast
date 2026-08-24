@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.features.demand_factors import build_weekday_weather_factor
+from stationcast.features.demand_factors import build_weekday_weather_factor, factor_column_name
 
 TRAIN_TEST_CUTOFF = 20250701
 """First 사용일자 of the held-out test year. Correction factors are fit on
@@ -49,22 +49,36 @@ when the actual value is near zero, so excluding these dates is necessary to
 get an honest read on "typical day" reproduction without that distortion."""
 
 
+_DAY_TYPES = ("평일", "주말+공휴일")
+_WEATHER_TYPES = ("맑음", "강수")
+_TEMP_TYPES = ("저온", "보통", "고온")
+
+
 def _long_group_means(
     weather_factor: pd.DataFrame, value_prefix: str, out_col: str
 ) -> pd.DataFrame:
-    """Melt a wide {value_prefix}_{day}_{weather}_{temp} block into long form."""
-    value_cols = [c for c in weather_factor.columns if c.startswith(f"{value_prefix}_")]
-    long_df = weather_factor.melt(
-        id_vars=["표준버스정류장ID", "정류장명"],
-        value_vars=value_cols,
-        var_name="_group",
-        value_name=out_col,
-    )
-    parts = long_df["_group"].str.split("_", n=3, expand=True)
-    long_df["요일구분"] = parts[1]
-    long_df["날씨구분"] = parts[2]
-    long_df["기온구분"] = parts[3]
-    return long_df.drop(columns="_group")
+    """Melt a wide {value_prefix}_{day}_{weather}_{temp} block into long form.
+
+    Builds each group's column name with factor_column_name() (issue #105)
+    instead of reverse-parsing it back out of the melted column label (issue
+    #110) -- the 12-group label set is fixed and known here, so there is
+    nothing to infer from the string.
+    """
+    groups = []
+    for day in _DAY_TYPES:
+        for weather in _WEATHER_TYPES:
+            for temp in _TEMP_TYPES:
+                column = factor_column_name(value_prefix, day, weather, temp)
+                if column not in weather_factor.columns:
+                    continue
+                group = weather_factor[["표준버스정류장ID", "정류장명", column]].rename(
+                    columns={column: out_col}
+                )
+                group["요일구분"] = day
+                group["날씨구분"] = weather
+                group["기온구분"] = temp
+                groups.append(group)
+    return pd.concat(groups, ignore_index=True)
 
 
 def build_boarding_reproduction_report(

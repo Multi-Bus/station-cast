@@ -1,5 +1,7 @@
-/** Congestion thresholds and colors are fixed design tokens (README §Design Tokens) --
- * v >= 70 -> heavy, v >= 40 -> moderate, else relaxed. */
+/** Colors are fixed design tokens (design_source/design_handoff_station_cast/README.md
+ * §Design Tokens). The level itself always comes from the backend's own grade
+ * (congestion.py's W/capacity ratio, via congestionLevelFromGrade) or is set directly
+ * in mock data -- there is no client-side numeric threshold any more (issue #111). */
 export type CongestionLevel = "relaxed" | "moderate" | "heavy";
 
 export const CONGESTION_LABEL: Record<CongestionLevel, string> = {
@@ -7,12 +9,6 @@ export const CONGESTION_LABEL: Record<CongestionLevel, string> = {
   moderate: "보통",
   heavy: "혼잡",
 };
-
-export function congestionLevelFromValue(value: number): CongestionLevel {
-  if (value >= 70) return "heavy";
-  if (value >= 40) return "moderate";
-  return "relaxed";
-}
 
 export function congestionLevelFromGrade(grade: string): CongestionLevel {
   if (grade === "혼잡") return "heavy";
@@ -26,8 +22,7 @@ export type FilterKey = "heavy";
  * views can never show a different set of stops for the same filter state. */
 export function applyStopFilters(stops: NearbyStop[], activeFilters: Set<FilterKey>): NearbyStop[] {
   return stops.filter((s) => {
-    if (activeFilters.has("heavy") && congestionLevelFromValue(s.congestionValue) !== "heavy")
-      return false;
+    if (activeFilters.has("heavy") && s.congestionLevel !== "heavy") return false;
     return true;
   });
 }
@@ -48,7 +43,7 @@ export interface NearbyStop {
   routes: string[];
   distanceM: number;
   waitEstimate: number;
-  congestionValue: number;
+  congestionLevel: CongestionLevel;
   isFavorite: boolean;
   mapPosition: { xPct: number; yPct: number };
   latLng: { lat: number; lng: number };
