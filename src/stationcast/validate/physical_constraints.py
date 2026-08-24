@@ -84,7 +84,8 @@ def capacity_violation_report(
     to the median headway of the stop's other routes that hour via
     ingest.route_schedule.fill_missing_headway, shared with
     estimator/wait_population.py so the two can't silently apply different
-    fallback rules to the same gap.
+    fallback rules to the same gap. Raises ValueError instead if a stop has
+    no route with a 배차간격 value at all (issue #109).
     """
     schedule = route_schedule[route_schedule["요일유형"] == day_type]
     schedule = schedule[~schedule["배차정보없음"]][["표준버스정류장ID", "노선번호", "배차간격"]]

@@ -57,7 +57,8 @@ def estimate_wait(
     stop that hour via ingest.route_schedule.fill_missing_headway (shared
     with validate/physical_constraints.py's capacity check) -- a single
     missing route shouldn't zero out or drop that route's real boarding
-    count.
+    count. A stop with no schedule data on any of its routes raises
+    ValueError instead of silently producing a NaN W.
 
     Returns 표준버스정류장ID, 정류장명, 시간대, W -- one row per (stop, hour),
     summed across every route serving that stop.
