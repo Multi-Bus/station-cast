@@ -29,18 +29,26 @@ def load_raw_holidays(csv_path: Path) -> pd.DataFrame:
 
 def build_holiday_daily(
     raw_df: pd.DataFrame,
-    start: int = CORRIDOR_START,
-    end: int = CORRIDOR_END,
+    start: int | None = CORRIDOR_START,
+    end: int | None = CORRIDOR_END,
 ) -> pd.DataFrame:
-    """Filter to the corridor's date range and collapse same-day holidays.
+    """Filter to a date range and collapse same-day holidays into one row.
 
     Some dates carry more than one entry (e.g., 20250505 is both 어린이날
     and 부처님오신날); these are combined into a single row per date so
     the result joins 1:1 against corridor_daily/weather_daily on 사용일자.
+
+    start/end=None disables that bound -- used for the /stops/{id}/context
+    serving path (holiday_daily_all.parquet), which needs "오늘" and
+    near-future dates past the training corridor's CORRIDOR_END.
     """
     sub = raw_df.copy()
+    sub = sub[sub["isHoliday"] == "Y"]
     sub["locdate"] = sub["locdate"].astype(int)
-    sub = sub[(sub["locdate"] >= start) & (sub["locdate"] <= end)]
+    if start is not None:
+        sub = sub[sub["locdate"] >= start]
+    if end is not None:
+        sub = sub[sub["locdate"] <= end]
 
     grouped = (
         sub.groupby("locdate")["dateName"]
@@ -52,12 +60,20 @@ def build_holiday_daily(
 
 
 def run(csv_path: Path, out_dir: Path) -> None:
-    """Build holiday_daily.parquet from the raw 특일정보 API dump."""
+    """Build both holiday parquet outputs from the raw 특일정보 API dump.
+
+    holiday_daily.parquet stays corridor-range-bounded (training input,
+    joined against corridor_daily/weather_daily). holiday_daily_all.parquet
+    is unbounded -- api/data.py reads this one for /stops/{id}/context's
+    day-type check, which needs today/near-future dates.
+    """
     raw = load_raw_holidays(csv_path)
     daily = build_holiday_daily(raw)
+    daily_all = build_holiday_daily(raw, start=None, end=None)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     daily.to_parquet(out_dir / "holiday_daily.parquet", index=False)
+    daily_all.to_parquet(out_dir / "holiday_daily_all.parquet", index=False)
 
 
 if __name__ == "__main__":

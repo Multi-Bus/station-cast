@@ -7,11 +7,13 @@ import "./NearbyStopsPanel.css";
 export function NearbyStopsPanel({
   stops,
   compact,
+  loading,
   onSelectStop,
   onToggleFavorite,
 }: {
   stops: NearbyStop[];
   compact: boolean;
+  loading: boolean;
   onSelectStop: (id: string) => void;
   onToggleFavorite: (id: string) => void;
 }) {
@@ -19,10 +21,13 @@ export function NearbyStopsPanel({
     const nearest = stops[0];
     return (
       <div className="nearby-peek">
-        <p className="nearby-peek-title">내 주변 정류장 {stops.length}곳</p>
+        <p className="nearby-peek-title">
+          {loading ? "정류장을 불러오는 중..." : `내 주변 정류장 ${stops.length}곳`}
+        </p>
         {nearest && (
           <button className="nearby-peek-row" onClick={() => onSelectStop(nearest.id)}>
-            가장 가까운 곳 · {nearest.name} {nearest.distanceM}m
+            가장 가까운 곳 · {nearest.name}
+            {nearest.distanceM > 0 ? ` ${nearest.distanceM}m` : ""}
           </button>
         )}
       </div>
@@ -36,7 +41,9 @@ export function NearbyStopsPanel({
         <span className="nearby-sort">거리순 ⌄</span>
       </div>
       {stops.length === 0 && (
-        <p className="nearby-empty">필터 조건에 맞는 정류장이 없습니다.</p>
+        <p className="nearby-empty">
+          {loading ? "정류장을 불러오는 중..." : "필터 조건에 맞는 정류장이 없습니다."}
+        </p>
       )}
       <ul className="nearby-rows">
         {stops.map((stop) => {
@@ -50,7 +57,12 @@ export function NearbyStopsPanel({
                 <span className="nearby-row-main">
                   <span className="nearby-row-name">{stop.name}</span>
                   <span className="nearby-row-meta">
-                    {stop.routes.join(", ")}번 · {stop.distanceM}m
+                    {[
+                      stop.routes.length > 0 ? `${stop.routes.join(", ")}번` : null,
+                      stop.distanceM > 0 ? `${stop.distanceM}m` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </span>
                 <span className="nearby-row-side">

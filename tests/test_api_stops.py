@@ -16,6 +16,11 @@ STOP_A = 100000385
 STOP_B = 100000386
 
 
+@pytest.fixture(autouse=True)
+def _no_forecast_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("KMA_FORECAST_API_KEY", raising=False)
+
+
 @pytest.fixture
 def corridor_data() -> CorridorData:
     stops = pd.DataFrame(
@@ -247,6 +252,8 @@ def test_context_returns_weather_and_holiday_note(client: TestClient) -> None:
         "humidity": 55.0,
         "snowfall": 0.0,
         "wind_speed": 2.1,
+        "precipitation_type": "맑음",
+        "is_forecast": False,
         "congestion_note": "공휴일이라 평소보다 혼잡도가 약 15% 낮을 것으로 예상됩니다.",
     }
 
@@ -282,6 +289,63 @@ def test_context_unknown_stop_returns_404(client: TestClient) -> None:
 
 def test_context_unknown_date_returns_404(client: TestClient) -> None:
     response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260201})
+
+    assert response.status_code == 404
+
+
+def test_context_falls_back_to_forecast_for_date_outside_weather_range(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 20260815 is a Saturday not in the holiday fixture -> day_type=주말,
+    # weekday_group=주말+공휴일. Forecast is 맑음(is_precipitating=False)/저온
+    # (high_temp=8.0 <= 13.9), matching STOP_A's fixture column
+    # 보정계수_승차_주말+공휴일_맑음_저온=0.85.
+    from stationcast.ingest.weather_forecast import DailyForecast
+
+    monkeypatch.setattr("stationcast.api.main.fetch_forecast_items", lambda: [])
+    monkeypatch.setattr(
+        "stationcast.api.main.build_daily_forecast",
+        lambda items, target_date: DailyForecast(
+            date=target_date,
+            temperature=10.0,
+            high_temp=8.0,
+            humidity=50.0,
+            wind_speed=3.0,
+            precipitation_type="맑음",
+            is_precipitating=False,
+        ),
+    )
+
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260815})
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "stop_id": STOP_A,
+        "name": "명동성당",
+        "date": 20260815,
+        "day_type": "주말",
+        "temperature": 10.0,
+        "precipitation": 0.0,
+        "humidity": 50.0,
+        "snowfall": 0.0,
+        "wind_speed": 3.0,
+        "precipitation_type": "맑음",
+        "is_forecast": True,
+        "congestion_note": "주말이라 평소보다 혼잡도가 약 15% 낮을 것으로 예상됩니다.",
+    }
+
+
+def test_context_returns_404_when_forecast_also_unavailable(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from stationcast.ingest.weather_forecast import ForecastUnavailable
+
+    def _raise() -> list[dict]:
+        raise ForecastUnavailable("KMA_FORECAST_API_KEY is not set")
+
+    monkeypatch.setattr("stationcast.api.main.fetch_forecast_items", _raise)
+
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260815})
 
     assert response.status_code == 404
 

@@ -105,7 +105,7 @@ def main() -> int:
         ("corridor_daily", lambda: run_oa12912(BOARDING_MONTH_DIR, PROCESSED_DIR)),
         ("corridor_route_schedule", lambda: run_route_schedule(RAW_DIR, PROCESSED_DIR)),
         ("weather_daily", lambda: run_weather(weather_csv, PROCESSED_DIR)),
-        ("holiday_daily", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
+        ("holiday_daily, holiday_daily_all", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
         ("stop_capacity", lambda: run_stop_capacity(PROCESSED_DIR)),
         (
             "corridor_features_daily, weekday_weather_factor",
