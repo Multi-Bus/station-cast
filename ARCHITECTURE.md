@@ -142,7 +142,7 @@ flowchart LR
 
 데이터는 왼쪽(공개 원본)에서 오른쪽(프론트엔드)으로 단방향으로 흐른다. `data/processed/`
 아래 parquet 파일들이 각 단계 사이의 경계다 — 로컬에서 각 모듈을 순서대로(`ingest` →
-`features` → `estimator` → `validate`) 실행해 채운다(`data/README.md` §8).
+`features` → `estimator` → `validate`) 실행해 채운다(`data/README.md` §11).
 
 ## 6. API 계약
 

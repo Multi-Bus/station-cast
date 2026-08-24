@@ -26,7 +26,7 @@ weekday_holiday_factor.parquet's 2-group (요일구분 only) correction --
 weekday_weather_factor's grouping already includes 요일구분 as one of its
 three axes, so it's a strict superset and the 2-group table adds nothing
 a comparison against it wouldn't already show (see review discussion,
-issue #16; also noted in data/README.md §8).
+issue #16; also noted in data/README.md §11).
 """
 
 from pathlib import Path
@@ -44,7 +44,7 @@ MAPE measures reproduction on days the factors never saw."""
 KNOWN_NIGHT_BUS_ONLY_DATES: tuple[int, ...] = (20260113, 20260114)
 """Dates where every route passing the stop was night-bus-only, so boarding
 drops to near zero after the night-bus exclusion filter (documented,
-pre-existing phenomenon -- see data/README.md §7, not a bug). MAPE diverges
+pre-existing phenomenon -- see data/README.md §10, not a bug). MAPE diverges
 when the actual value is near zero, so excluding these dates is necessary to
 get an honest read on "typical day" reproduction without that distortion."""
 
@@ -203,7 +203,7 @@ def run(processed_dir: Path, out_dir: Path) -> None:
     print()
     print(
         f"=== 승차 재현 MAPE ({KNOWN_NIGHT_BUS_ONLY_DATES} 제외, "
-        "data/README.md §7 문서화된 이상치) ==="
+        "data/README.md §10 문서화된 이상치) ==="
     )
     for k, v in summary.items():
         print(f"{k}: {v:.1f}%")

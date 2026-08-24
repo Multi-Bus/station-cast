@@ -1,6 +1,6 @@
 """Corridor data loading for API endpoints (S2, issue #13).
 
-data/processed/*.parquet is not committed (see data/README.md §8) -- each
+data/processed/*.parquet is not committed (see data/README.md §11) -- each
 teammate regenerates it locally by running the ingest/estimator pipeline.
 Endpoints depend on get_corridor_data() via FastAPI's Depends so tests can
 override it with in-memory fixtures instead of touching disk.
