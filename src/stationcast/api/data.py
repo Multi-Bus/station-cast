@@ -22,6 +22,7 @@ parquet outputs of features/demand_factors.py and ingest/holiday.py:
 """
 
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
@@ -74,6 +75,13 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     )
 
 
+@lru_cache(maxsize=1)
 def get_corridor_data() -> CorridorData:
-    """FastAPI dependency wrapper around load_corridor_data(); override in tests."""
+    """FastAPI dependency wrapper around load_corridor_data(); override in tests.
+
+    Cached for the process lifetime: data/processed/ doesn't change while the
+    server is running, and reloading all 7 parquet files costs ~120ms per
+    call otherwise -- every request was paying that cost before this cache
+    (issue #114).
+    """
     return load_corridor_data()
