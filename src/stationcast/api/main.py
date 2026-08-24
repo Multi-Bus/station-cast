@@ -90,6 +90,8 @@ def _current_date() -> int:
 
 def _stop_capacity(data: CorridorData, stop_id: int) -> float:
     row = data.capacity[data.capacity["표준버스정류장ID"] == stop_id]
+    if row.empty:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
     return float(row["포용인원"].iloc[0])
 
 

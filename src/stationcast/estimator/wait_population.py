@@ -32,6 +32,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest.route_schedule import fill_missing_headway
+
 DEFAULT_DAY_TYPE = "평일"
 
 
@@ -52,8 +54,10 @@ def estimate_wait(
 
     Routes with no schedule row, or flagged 배차정보없음, fall back to the
     median headway/registered-range of the *other* routes serving the same
-    stop that hour -- a single missing route shouldn't zero out or drop
-    that route's real boarding count.
+    stop that hour via ingest.route_schedule.fill_missing_headway (shared
+    with validate/physical_constraints.py's capacity check) -- a single
+    missing route shouldn't zero out or drop that route's real boarding
+    count.
 
     Returns 표준버스정류장ID, 정류장명, 시간대, W -- one row per (stop, hour),
     summed across every route serving that stop.
@@ -64,10 +68,7 @@ def estimate_wait(
     ]
 
     merged = route_hourly.merge(schedule, on=["표준버스정류장ID", "노선번호"], how="left")
-    for col in ("배차간격", "최소배차", "최대배차"):
-        merged[col] = merged[col].fillna(
-            merged.groupby("표준버스정류장ID")[col].transform("median")
-        )
+    merged = fill_missing_headway(merged, ["배차간격", "최소배차", "최대배차"])
 
     cv = ((merged["최대배차"] - merged["최소배차"]) / (12**0.5)) / merged["배차간격"]
     merged["평균대기_분"] = (merged["배차간격"] / 2) * (1 + cv**2)
