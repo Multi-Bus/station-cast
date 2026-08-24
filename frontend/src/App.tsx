@@ -99,6 +99,8 @@ export default function App() {
             selectedStopId={selectedStopId}
             sheetHeightPx={sheet.heightPx}
             controlsHidden={sheet.snap === "full"}
+            userPosition={location.position}
+            locationStatus={location.status}
             onSelectStop={selectStop}
             onRecenter={recenter}
           />

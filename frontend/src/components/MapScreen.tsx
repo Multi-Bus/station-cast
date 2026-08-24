@@ -1,6 +1,7 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Layers, Navigation, Search } from "lucide-react";
 import { CustomOverlayMap, Map } from "react-kakao-maps-sdk";
+import type { UserLocationState } from "../hooks/useUserLocation";
 import { congestionLevelFromValue, type FilterKey, type NearbyStop } from "../types/stop";
 import "./MapScreen.css";
 
@@ -110,12 +111,14 @@ function KakaoStopsMap({
   onSelectStop,
   center,
   mapType,
+  userPosition,
 }: {
   visibleStops: NearbyStop[];
   selectedStopId: string | null;
   onSelectStop: (id: string) => void;
   center: { lat: number; lng: number };
   mapType: KakaoMapType;
+  userPosition: { lat: number; lng: number } | null;
 }) {
   const { ready, failed } = useKakaoScript(KAKAO_MAP_KEY);
 
@@ -125,6 +128,11 @@ function KakaoStopsMap({
 
   return (
     <Map center={center} isPanto level={5} mapTypeId={mapType} style={{ position: "absolute", inset: 0 }}>
+      {userPosition && (
+        <CustomOverlayMap position={userPosition}>
+          <div className="user-location-dot" aria-label="내 위치" role="img" />
+        </CustomOverlayMap>
+      )}
       {visibleStops.map((stop) => (
         <CustomOverlayMap key={stop.id} position={stop.latLng} clickable yAnchor={1}>
           <StopMarker stop={stop} selected={selectedStopId === stop.id} onSelectStop={onSelectStop} />
@@ -144,6 +152,8 @@ export function MapScreen({
   selectedStopId,
   sheetHeightPx,
   controlsHidden,
+  userPosition,
+  locationStatus,
   onSelectStop,
   onRecenter,
 }: {
@@ -159,6 +169,8 @@ export function MapScreen({
   selectedStopId: string | null;
   sheetHeightPx: number;
   controlsHidden: boolean;
+  userPosition: { lat: number; lng: number } | null;
+  locationStatus: UserLocationState["status"];
   onSelectStop: (id: string) => void;
   onRecenter: () => void;
 }) {
@@ -177,8 +189,23 @@ export function MapScreen({
     (s) => congestionLevelFromValue(s.congestionValue) === "heavy",
   ).length;
 
+  // Gating on "granted" is load-bearing: retry() flips the status to "pending"
+  // first, and reading that as an answer would end the wait before the fix lands.
+  const awaitingFix = useRef(false);
+  useEffect(() => {
+    if (!awaitingFix.current) return;
+    if (locationStatus === "granted" && userPosition) {
+      setCenter(userPosition);
+      awaitingFix.current = false;
+    } else if (locationStatus === "unavailable") {
+      setCenter(corridorCenter);
+      awaitingFix.current = false;
+    }
+  }, [userPosition, locationStatus, corridorCenter]);
+
   function handleRecenter() {
-    setCenter(corridorCenter);
+    if (userPosition) setCenter(userPosition);
+    awaitingFix.current = true;
     onRecenter();
   }
 
@@ -194,6 +221,7 @@ export function MapScreen({
           onSelectStop={onSelectStop}
           center={center}
           mapType={mapType}
+          userPosition={userPosition}
         />
       ) : (
         <PlaceholderMap visibleStops={visibleStops} selectedStopId={selectedStopId} onSelectStop={onSelectStop} />
