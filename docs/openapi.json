@@ -164,6 +164,10 @@
             "title": "Estimated Wait",
             "type": "number"
           },
+          "grade": {
+            "title": "Grade",
+            "type": "string"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -176,7 +180,8 @@
         "required": [
           "stop_id",
           "name",
-          "estimated_wait"
+          "estimated_wait",
+          "grade"
         ],
         "title": "CorridorStopSnapshot",
         "type": "object"
@@ -416,7 +421,7 @@
   "paths": {
     "/corridor": {
       "get": {
-        "description": "Every stop's estimated wait at one hour (default: current hour).",
+        "description": "Every stop's estimated wait and congestion grade at one hour (default: current hour).",
         "operationId": "get_corridor_corridor_get",
         "parameters": [
           {

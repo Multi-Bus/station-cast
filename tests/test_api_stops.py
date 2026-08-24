@@ -208,8 +208,8 @@ def test_corridor_returns_every_stop_at_given_hour(client: TestClient) -> None:
     body = response.json()
     assert body["hour"] == 8
     assert body["stops"] == [
-        {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5},
-        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 4.0},
+        {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5, "grade": "보통"},
+        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 4.0, "grade": "여유"},
     ]
 
 
@@ -223,8 +223,8 @@ def test_corridor_defaults_to_current_hour_when_omitted(
     body = response.json()
     assert body["hour"] == 8
     assert body["stops"] == [
-        {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5},
-        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 4.0},
+        {"stop_id": STOP_A, "name": "명동성당", "estimated_wait": 12.5, "grade": "보통"},
+        {"stop_id": STOP_B, "name": "종로1가", "estimated_wait": 4.0, "grade": "여유"},
     ]
 
 

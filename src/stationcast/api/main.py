@@ -226,14 +226,15 @@ def get_corridor(
     hour: int | None = Query(default=None, ge=0, le=23),
     data: CorridorData = Depends(get_corridor_data),
 ) -> CorridorResponse:
-    """Every stop's estimated wait at one hour (default: current hour)."""
+    """Every stop's estimated wait and congestion grade at one hour (default: current hour)."""
     target_hour = _current_hour() if hour is None else hour
     snapshot = data.wait[data.wait["시간대"] == target_hour]
     stops = [
         CorridorStopSnapshot(
-            stop_id=int(row["표준버스정류장ID"]),
+            stop_id=(stop_id := int(row["표준버스정류장ID"])),
             name=str(row["정류장명"]),
-            estimated_wait=float(row["W"]),
+            estimated_wait=(estimated_wait := float(row["W"])),
+            grade=grade_wait(estimated_wait, _stop_capacity(data, stop_id)),
         )
         for _, row in snapshot.iterrows()
     ]
