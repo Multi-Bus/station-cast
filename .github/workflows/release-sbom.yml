@@ -20,7 +20,7 @@ jobs:
           cache: "pip"
 
       - name: Install project (prod deps only -- SBOM should reflect what ships)
-        run: pip install .
+        run: pip install -c constraints.txt .
 
       - name: Install cyclonedx-bom
         run: pip install cyclonedx-bom
