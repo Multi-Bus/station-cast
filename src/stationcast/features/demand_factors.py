@@ -100,6 +100,17 @@ def build_weekday_holiday_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     return pivot.sort_values("표준버스정류장ID").reset_index(drop=True)
 
 
+def factor_column_name(value: str, day_type: str, weather_type: str, temp_type: str) -> str:
+    """Build a 요일구분×날씨구분×기온구분 wide-format column name (issue #105).
+
+    e.g. factor_column_name("보정계수_승차", "평일", "맑음", "보통")
+    -> "보정계수_승차_평일_맑음_보통". Single source for this naming convention:
+    api/main.py's lookup and validate/boarding_reproduction.py's parser both
+    need to agree with whatever this module generates.
+    """
+    return f"{value}_{day_type}_{weather_type}_{temp_type}"
+
+
 def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     """Per-stop 요일구분×날씨구분×기온구분(12그룹) average ratio for 승차/하차.
 
@@ -126,12 +137,12 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
         values=["평균승차", "평균하차", "표본수"],
     )
     pivot.columns = [
-        f"{value}_{day}_{weather}_{temp}" for value, day, weather, temp in pivot.columns
+        factor_column_name(value, day, weather, temp) for value, day, weather, temp in pivot.columns
     ]
     pivot = pivot.reset_index()
 
-    base_board = pivot["평균승차_평일_맑음_보통"]
-    base_alight = pivot["평균하차_평일_맑음_보통"]
+    base_board = pivot[factor_column_name("평균승차", "평일", "맑음", "보통")]
+    base_alight = pivot[factor_column_name("평균하차", "평일", "맑음", "보통")]
     non_baseline = [
         (day, weather, temp)
         for day in ("평일", "주말+공휴일")
@@ -140,11 +151,11 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
         if not (day == "평일" and weather == "맑음" and temp == "보통")
     ]
     for day, weather, temp in non_baseline:
-        pivot[f"보정계수_승차_{day}_{weather}_{temp}"] = (
-            pivot[f"평균승차_{day}_{weather}_{temp}"] / base_board
+        pivot[factor_column_name("보정계수_승차", day, weather, temp)] = (
+            pivot[factor_column_name("평균승차", day, weather, temp)] / base_board
         )
-        pivot[f"보정계수_하차_{day}_{weather}_{temp}"] = (
-            pivot[f"평균하차_{day}_{weather}_{temp}"] / base_alight
+        pivot[factor_column_name("보정계수_하차", day, weather, temp)] = (
+            pivot[factor_column_name("평균하차", day, weather, temp)] / base_alight
         )
 
     ratio_cols = [c for c in pivot.columns if c.startswith("보정계수_")]
