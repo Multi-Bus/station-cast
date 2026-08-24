@@ -11,12 +11,16 @@ export interface StopsResponse {
   stops: ApiStop[];
 }
 
-export interface CongestionResponse {
+export interface ApiCorridorStopSnapshot {
   stop_id: number;
   name: string;
-  hour: number;
   estimated_wait: number;
   grade: string;
+}
+
+export interface CorridorResponse {
+  hour: number;
+  stops: ApiCorridorStopSnapshot[];
 }
 
 export interface ApiTimelinePoint {

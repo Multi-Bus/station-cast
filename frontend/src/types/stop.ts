@@ -20,7 +20,7 @@ export function congestionLevelFromGrade(grade: string): CongestionLevel {
   return "relaxed";
 }
 
-export type FilterKey = "heavy" | "transferHub";
+export type FilterKey = "heavy";
 
 /** Shared by MapScreen (markers) and NearbyStopsPanel (list) so the two
  * views can never show a different set of stops for the same filter state. */
@@ -28,7 +28,6 @@ export function applyStopFilters(stops: NearbyStop[], activeFilters: Set<FilterK
   return stops.filter((s) => {
     if (activeFilters.has("heavy") && congestionLevelFromValue(s.congestionValue) !== "heavy")
       return false;
-    if (activeFilters.has("transferHub") && !s.isTransferHub) return false;
     return true;
   });
 }
@@ -50,7 +49,6 @@ export interface NearbyStop {
   distanceM: number;
   waitEstimate: number;
   congestionValue: number;
-  isTransferHub: boolean;
   isFavorite: boolean;
   mapPosition: { xPct: number; yPct: number };
   latLng: { lat: number; lng: number };
@@ -69,8 +67,6 @@ export interface HourlyPoint {
 }
 
 export interface StopDetail extends NearbyStop {
-  waitConfidenceLow: number;
-  waitConfidenceHigh: number;
   weather: {
     summary: string;
     note: string;
@@ -80,8 +76,6 @@ export interface StopDetail extends NearbyStop {
   arrivals: Arrival[];
   hourly: HourlyPoint[];
   stats: {
-    todayAvgPct: number;
     peakHour: number;
-    dayOverDayPct: number;
   };
 }

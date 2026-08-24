@@ -49,15 +49,11 @@ function buildStopDetail(
   return {
     ...base,
     routes: routes.length > 0 ? routes : base.routes,
-    waitConfidenceLow: Math.round(base.waitEstimate * 0.8),
-    waitConfidenceHigh: Math.round(base.waitEstimate * 1.2),
     weather: weatherFromContext(context),
     arrivals: toArrivals(arrivals),
     hourly,
     stats: {
-      todayAvgPct: 0,
       peakHour: peak?.hour ?? 0,
-      dayOverDayPct: 0,
     },
   };
 }

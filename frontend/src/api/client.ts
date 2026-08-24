@@ -1,6 +1,6 @@
 import type {
   ArrivalsResponse,
-  CongestionResponse,
+  CorridorResponse,
   StopContextResponse,
   StopsResponse,
   TimelineResponse,
@@ -18,8 +18,8 @@ export function getStops(): Promise<StopsResponse> {
   return getJSON("/stops");
 }
 
-export function getCongestion(stopId: number): Promise<CongestionResponse> {
-  return getJSON(`/stops/${stopId}/congestion`);
+export function getCorridor(): Promise<CorridorResponse> {
+  return getJSON("/corridor");
 }
 
 export function getTimeline(stopId: number): Promise<TimelineResponse> {
