@@ -25,7 +25,14 @@ from stationcast.api.schemas import (
     TimelineResponse,
 )
 from stationcast.estimator.congestion import grade_wait
-from stationcast.features.demand_factors import classify_temperature
+from stationcast.features.demand_factors import (
+    boarding_factor,
+    boarding_factor_for_labels,
+    classify_day_type,
+    classify_temperature,
+    congestion_note,
+    precipitation_type_from_asos,
+)
 from stationcast.ingest.realtime_arrival import ArrivalInfoUnavailable, fetch_arrivals
 from stationcast.ingest.weather_forecast import (
     ForecastUnavailable,
@@ -102,42 +109,6 @@ def _stop_name(data: CorridorData, stop_id: int) -> str:
     return str(row["정류장명"].iloc[0])
 
 
-def _boarding_factor_for_labels(
-    data: CorridorData, stop_id: int, weekday_group: str, weather_group: str, temp_group: str
-) -> float:
-    if (weekday_group, weather_group, temp_group) == ("평일", "맑음", "보통"):
-        return 1.0
-
-    factor_row = data.weekday_weather_factor[
-        data.weekday_weather_factor["표준버스정류장ID"] == stop_id
-    ]
-    column = f"보정계수_승차_{weekday_group}_{weather_group}_{temp_group}"
-    return float(factor_row[column].iloc[0])
-
-
-def _boarding_factor(data: CorridorData, stop_id: int, date: int) -> float:
-    features_row = data.features_daily[
-        (data.features_daily["표준버스정류장ID"] == stop_id)
-        & (data.features_daily["사용일자"] == date)
-    ].iloc[0]
-    return _boarding_factor_for_labels(
-        data,
-        stop_id,
-        str(features_row["요일구분"]),
-        str(features_row["날씨구분"]),
-        str(features_row["기온구분"]),
-    )
-
-
-def _precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) -> str:
-    """맑음/비/눈 근사 라벨(과거 관측 ASOS 데이터 기준)."""
-    if snowfall_cm > 0:
-        return "눈"
-    if precipitation_mm > 0:
-        return "비"
-    return "맑음"
-
-
 def _stop_ars_number(data: CorridorData, stop_id: int) -> str:
     row = data.stops[data.stops["표준버스정류장ID"] == stop_id]
     if row.empty:
@@ -155,27 +126,6 @@ def _to_arrival_info(item: dict[str, str | None]) -> ArrivalInfo:
         congestion_1=item.get("congestion1"),
         congestion_2=item.get("congestion2"),
     )
-
-
-def _day_type(date: int, holiday_dates: set[int]) -> str:
-    """Classify a date as 공휴일 > 주말 > 평일 (holiday takes priority over weekend)."""
-    if date in holiday_dates:
-        return "공휴일"
-    dow = pd.to_datetime(str(date), format="%Y%m%d").dayofweek
-    return "주말" if dow >= 5 else "평일"
-
-
-def _congestion_note(day_type: str, boarding_factor: float) -> str:
-    """Human-readable explanation of the day-type correction factor.
-
-    boarding_factor is 보정계수_승차 (해당 요일×날씨×기온 그룹 평균승차 / 기준선
-    평균승차) from weekday_weather_factor.parquet, via _boarding_factor()
-    """
-    if day_type == "평일":
-        return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
-    percent = round(abs(boarding_factor - 1.0) * 100)
-    direction = "낮을" if boarding_factor < 1.0 else "높을"
-    return f"{day_type}이라 평소보다 혼잡도가 약 {percent}% {direction} 것으로 예상됩니다."
 
 
 @app.get("/stops/{stop_id}/congestion", response_model=CongestionResponse)
@@ -258,13 +208,15 @@ def get_context(
     """
     name = _stop_name(data, stop_id)
     target_date = _current_date() if date is None else date
-    day_type = _day_type(target_date, set(data.holiday["사용일자"]))
+    day_type = classify_day_type(target_date, set(data.holiday["사용일자"]))
 
     weather_row = data.weather[data.weather["사용일자"] == target_date]
     if not weather_row.empty:
         precipitation = float(weather_row["강수량"].iloc[0])
         snowfall = float(weather_row["신적설"].iloc[0])
-        boarding_factor = _boarding_factor(data, stop_id, target_date)
+        factor = boarding_factor(
+            data.features_daily, data.weekday_weather_factor, stop_id, target_date
+        )
         return StopContextResponse(
             stop_id=stop_id,
             name=name,
@@ -275,9 +227,9 @@ def get_context(
             humidity=float(weather_row["습도"].iloc[0]),
             snowfall=snowfall,
             wind_speed=float(weather_row["평균풍속"].iloc[0]),
-            precipitation_type=_precipitation_type_from_asos(precipitation, snowfall),
+            precipitation_type=precipitation_type_from_asos(precipitation, snowfall),
             is_forecast=False,
-            congestion_note=_congestion_note(day_type, boarding_factor),
+            congestion_note=congestion_note(day_type, factor),
         )
 
     try:
@@ -290,8 +242,8 @@ def get_context(
     weekday_group = "평일" if day_type == "평일" else "주말+공휴일"
     weather_group = "강수" if forecast.is_precipitating else "맑음"
     temp_group = classify_temperature(forecast.high_temp)
-    boarding_factor = _boarding_factor_for_labels(
-        data, stop_id, weekday_group, weather_group, temp_group
+    factor = boarding_factor_for_labels(
+        data.weekday_weather_factor, stop_id, weekday_group, weather_group, temp_group
     )
 
     return StopContextResponse(
@@ -306,7 +258,7 @@ def get_context(
         wind_speed=forecast.wind_speed,
         precipitation_type=forecast.precipitation_type,
         is_forecast=True,
-        congestion_note=_congestion_note(day_type, boarding_factor),
+        congestion_note=congestion_note(day_type, factor),
     )
 
 
