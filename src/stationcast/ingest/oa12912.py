@@ -6,24 +6,17 @@ features/ (issue #10) to derive weekday/weekend/holiday/seasonal
 correction factors, since OA-12913 alone has no per-date breakdown.
 """
 
-import re
 from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest._common import clean_stop_name, read_cp949_csv
 from stationcast.ingest.oa12913 import CORRIDOR_NIGHT_BUS_ROUTES, CORRIDOR_STOP_IDS
-
-_NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
-
-
-def _clean_stop_name(name: object) -> str:
-    """Strip the trailing per-route sequence number from a raw 역명 value."""
-    return _NAME_SUFFIX_RE.sub("", str(name))
 
 
 def load_daily_boarding(csv_path: Path) -> pd.DataFrame:
     """Load one month's raw OA-12912 CSV (cp949-encoded)."""
-    return pd.read_csv(csv_path, encoding="cp949", low_memory=False)
+    return read_cp949_csv(csv_path, low_memory=False)
 
 
 def build_corridor_daily(
@@ -59,7 +52,7 @@ def build_corridor_daily(
     sub = boarding_df[stop_id_num.isin(stop_ids)].copy()
     sub["표준버스정류장ID"] = stop_id_num[stop_id_num.isin(stop_ids)].astype("int64")
     sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
-    sub["정류장명"] = sub["역명"].apply(_clean_stop_name)
+    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
 
     daily_totals = (
         sub.groupby(["표준버스정류장ID", "사용일자"])

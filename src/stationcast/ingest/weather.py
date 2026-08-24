@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from stationcast.ingest._common import read_cp949_csv
+
 _COLUMN_MAP = {
     "일시": "사용일자",
     "평균기온(°C)": "평균기온",
@@ -31,7 +33,7 @@ _ZERO_FILL_COLUMNS = ("강수량", "신적설")
 
 def load_daily_weather(csv_path: Path) -> pd.DataFrame:
     """Load the raw KMA ASOS daily CSV (cp949-encoded)."""
-    return pd.read_csv(csv_path, encoding="cp949")
+    return read_cp949_csv(csv_path)
 
 
 def build_weather_daily(weather_df: pd.DataFrame) -> pd.DataFrame:
