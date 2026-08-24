@@ -3,26 +3,27 @@ import { BottomSheet } from "./components/BottomSheet";
 import { ComingSoon } from "./components/ComingSoon";
 import { MapScreen } from "./components/MapScreen";
 import { NearbyStopsPanel } from "./components/NearbyStopsPanel";
+import { StopDetailLoading } from "./components/StopDetailLoading";
 import { StopDetailPending } from "./components/StopDetailPending";
 import { StopDetailView } from "./components/StopDetailView";
 import { TabBar, type TabKey } from "./components/TabBar";
-import { NEARBY_STOPS, STOP_DETAILS } from "./data/mockStops";
 import { useBottomSheet } from "./hooks/useBottomSheet";
+import { useCorridorStops } from "./hooks/useCorridorStops";
 import { useFavorites } from "./hooks/useFavorites";
+import { useStopDetail } from "./hooks/useStopDetail";
 import { applyStopFilters, type FilterKey } from "./types/stop";
-
-const DEFAULT_FAVORITES = NEARBY_STOPS.filter((s) => s.isFavorite).map((s) => s.id);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("map");
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
   const sheet = useBottomSheet("peek");
-  const { favorites, toggle: toggleFavorite } = useFavorites(DEFAULT_FAVORITES);
+  const { favorites, toggle: toggleFavorite } = useFavorites([]);
+  const { stops: corridorStops, loading: stopsLoading, usingMock } = useCorridorStops();
 
   const stops = useMemo(
-    () => NEARBY_STOPS.map((s) => ({ ...s, isFavorite: favorites.includes(s.id) })),
-    [favorites],
+    () => corridorStops.map((s) => ({ ...s, isFavorite: favorites.includes(s.id) })),
+    [corridorStops, favorites],
   );
 
   // Filters live here, not inside MapScreen, so the sheet's list (screen ②)
@@ -66,15 +67,13 @@ export default function App() {
     sheet.setSnap("half");
   }
 
-  /** Placeholder map has no camera, so "내 위치" returns to the surroundings
-   * view: drop the selection and collapse back to the peek summary. */
   function recenter() {
     setSelectedStopId(null);
     sheet.setSnap("peek");
   }
 
   const selectedStop = selectedStopId ? stops.find((s) => s.id === selectedStopId) : undefined;
-  const selectedDetail = selectedStopId ? STOP_DETAILS[selectedStopId] : undefined;
+  const { detail: selectedDetail, pending: detailPending } = useStopDetail(selectedStop, usingMock);
 
   return (
     <>
@@ -98,6 +97,12 @@ export default function App() {
                 onBack={backToList}
                 onToggleFavorite={toggleFavorite}
               />
+            ) : selectedStop && detailPending ? (
+              <StopDetailLoading
+                stop={selectedStop}
+                onBack={backToList}
+                onToggleFavorite={toggleFavorite}
+              />
             ) : selectedStop ? (
               <StopDetailPending
                 stop={selectedStop}
@@ -108,6 +113,7 @@ export default function App() {
               <NearbyStopsPanel
                 stops={visibleStops}
                 compact={sheet.snap === "peek"}
+                loading={stopsLoading}
                 onSelectStop={selectStop}
                 onToggleFavorite={toggleFavorite}
               />

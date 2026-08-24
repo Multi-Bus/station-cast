@@ -136,3 +136,46 @@ jobs:
         with:
           name: scancode-source-report
           path: scancode-source-report-*.json
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install project (prod deps only -- SBOM should reflect what ships)
+        run: pip install .
+
+      - name: Install cyclonedx-bom
+        run: pip install cyclonedx-bom
+
+      - name: Generate Python SBOM
+        run: cyclonedx-py environment -o sbom-python.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate npm SBOM
+        working-directory: frontend
+        run: npx @cyclonedx/cyclonedx-npm --output-file ../sbom-npm.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom-python.json
+            sbom-npm.json

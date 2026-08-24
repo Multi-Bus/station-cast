@@ -21,6 +21,9 @@ _OUTLIER_HIGH = 2.0
 
 _TEMP_LABELS = ["저온", "보통", "고온"]
 
+# 최고기온 3분위 경계값(3년치 데이터의 qcut 결과를 고정 상수로 전환).
+_TEMP_BOUNDARIES = (13.9, 25.9)
+
 
 def _day_type(dates: pd.Series, holiday_dates: set[int]) -> pd.Series:
     """Label each 사용일자 as 평일 or 주말+공휴일."""
@@ -37,10 +40,24 @@ def _weather_type(precipitation: pd.Series, snowfall: pd.Series) -> pd.Series:
     return has_precip.map({True: "강수", False: "맑음"})
 
 
+def classify_temperature(high_temp: float) -> str:
+    """Label one day's 최고기온 저온/보통/고온 (single-value counterpart to _temp_type())."""
+    low, high = _TEMP_BOUNDARIES
+    if high_temp <= low:
+        return _TEMP_LABELS[0]
+    if high_temp <= high:
+        return _TEMP_LABELS[1]
+    return _TEMP_LABELS[2]
+
+
 def _temp_type(high_temps: pd.Series) -> pd.Series:
-    """Label each day 저온/보통/고온 by tercile of 최고기온 (most correlated
+    """Label each day 저온/보통/고온 by fixed 최고기온 boundaries (most correlated
     with ridership among the weather columns -- see issue discussion)."""
-    return pd.qcut(high_temps, 3, labels=_TEMP_LABELS)
+    return pd.cut(
+        high_temps,
+        bins=[-float("inf"), *_TEMP_BOUNDARIES, float("inf")],
+        labels=_TEMP_LABELS,
+    )
 
 
 def build_features_daily(
@@ -138,18 +155,22 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def run(processed_dir: Path) -> None:
-    """Build corridor_features_daily.parquet, weekday_holiday_factor.parquet, and
-    weekday_weather_factor.parquet."""
+    """Build corridor_features_daily.parquet and weekday_weather_factor.parquet.
+
+    build_weekday_holiday_factor()'s 2-group table is no longer written to
+    disk: weekday_weather_factor already has 요일구분 as one of its three
+    axes, and nothing has read the 2-group file since /stops/{id}/context
+    switched over (issue #78). The function stays for ad-hoc weekday-only
+    comparisons -- it just isn't part of the pipeline's output any more.
+    """
     corridor_daily = pd.read_parquet(processed_dir / "corridor_daily.parquet")
     weather_daily = pd.read_parquet(processed_dir / "weather_daily.parquet")
     holiday_daily = pd.read_parquet(processed_dir / "holiday_daily.parquet")
 
     features_daily = build_features_daily(corridor_daily, weather_daily, holiday_daily)
-    factor = build_weekday_holiday_factor(features_daily)
     weather_factor = build_weekday_weather_factor(features_daily)
 
     features_daily.to_parquet(processed_dir / "corridor_features_daily.parquet", index=False)
-    factor.to_parquet(processed_dir / "weekday_holiday_factor.parquet", index=False)
     weather_factor.to_parquet(processed_dir / "weekday_weather_factor.parquet", index=False)
 
 
