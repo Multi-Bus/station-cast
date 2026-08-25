@@ -11,7 +11,7 @@ import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from stationcast.api.data import CorridorData, get_corridor_data
+from stationcast.api.data import CorridorData, CorridorDataUnavailable, get_corridor_data
 from stationcast.api.schemas import (
     ArrivalInfo,
     ArrivalsResponse,
@@ -46,6 +46,15 @@ from stationcast.ingest.weather_forecast import (
 REQUEST_TIMEOUT_SECONDS = 3.0
 
 app = FastAPI(title="Station Cast API")
+
+
+@app.exception_handler(CorridorDataUnavailable)
+async def corridor_data_unavailable_handler(
+    request: Request, exc: CorridorDataUnavailable
+) -> JSONResponse:
+    """503, not 500 -- the service is fine, it just hasn't been given its
+    data yet (e.g. a container started without the data volume mounted)."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 
 @app.middleware("http")
