@@ -66,6 +66,6 @@ api)는 그대로 재사용 가능한 구조로 설계돼 있다.
   GPL·AGPL·LGPL 계열은 기본 차단한다는 기준이 `docs/LICENSE_POLICY.md`에 문서화돼
   있어, 외부 기여자가 라이선스 충돌을 걱정하지 않고 의존성을 추가할 수 있다.
 - **기여 절차 문서화**: 브랜치명·커밋 컨벤션·PR 절차·CI 게이트(ruff·mypy·pytest·
-  라이선스 스캔)가 `CONTRIBUTING.md`에 명시돼 있고, 로컬 개발 환경도
-  `pip install -e ".[dev]"` 한 줄로 끝난다 — 새 기여자가 코드 스타일이나
-  워크플로를 추측할 필요가 없다.
+  라이선스 스캔)가 `CONTRIBUTING.md`에 명시돼 있고, 로컬 개발 환경도 Python 3.11에서
+  `pip install -c constraints.txt -e ".[dev]"` 한 줄로 끝난다 — 새 기여자가 코드
+  스타일이나 워크플로를 추측할 필요가 없다.

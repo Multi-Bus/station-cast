@@ -128,9 +128,12 @@ def build_boarding_reproduction_report(
         "무보정_예측승차",
         "요일날씨기온보정_예측승차",
     ]
-    return merged[cols].rename(columns={"승차": "실측_승차"}).sort_values(
-        ["표준버스정류장ID", "사용일자"]
-    ).reset_index(drop=True)
+    return (
+        merged[cols]
+        .rename(columns={"승차": "실측_승차"})
+        .sort_values(["표준버스정류장ID", "사용일자"])
+        .reset_index(drop=True)
+    )
 
 
 def _mape(actual: pd.Series, predicted: pd.Series) -> float:

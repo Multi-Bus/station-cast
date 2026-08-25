@@ -49,8 +49,7 @@ app = FastAPI(title="Station Cast API")
 
 @app.middleware("http")
 async def enforce_request_timeout(request: Request, call_next):
-    """Cut off any request that overruns the response-time budget (issue #18).
-    """
+    """Cut off any request that overruns the response-time budget (issue #18)."""
     try:
         return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
     except TimeoutError:
@@ -153,9 +152,7 @@ def get_congestion(
 
 
 @app.get("/stops/{stop_id}/timeline", response_model=TimelineResponse)
-def get_timeline(
-    stop_id: int, data: CorridorData = Depends(get_corridor_data)
-) -> TimelineResponse:
+def get_timeline(stop_id: int, data: CorridorData = Depends(get_corridor_data)) -> TimelineResponse:
     """Full 24-hour estimated-wait curve for one stop, each hour graded."""
     wait = _stop_wait(data, stop_id).sort_values("시간대")
     capacity = _stop_capacity(data, stop_id)
@@ -263,12 +260,10 @@ def get_context(
 
 
 @app.get("/stops/{stop_id}/arrivals", response_model=ArrivalsResponse)
-def get_arrivals(
-    stop_id: int, data: CorridorData = Depends(get_corridor_data)
-) -> ArrivalsResponse:
+def get_arrivals(stop_id: int, data: CorridorData = Depends(get_corridor_data)) -> ArrivalsResponse:
     """
     Real-time next-arrival info for every route serving one stop (issue #48).
-    Backed by Seoul TOPIS (ws.bus.go.kr) -- a live display feature. 
+    Backed by Seoul TOPIS (ws.bus.go.kr) -- a live display feature.
     """
     name = _stop_name(data, stop_id)
     ars_number = _stop_ars_number(data, stop_id)

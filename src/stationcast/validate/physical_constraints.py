@@ -108,9 +108,7 @@ def capacity_violation_report(
         "위반",
     ]
     return (
-        merged[cols]
-        .sort_values(["표준버스정류장ID", "노선번호", "시간대"])
-        .reset_index(drop=True)
+        merged[cols].sort_values(["표준버스정류장ID", "노선번호", "시간대"]).reset_index(drop=True)
     )
 
 
