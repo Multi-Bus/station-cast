@@ -173,7 +173,7 @@
   display: flex;
   gap: 7px;
   overflow-x: auto;
-  overflow-y: hidden;
+  padding-block: 8px;
 }
 
 .chip {
