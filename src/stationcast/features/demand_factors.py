@@ -134,6 +134,16 @@ def precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) ->
     return "맑음"
 
 
+class BoardingFactorUnavailable(Exception):
+    """Raised when boarding_factor()/boarding_factor_for_labels() has no row
+    to compute a correction factor from -- an unlisted stop_id, a (stop,
+    date) combination features_daily never covered (issue #137, e.g. the 17
+    corridor-wide night-bus-only dates documented in data/README.md), or a
+    요일×날씨×기온 group weekday_weather_factor has no column for. Callers
+    should catch this and degrade to a 404 rather than let the underlying
+    .iloc[0]/KeyError surface as a 500."""
+
+
 def boarding_factor_for_labels(
     weekday_weather_factor: pd.DataFrame,
     stop_id: int,
@@ -149,7 +159,13 @@ def boarding_factor_for_labels(
         return 1.0
 
     factor_row = weekday_weather_factor[weekday_weather_factor["표준버스정류장ID"] == stop_id]
+    if factor_row.empty:
+        raise BoardingFactorUnavailable(f"no weekday_weather_factor row for stop {stop_id}")
     column = factor_column_name("보정계수_승차", weekday_group, weather_group, temp_group)
+    if column not in factor_row.columns:
+        raise BoardingFactorUnavailable(
+            f"no {column!r} column in weekday_weather_factor for stop {stop_id}"
+        )
     return float(factor_row[column].iloc[0])
 
 
@@ -163,13 +179,16 @@ def boarding_factor(
     features_daily. Moved from api/main.py (issue #107)."""
     features_row = features_daily[
         (features_daily["표준버스정류장ID"] == stop_id) & (features_daily["사용일자"] == date)
-    ].iloc[0]
+    ]
+    if features_row.empty:
+        raise BoardingFactorUnavailable(f"no features_daily row for stop {stop_id} on date {date}")
+    row = features_row.iloc[0]
     return boarding_factor_for_labels(
         weekday_weather_factor,
         stop_id,
-        str(features_row["요일구분"]),
-        str(features_row["날씨구분"]),
-        str(features_row["기온구분"]),
+        str(row["요일구분"]),
+        str(row["날씨구분"]),
+        str(row["기온구분"]),
     )
 
 

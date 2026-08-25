@@ -26,6 +26,7 @@ from stationcast.api.schemas import (
 )
 from stationcast.estimator.congestion import grade_wait
 from stationcast.features.demand_factors import (
+    BoardingFactorUnavailable,
     boarding_factor,
     boarding_factor_for_labels,
     classify_day_type,
@@ -92,6 +93,20 @@ def _current_hour() -> int:
 
 def _current_date() -> int:
     return int(datetime.now().strftime("%Y%m%d"))
+
+
+def _validate_date(date: int) -> None:
+    """Reject a YYYYMMDD date that isn't a real calendar date (issue #137).
+
+    ``date`` is a plain ``int`` query param, so FastAPI/Pydantic accepts any
+    integer -- 0, negative, wrong-length, or a real-looking-but-invalid date
+    like 20260230 (Feb 30) all parse fine as ints and used to blow up later
+    as an unhandled ValueError (500) instead of a 422.
+    """
+    try:
+        datetime.strptime(str(date), "%Y%m%d")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"invalid date {date}") from exc
 
 
 def _stop_capacity(data: CorridorData, stop_id: int) -> float:
@@ -205,15 +220,22 @@ def get_context(
     """
     name = _stop_name(data, stop_id)
     target_date = _current_date() if date is None else date
+    _validate_date(target_date)
     day_type = classify_day_type(target_date, set(data.holiday["사용일자"]))
 
     weather_row = data.weather[data.weather["사용일자"] == target_date]
     if not weather_row.empty:
         precipitation = float(weather_row["강수량"].iloc[0])
         snowfall = float(weather_row["신적설"].iloc[0])
-        factor = boarding_factor(
-            data.features_daily, data.weekday_weather_factor, stop_id, target_date
-        )
+        raw_wind_speed = weather_row["평균풍속"].iloc[0]
+        try:
+            factor = boarding_factor(
+                data.features_daily, data.weekday_weather_factor, stop_id, target_date
+            )
+        except BoardingFactorUnavailable as exc:
+            raise HTTPException(
+                status_code=404, detail=f"no correction factor for stop {stop_id} on {target_date}"
+            ) from exc
         return StopContextResponse(
             stop_id=stop_id,
             name=name,
@@ -223,7 +245,7 @@ def get_context(
             precipitation=precipitation,
             humidity=float(weather_row["습도"].iloc[0]),
             snowfall=snowfall,
-            wind_speed=float(weather_row["평균풍속"].iloc[0]),
+            wind_speed=None if pd.isna(raw_wind_speed) else float(raw_wind_speed),
             precipitation_type=precipitation_type_from_asos(precipitation, snowfall),
             is_forecast=False,
             congestion_note=congestion_note(day_type, factor),
@@ -239,9 +261,14 @@ def get_context(
     weekday_group = "평일" if day_type == "평일" else "주말+공휴일"
     weather_group = "강수" if forecast.is_precipitating else "맑음"
     temp_group = classify_temperature(forecast.high_temp)
-    factor = boarding_factor_for_labels(
-        data.weekday_weather_factor, stop_id, weekday_group, weather_group, temp_group
-    )
+    try:
+        factor = boarding_factor_for_labels(
+            data.weekday_weather_factor, stop_id, weekday_group, weather_group, temp_group
+        )
+    except BoardingFactorUnavailable as exc:
+        raise HTTPException(
+            status_code=404, detail=f"no correction factor for stop {stop_id} on {target_date}"
+        ) from exc
 
     return StopContextResponse(
         stop_id=stop_id,
