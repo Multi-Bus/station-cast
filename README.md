@@ -118,6 +118,25 @@ uvicorn stationcast.api.main:app --reload
 `api/main.py`·`api/schemas.py` 변경 시 `python scripts/export_openapi.py`로
 재생성해야 CI가 통과합니다.
 
+### 5-1. Docker로 API 서버 실행 (선택)
+
+이미지에는 `data/processed/`가 들어 있지 않으므로(용량·라이선스, 위 3~4단계 참고),
+**볼륨 마운트가 필요합니다.** 마운트 없이 띄우면 `/health`만 응답하고 나머지
+엔드포인트는 503을 반환합니다(issue #141).
+
+```bash
+docker build -t station-cast .
+docker run -p 8000:8000 -v "$(pwd)/data/processed:/app/data/processed" station-cast
+```
+
+원본 데이터 없이 컨테이너 기동만 빠르게 확인하려면 합성 스모크 데이터로 대신할
+수 있습니다(실데이터 아님, `/stops` 등 응답이 실제 회랑 값과 다릅니다):
+
+```bash
+python scripts/build_smoke_data.py /tmp/smoke-data
+docker run -p 8000:8000 -v /tmp/smoke-data:/app/data/processed station-cast
+```
+
 ### 6. 프론트엔드 (issue #56)
 
 ```bash
