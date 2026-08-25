@@ -126,9 +126,10 @@ npm install
 npm run dev
 ```
 
-`http://localhost:5173`. 목데이터로 동작하며(백엔드 fetch 연동은 각 데이터가
-준비되는 대로 진행), API 서버를 같이 띄우면 `/api`가 프록시됩니다. 자세한 범위는
-[`frontend/README.md`](./frontend/README.md) 참고.
+`http://localhost:5173`. `/api`가 API 서버(`http://127.0.0.1:8000`)로
+프록시되므로 백엔드를 같이 띄워야 정류장 데이터가 뜹니다 -- 백엔드가 응답하지
+않으면 재시도 버튼이 있는 에러 상태가 표시됩니다(목데이터 폴백 없음, issue
+#136). 자세한 범위는 [`frontend/README.md`](./frontend/README.md) 참고.
 
 ## 디렉터리 구조
 

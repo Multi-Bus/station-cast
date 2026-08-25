@@ -8,21 +8,42 @@ export function NearbyStopsPanel({
   stops,
   compact,
   loading,
+  error,
+  emptyReason,
   onSelectStop,
   onToggleFavorite,
+  onRetry,
 }: {
   stops: NearbyStop[];
   compact: boolean;
   loading: boolean;
+  error: boolean;
+  /** Why `stops` (the already filtered+searched list) is empty, when it's not
+   * loading or errored -- lets the message say which of "필터"/"검색" is
+   * responsible instead of one sentence covering both plus API failure. */
+  emptyReason: "filter" | "search" | null;
   onSelectStop: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  onRetry: () => void;
 }) {
+  const emptyMessage = loading
+    ? "정류장을 불러오는 중..."
+    : error
+      ? "정류장 정보를 불러오지 못했습니다."
+      : emptyReason === "search"
+        ? "검색 결과가 없습니다."
+        : "필터 조건에 맞는 정류장이 없습니다.";
+
   if (compact) {
     const nearest = stops[0];
     return (
       <div className="nearby-peek">
         <p className="nearby-peek-title">
-          {loading ? "정류장을 불러오는 중..." : `내 주변 정류장 ${stops.length}곳`}
+          {loading
+            ? "정류장을 불러오는 중..."
+            : error
+              ? "정류장 정보를 불러오지 못했습니다."
+              : `내 주변 정류장 ${stops.length}곳`}
         </p>
         {nearest && (
           <button className="nearby-peek-row" onClick={() => onSelectStop(nearest.id)}>
@@ -41,9 +62,14 @@ export function NearbyStopsPanel({
         <span className="nearby-sort">거리순 ⌄</span>
       </div>
       {stops.length === 0 && (
-        <p className="nearby-empty">
-          {loading ? "정류장을 불러오는 중..." : "필터 조건에 맞는 정류장이 없습니다."}
-        </p>
+        <div className="nearby-empty">
+          <p>{emptyMessage}</p>
+          {!loading && error && (
+            <button className="nearby-empty-retry" onClick={onRetry}>
+              다시 시도
+            </button>
+          )}
+        </div>
       )}
       <ul className="nearby-rows">
         {stops.map((stop) => {

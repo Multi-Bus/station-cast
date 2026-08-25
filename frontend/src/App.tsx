@@ -3,8 +3,8 @@ import { BottomSheet } from "./components/BottomSheet";
 import { ComingSoon } from "./components/ComingSoon";
 import { MapScreen } from "./components/MapScreen";
 import { NearbyStopsPanel } from "./components/NearbyStopsPanel";
+import { StopDetailError } from "./components/StopDetailError";
 import { StopDetailLoading } from "./components/StopDetailLoading";
-import { StopDetailPending } from "./components/StopDetailPending";
 import { StopDetailView } from "./components/StopDetailView";
 import { TabBar, type TabKey } from "./components/TabBar";
 import { useBottomSheet } from "./hooks/useBottomSheet";
@@ -22,7 +22,12 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const sheet = useBottomSheet("peek");
   const { favorites, toggle: toggleFavorite } = useFavorites([]);
-  const { stops: corridorStops, loading: stopsLoading, usingMock } = useCorridorStops();
+  const {
+    stops: corridorStops,
+    loading: stopsLoading,
+    error: stopsError,
+    retry: retryStops,
+  } = useCorridorStops();
   const location = useUserLocation();
 
   const stops = useMemo(() => {
@@ -37,10 +42,21 @@ export default function App() {
 
   // Filters live here, not inside MapScreen, so the sheet's list (screen ②)
   // and the map's markers can never disagree about which stops are shown.
-  const visibleStops = useMemo(() => {
-    const filtered = applyStopFilters(stops, activeFilters);
-    return applySearchQuery(filtered, searchQuery);
-  }, [stops, activeFilters, searchQuery]);
+  const filteredStops = useMemo(() => applyStopFilters(stops, activeFilters), [stops, activeFilters]);
+  const visibleStops = useMemo(
+    () => applySearchQuery(filteredStops, searchQuery),
+    [filteredStops, searchQuery],
+  );
+
+  // Distinguishes "filter narrowed it to zero" from "search narrowed it to
+  // zero" so NearbyStopsPanel can say which one, instead of one sentence
+  // covering both (and, previously, API failure too -- issue #136).
+  const emptyReason: "filter" | "search" | null =
+    activeFilters.size > 0 && filteredStops.length === 0
+      ? "filter"
+      : searchQuery.trim() !== "" && visibleStops.length === 0
+        ? "search"
+        : null;
 
   function toggleFilter(key: FilterKey) {
     setActiveFilters((prev) => {
@@ -83,7 +99,11 @@ export default function App() {
   }
 
   const selectedStop = selectedStopId ? stops.find((s) => s.id === selectedStopId) : undefined;
-  const { detail: selectedDetail, pending: detailPending } = useStopDetail(selectedStop, usingMock);
+  const {
+    detail: selectedDetail,
+    pending: detailPending,
+    retry: retryDetail,
+  } = useStopDetail(selectedStop);
 
   return (
     <>
@@ -118,18 +138,22 @@ export default function App() {
                 onToggleFavorite={toggleFavorite}
               />
             ) : selectedStop ? (
-              <StopDetailPending
+              <StopDetailError
                 stop={selectedStop}
                 onBack={backToList}
                 onToggleFavorite={toggleFavorite}
+                onRetry={retryDetail}
               />
             ) : (
               <NearbyStopsPanel
                 stops={visibleStops}
                 compact={sheet.snap === "peek"}
                 loading={stopsLoading}
+                error={stopsError}
+                emptyReason={emptyReason}
                 onSelectStop={selectStop}
                 onToggleFavorite={toggleFavorite}
+                onRetry={retryStops}
               />
             )}
           </BottomSheet>

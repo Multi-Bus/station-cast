@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getArrivals, getContext, getTimeline } from "../api/client";
 import type { ApiArrivalInfo, StopContextResponse, TimelineResponse } from "../api/types";
-import { STOP_DETAILS } from "../data/mockStops";
 import { congestionLevelFromGrade, type Arrival, type NearbyStop, type StopDetail } from "../types/stop";
 
 function arrivalMinutes(message: string): number {
@@ -60,23 +59,22 @@ function buildStopDetail(
 
 export function useStopDetail(
   stop: NearbyStop | undefined,
-  isMock: boolean,
-): { detail: StopDetail | null; pending: boolean } {
+): { detail: StopDetail | null; pending: boolean; error: boolean; retry: () => void } {
   const [detail, setDetail] = useState<StopDetail | null>(null);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!stop) {
       setDetail(null);
-      return;
-    }
-    if (isMock) {
-      setDetail(STOP_DETAILS[stop.id] ?? null);
+      setError(false);
       return;
     }
 
     let cancelled = false;
     setPending(true);
+    setError(false);
     setDetail(null);
 
     async function run() {
@@ -90,7 +88,7 @@ export function useStopDetail(
         if (cancelled) return;
         setDetail(buildStopDetail(stop!, timeline, arrivalsRes?.arrivals ?? [], context));
       } catch {
-        if (!cancelled) setDetail(null);
+        if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setPending(false);
       }
@@ -100,7 +98,7 @@ export function useStopDetail(
     return () => {
       cancelled = true;
     };
-  }, [stop?.id, isMock]);
+  }, [stop?.id, reloadKey]);
 
-  return { detail, pending };
+  return { detail, pending, error, retry: () => setReloadKey((k) => k + 1) };
 }
