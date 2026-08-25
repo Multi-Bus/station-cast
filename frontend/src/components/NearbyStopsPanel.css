@@ -19,10 +19,28 @@
 }
 
 .nearby-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-4) 0;
   text-align: center;
   font-size: 13px;
   color: var(--color-text-muted);
+}
+
+.nearby-empty p {
+  margin: 0;
+}
+
+.nearby-empty-retry {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-card-border);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text);
 }
 
 .nearby-list-header {

@@ -140,9 +140,7 @@ def build_corridor_stops(
     )
     result = meta.merge(coords, left_on="표준버스정류장ID", right_on="정류소번호", how="left")
     return (
-        result.drop(columns=["정류소번호"])
-        .sort_values("표준버스정류장ID")
-        .reset_index(drop=True)
+        result.drop(columns=["정류소번호"]).sort_values("표준버스정류장ID").reset_index(drop=True)
     )
 
 

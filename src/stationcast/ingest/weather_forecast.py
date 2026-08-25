@@ -115,8 +115,10 @@ def _latest_base_datetime(now: datetime | None = None) -> tuple[str, str]:
         + timedelta(minutes=_BASE_TIME_PUBLISH_DELAY_MIN)
         <= now
     ]
-    latest = max(published) if published else (
-        (now - timedelta(days=1)).replace(hour=23, minute=0, second=0, microsecond=0)
+    latest = (
+        max(published)
+        if published
+        else ((now - timedelta(days=1)).replace(hour=23, minute=0, second=0, microsecond=0))
     )
     return latest.strftime("%Y%m%d"), latest.strftime("%H%M")
 
