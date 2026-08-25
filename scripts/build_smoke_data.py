@@ -1,9 +1,6 @@
 """Build a small synthetic data/processed/ for smoke-testing the API (issue #141).
 
-Nobody had ever actually started the container and hit an endpoint -- the
-real pipeline needs data/raw/ inputs that require manual downloads and API
-keys (data/README.md §1~§7), which CI doesn't have. This script fabricates
-the minimum parquet set load_corridor_data() needs, using the corridor's
+This script fabricates the minimum parquet set load_corridor_data() needs, using the corridor's
 real stop IDs (so /stops/{id}/... paths are meaningful) with made-up
 values everywhere else, so `docker run` can be checked end to end without
 the real pipeline.
