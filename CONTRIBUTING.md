@@ -44,8 +44,10 @@ type: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`
 
 ## 로컬 개발 환경
 
+Python 3.11이 필요합니다(`requires-python = ">=3.11,<3.12"`).
+
 ```bash
-pip install -e ".[dev]"
+pip install -c constraints.txt -e ".[dev]"
 pre-commit install
 pytest
 ```

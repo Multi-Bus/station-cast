@@ -18,9 +18,7 @@ def _raw_holiday_df() -> pd.DataFrame:
 
 
 def test_build_holiday_daily_filters_to_corridor_range() -> None:
-    result = build_holiday_daily(
-        _raw_holiday_df(), start=20250701, end=20260630
-    )
+    result = build_holiday_daily(_raw_holiday_df(), start=20250701, end=20260630)
 
     # 20250101 is before the corridor start and must be dropped
     assert 20250101 not in set(result["사용일자"])
@@ -28,9 +26,7 @@ def test_build_holiday_daily_filters_to_corridor_range() -> None:
 
 
 def test_build_holiday_daily_collapses_same_day_holidays() -> None:
-    result = build_holiday_daily(
-        _raw_holiday_df(), start=20250701, end=20260630
-    )
+    result = build_holiday_daily(_raw_holiday_df(), start=20250701, end=20260630)
 
     row = result[result["사용일자"] == 20260505].iloc[0]
     assert row["공휴일명"] == "어린이날·부처님오신날"
