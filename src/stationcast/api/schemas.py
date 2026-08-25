@@ -81,7 +81,10 @@ class StopContextResponse(BaseModel):
 
     precipitation_type is a normalized display label (맑음/비/눈 등). is_forecast=True
     means the fields came from a short-range forecast rather than an observed
-    reading; precipitation/snowfall are 0.0 on forecast rows.
+    reading; precipitation/snowfall are 0.0 on forecast rows. wind_speed is
+    null on the rare historical date where ASOS itself has no 평균풍속
+    reading (issue #137) -- never fabricated, since unlike precipitation/
+    snowfall there's no "0 means it didn't happen" convention for wind.
     """
 
     stop_id: int
@@ -92,7 +95,7 @@ class StopContextResponse(BaseModel):
     precipitation: float
     humidity: float
     snowfall: float
-    wind_speed: float
+    wind_speed: float | None
     precipitation_type: str
     is_forecast: bool
     congestion_note: str

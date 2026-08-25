@@ -55,7 +55,8 @@ def corridor_data() -> CorridorData:
             "강수량": [0.0, 3.2],
             "습도": [55.0, 70.0],
             "신적설": [0.0, 1.5],
-            "평균풍속": [2.1, 3.4],
+            # 20260102는 기상청 ASOS 평균풍속 결측(NaN) 재현용 (issue #137).
+            "평균풍속": [2.1, float("nan")],
         }
     )
     holiday = pd.DataFrame({"사용일자": [20260101], "공휴일명": ["신정"]})
@@ -291,6 +292,37 @@ def test_context_unknown_date_returns_404(client: TestClient) -> None:
     response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260201})
 
     assert response.status_code == 404
+
+
+def test_context_missing_features_daily_combo_returns_404(client: TestClient) -> None:
+    # STOP_A only has a features_daily row for 20260101, not 20260102 -- weather
+    # exists for both dates, but this (stop, date) combo doesn't. Mirrors the
+    # 17 corridor-wide combinations missing from corridor_features_daily.parquet
+    # in real data (data/README.md §10, night-bus-only days). boarding_factor()
+    # used to crash on an empty frame's .iloc[0] here (issue #137).
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260102})
+
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("bad_date", [0, -5, 1, 20261332, 20260230])
+def test_context_rejects_invalid_date(client: TestClient, bad_date: int) -> None:
+    # 0/-5/1 aren't parseable as YYYYMMDD at all; 20261332 has month 13;
+    # 20260230 is Feb 30, which doesn't exist. All used to reach
+    # classify_day_type()'s pd.to_datetime() and crash as an unhandled 500.
+    response = client.get(f"/stops/{STOP_A}/context", params={"date": bad_date})
+
+    assert response.status_code == 422
+
+
+def test_context_wind_speed_null_when_asos_reading_missing(client: TestClient) -> None:
+    # STOP_B/20260102's 평균풍속 fixture value is NaN (ASOS instrument gap) --
+    # the response should expose null rather than crash or fabricate a value
+    # (issue #137).
+    response = client.get(f"/stops/{STOP_B}/context", params={"date": 20260102})
+
+    assert response.status_code == 200
+    assert response.json()["wind_speed"] is None
 
 
 def test_context_falls_back_to_forecast_for_date_outside_weather_range(
