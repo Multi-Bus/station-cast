@@ -59,9 +59,7 @@ def build_corridor_daily(
         .agg(승차=("승차총승객수", "sum"), 하차=("하차총승객수", "sum"))
         .reset_index()
     )
-    latest_name = (
-        sub.sort_values("사용일자").groupby("표준버스정류장ID")["정류장명"].last()
-    )
+    latest_name = sub.sort_values("사용일자").groupby("표준버스정류장ID")["정류장명"].last()
     result = daily_totals.merge(latest_name, on="표준버스정류장ID", how="left")
 
     return (

@@ -37,8 +37,7 @@ class ArrivalInfoUnavailable(Exception):
 
 
 def _service_key() -> str:
-    """Read SEOUL_BUS_API_KEY from the environment, URL-decoded.
-    """
+    """Read SEOUL_BUS_API_KEY from the environment, URL-decoded."""
     raw = os.environ.get("SEOUL_BUS_API_KEY")
     if not raw:
         raise ArrivalInfoUnavailable("SEOUL_BUS_API_KEY is not set")
@@ -80,6 +79,5 @@ def fetch_arrivals(ars_id: str, timeout: float = DEFAULT_TIMEOUT) -> list[dict[s
         raise ArrivalInfoUnavailable(f"TOPIS returned headerCd={header_cd}: {header_msg}")
 
     return [
-        {field.tag: field.text for field in item}
-        for item in root.findall("./msgBody/itemList")
+        {field.tag: field.text for field in item} for item in root.findall("./msgBody/itemList")
     ]
