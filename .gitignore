@@ -21,11 +21,11 @@ license-report.csv
 scancode-source-report-*.json
 venv_osc_dep_tmp/
 
-# Data (raw/processed artifacts are not committed; keep folder structure via .gitkeep)
+# Data (raw is not committed -- API keys/login required to fetch, 16MB;
+# processed *is* committed since issue #159 -- 548KB, and every source
+# dataset's license permits redistribution, see data/README.md §11)
 data/raw/*
 !data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
 
 # Secrets / local config
 .env
