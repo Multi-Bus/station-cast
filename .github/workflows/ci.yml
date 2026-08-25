@@ -35,6 +35,52 @@ jobs:
           python scripts/export_openapi.py
           git diff --exit-code docs/openapi.json
 
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t station-cast:ci .
+
+      - name: Run without the data volume -- must be 503, not 500 (issue #141)
+        run: |
+          docker run -d --rm -p 8000:8000 --name station-cast-empty station-cast:ci
+          for i in $(seq 1 10); do curl -sf http://127.0.0.1:8000/health && break; sleep 1; done
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/stops)
+          docker logs station-cast-empty
+          docker stop station-cast-empty
+          test "$status" = "503"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -c constraints.txt -e .
+
+      - name: Build synthetic smoke data
+        run: python scripts/build_smoke_data.py /tmp/smoke-data
+
+      - name: Run with the data volume mounted -- every endpoint must answer
+        run: |
+          docker run -d --rm -p 8000:8000 -v /tmp/smoke-data:/app/data/processed \
+            --name station-cast-smoke station-cast:ci
+          for i in $(seq 1 10); do curl -sf http://127.0.0.1:8000/health && break; sleep 1; done
+          fail=0
+          for path in /stops /corridor /stops/101000021/timeline \
+                      /stops/101000021/congestion /stops/101000021/context?date=20260105 \
+                      /stops/101000021/arrivals; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8000$path")
+            echo "$path -> $status"
+            [ "$status" = "200" ] || fail=1
+          done
+          docker logs station-cast-smoke
+          docker stop station-cast-smoke
+          exit $fail
+
   frontend:
     runs-on: ubuntu-latest
     steps:

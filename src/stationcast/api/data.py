@@ -31,6 +31,22 @@ from stationcast.ingest.stop_capacity import build_stop_capacity
 
 DATA_DIR = Path("data/processed")
 
+_PARQUET_FILES = (
+    "corridor_stops.parquet",
+    "corridor_wait.parquet",
+    "weather_daily.parquet",
+    "holiday_daily_all.parquet",
+    "corridor_features_daily.parquet",
+    "weekday_weather_factor.parquet",
+)
+
+
+class CorridorDataUnavailable(Exception):
+    """Raised when data_dir is missing one of the parquet files
+    load_corridor_data() needs -- most commonly a container run without the
+    data volume mounted. Callers should surface this as a 503, not a 500:
+    the service isn't broken, it just hasn't been given its data yet."""
+
 
 @dataclass
 class CorridorData:
@@ -56,7 +72,21 @@ class CorridorData:
 
 
 def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
-    """Read the corridor's stop metadata and estimated-wait time series from disk."""
+    """Read the corridor's stop metadata and estimated-wait time series from disk.
+
+    Raises CorridorDataUnavailable listing every missing file, rather than
+    letting the first pd.read_parquet() fail with a bare FileNotFoundError --
+    someone bringing up a fresh container wants the whole list at once, not
+    one file per restart.
+    """
+    missing = [name for name in _PARQUET_FILES if not (data_dir / name).exists()]
+    if missing:
+        raise CorridorDataUnavailable(
+            f"missing parquet files in {data_dir}: {missing} -- run "
+            "scripts/build_processed.py and estimator/wait_population.py, "
+            "or mount a data/processed/ directory that already has them"
+        )
+
     stops = pd.read_parquet(data_dir / "corridor_stops.parquet")
     wait = pd.read_parquet(data_dir / "corridor_wait.parquet")
     capacity = build_stop_capacity()
