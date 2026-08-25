@@ -107,60 +107,62 @@ export default function App() {
 
   return (
     <>
-      {activeTab === "map" && (
-        <>
-          <MapScreen
-            stops={stops}
-            visibleStops={visibleStops}
-            activeFilters={activeFilters}
-            onToggleFilter={toggleFilter}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            selectedStopId={selectedStopId}
-            sheetHeightPx={sheet.heightPx}
-            controlsHidden={sheet.snap === "full"}
-            userPosition={location.position}
-            locationStatus={location.status}
-            onSelectStop={selectStop}
-            onRecenter={recenter}
-          />
-          <BottomSheet sheet={sheet}>
-            {selectedDetail && selectedStop ? (
-              <StopDetailView
-                stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
-                onBack={backToList}
-                onToggleFavorite={toggleFavorite}
-              />
-            ) : selectedStop && detailPending ? (
-              <StopDetailLoading
-                stop={selectedStop}
-                onBack={backToList}
-                onToggleFavorite={toggleFavorite}
-              />
-            ) : selectedStop ? (
-              <StopDetailError
-                stop={selectedStop}
-                onBack={backToList}
-                onToggleFavorite={toggleFavorite}
-                onRetry={retryDetail}
-              />
-            ) : (
-              <NearbyStopsPanel
-                stops={visibleStops}
-                compact={sheet.snap === "peek"}
-                loading={stopsLoading}
-                error={stopsError}
-                emptyReason={emptyReason}
-                onSelectStop={selectStop}
-                onToggleFavorite={toggleFavorite}
-                onRetry={retryStops}
-              />
-            )}
-          </BottomSheet>
-        </>
-      )}
-      {activeTab === "favorites" && <ComingSoon label="즐겨찾기" />}
-      {activeTab === "settings" && <ComingSoon label="설정" />}
+      <main>
+        {activeTab === "map" && (
+          <>
+            <MapScreen
+              stops={stops}
+              visibleStops={visibleStops}
+              activeFilters={activeFilters}
+              onToggleFilter={toggleFilter}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              selectedStopId={selectedStopId}
+              sheetHeightPx={sheet.heightPx}
+              controlsHidden={sheet.snap === "full"}
+              userPosition={location.position}
+              locationStatus={location.status}
+              onSelectStop={selectStop}
+              onRecenter={recenter}
+            />
+            <BottomSheet sheet={sheet}>
+              {selectedDetail && selectedStop ? (
+                <StopDetailView
+                  stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
+                  onBack={backToList}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ) : selectedStop && detailPending ? (
+                <StopDetailLoading
+                  stop={selectedStop}
+                  onBack={backToList}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ) : selectedStop ? (
+                <StopDetailError
+                  stop={selectedStop}
+                  onBack={backToList}
+                  onToggleFavorite={toggleFavorite}
+                  onRetry={retryDetail}
+                />
+              ) : (
+                <NearbyStopsPanel
+                  stops={visibleStops}
+                  compact={sheet.snap === "peek"}
+                  loading={stopsLoading}
+                  error={stopsError}
+                  emptyReason={emptyReason}
+                  onSelectStop={selectStop}
+                  onToggleFavorite={toggleFavorite}
+                  onRetry={retryStops}
+                />
+              )}
+            </BottomSheet>
+          </>
+        )}
+        {activeTab === "favorites" && <ComingSoon label="즐겨찾기" />}
+        {activeTab === "settings" && <ComingSoon label="설정" />}
+      </main>
 
       <TabBar active={activeTab} onChange={changeTab} />
     </>

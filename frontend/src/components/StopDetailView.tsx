@@ -48,14 +48,13 @@ export function StopDetailView({
 }) {
   const level = stop.congestionLevel;
   const peakBarValue = Math.max(...stop.hourly.map((h) => h.value));
-  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleShare() {
     const result = await shareStop(stop);
-    if (result === "copied") {
-      setShareStatus("copied");
-      setTimeout(() => setShareStatus("idle"), 2000);
-    }
+    if (result === "shared") return;
+    setShareStatus(result === "copied" ? "copied" : "failed");
+    setTimeout(() => setShareStatus("idle"), 2000);
   }
 
   return (
@@ -75,14 +74,22 @@ export function StopDetailView({
           </button>
           <span aria-hidden="true">·</span>
           <button aria-label="정류장 정보 공유" onClick={handleShare}>
-            <Share2 size={14} /> {shareStatus === "copied" ? "복사됨" : "공유"}
+            <Share2 size={14} />{" "}
+            <span aria-live="polite">
+              {shareStatus === "copied" ? "복사됨" : shareStatus === "failed" ? "공유 실패" : "공유"}
+            </span>
           </button>
         </div>
       </div>
 
       <h1 className="stop-detail-title">
         {stop.name}
-        {stop.arsNumber && <span className="stop-detail-ars-number">{stop.arsNumber}</span>}
+        {stop.arsNumber && (
+          <>
+            <span className="sr-only"> </span>
+            <span className="stop-detail-ars-number">{stop.arsNumber}</span>
+          </>
+        )}
       </h1>
 
       <section className={`stop-hero congestion-${level}`}>
@@ -98,14 +105,19 @@ export function StopDetailView({
         <div>
           <p className="stop-weather-summary">
             {stop.weather.summary}
-            {stop.weather.isForecast && <span className="forecast-badge">예보</span>}
+            {stop.weather.isForecast && (
+              <>
+                <span className="sr-only"> </span>
+                <span className="forecast-badge">예보</span>
+              </>
+            )}
           </p>
           <p className="stop-weather-note">{stop.weather.note}</p>
         </div>
       </section>
 
       <section className="card stop-arrivals">
-        <h3 className="section-header">버스 도착 정보</h3>
+        <h2 className="section-header">버스 도착 정보</h2>
         {stop.arrivals.map((a) => (
           <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
             <span className="stop-arrival-route">{a.route}</span>
@@ -116,7 +128,7 @@ export function StopDetailView({
       </section>
 
       <section className="stop-hourly">
-        <h3 className="section-header">시간대별 예상 대기인원</h3>
+        <h2 className="section-header">시간대별 예상 대기인원</h2>
         <div
           className="stop-hourly-bars"
           role="img"
