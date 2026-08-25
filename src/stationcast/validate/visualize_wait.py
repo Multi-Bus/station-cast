@@ -31,9 +31,7 @@ def save_overview_grid(wait_df: pd.DataFrame, out_path: Path) -> Path:
     """
     stop_ids = sorted(wait_df["표준버스정류장ID"].drop_duplicates().tolist())
     if len(stop_ids) != EXPECTED_STOP_COUNT:
-        raise ValueError(
-            f"expected {EXPECTED_STOP_COUNT} stops in wait_df, found {len(stop_ids)}"
-        )
+        raise ValueError(f"expected {EXPECTED_STOP_COUNT} stops in wait_df, found {len(stop_ids)}")
 
     n_cols = 3
     n_rows = -(-len(stop_ids) // n_cols)  # ceil division

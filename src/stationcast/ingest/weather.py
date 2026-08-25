@@ -44,9 +44,7 @@ def build_weather_daily(weather_df: pd.DataFrame) -> pd.DataFrame:
     joined directly on that column.
     """
     selected = weather_df[list(_COLUMN_MAP.keys())].rename(columns=_COLUMN_MAP)
-    selected["사용일자"] = (
-        pd.to_datetime(selected["사용일자"]).dt.strftime("%Y%m%d").astype(int)
-    )
+    selected["사용일자"] = pd.to_datetime(selected["사용일자"]).dt.strftime("%Y%m%d").astype(int)
     zero_fill = list(_ZERO_FILL_COLUMNS)
     selected[zero_fill] = selected[zero_fill].fillna(0.0)
     return selected.sort_values("사용일자").reset_index(drop=True)

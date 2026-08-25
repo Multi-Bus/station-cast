@@ -10,16 +10,22 @@
 실제로 탄 사람(승차)뿐입니다. Station Cast는 이 승차 실데이터와 노선별 배차간격으로부터
 대기인원을 역추정합니다(Little's Law 기반).
 
-문제 정의와 접근 방식은 [ARCHITECTURE.md](./ARCHITECTURE.md)에 정리합니다. 작성 중입니다.
+문제 정의와 접근 방식은 [ARCHITECTURE.md](./ARCHITECTURE.md)에 정리했습니다.
 
 ## 실행
+
+**Python 3.11이 필요합니다.** `pyproject.toml`의 `requires-python`이 `>=3.11,<3.12`이며,
+3.12 이상에서는 설치 단계에서 막힙니다. CI와 Docker 이미지도 3.11로 고정돼 있습니다.
 
 ```bash
 git clone https://github.com/Multi-Bus/station-cast.git
 cd station-cast
-pip install -e ".[dev]"
+python --version                              # Python 3.11.x
+pip install -c constraints.txt -e ".[dev]"
 pytest
 ```
+
+`-c constraints.txt`는 CI·Dockerfile이 쓰는 것과 같은 의존성 버전 조합을 고정합니다.
 
 ### 데이터 파이프라인 재현 (issue #20)
 
