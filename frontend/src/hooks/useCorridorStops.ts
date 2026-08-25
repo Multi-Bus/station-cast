@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getCorridor, getStops } from "../api/client";
-import { NEARBY_STOPS } from "../data/mockStops";
 import { congestionLevelFromGrade, type NearbyStop } from "../types/stop";
 
 const PLACEHOLDER_ROUTES: string[] = [];
@@ -17,14 +16,18 @@ function placeholderMapPosition(index: number): { xPct: number; yPct: number } {
 export function useCorridorStops(): {
   stops: NearbyStop[];
   loading: boolean;
-  usingMock: boolean;
+  error: boolean;
+  retry: () => void;
 } {
   const [stops, setStops] = useState<NearbyStop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [usingMock, setUsingMock] = useState(false);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(false);
 
     async function run() {
       try {
@@ -54,13 +57,12 @@ export function useCorridorStops(): {
         });
         if (!cancelled) {
           setStops(built);
-          setUsingMock(false);
           setLoading(false);
         }
       } catch {
         if (!cancelled) {
-          setStops(NEARBY_STOPS);
-          setUsingMock(true);
+          setStops([]);
+          setError(true);
           setLoading(false);
         }
       }
@@ -70,7 +72,7 @@ export function useCorridorStops(): {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
-  return { stops, loading, usingMock };
+  return { stops, loading, error, retry: () => setReloadKey((k) => k + 1) };
 }
