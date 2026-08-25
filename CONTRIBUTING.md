@@ -1,5 +1,13 @@
 # Contributing to Station Cast
 
+## 팀 역할
+
+| 트랙 | 담당 | 영역 |
+|---|---|---|
+| A. 데이터 | sonyungi | `ingest/`, `features/` |
+| B. 추정·검증 | stevechung7 | `estimator/`, `validate/` |
+| C. 서비스·오픈소스 | subniin | `api/`, `.github/`, Docker/CI |
+
 ## 기본 원칙
 
 - `main` 브랜치에 직접 push 하지 않습니다. 모든 변경은 Issue → 브랜치 → PR → 리뷰(작성자를
