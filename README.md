@@ -124,9 +124,9 @@ uvicorn stationcast.api.main:app --reload
 
 ### 5-1. Docker로 API 서버 실행 (선택)
 
-이미지에는 `data/processed/`가 들어 있지 않으므로(용량·라이선스, 위 3~4단계 참고),
-**볼륨 마운트가 필요합니다.** 마운트 없이 띄우면 `/health`만 응답하고 나머지
-엔드포인트는 503을 반환합니다(issue #141).
+Dockerfile은 `src/`와 의존성 파일만 COPY하므로 이미지에 `data/processed/`가 들어가지
+않습니다. 따라서 **볼륨 마운트가 필요합니다.** 마운트 없이 띄우면 `/health`만 응답하고
+나머지 엔드포인트는 503을 반환합니다(issue #141).
 
 ```bash
 docker build -t station-cast .
@@ -168,7 +168,7 @@ station-cast/
   design_source/  # 디자인 핸드오프 원본 (frontend/README.md 참고)
   tests/
   docs/           # LICENSE_POLICY.md 등
-  data/           # raw/processed (커밋되지 않음, .gitkeep만 추적)
+  data/           # processed는 커밋됨(issue #159), raw는 각자 수집
 ```
 
 ## 규칙
