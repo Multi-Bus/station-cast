@@ -6,16 +6,6 @@ export type SheetSnap = "peek" | "half" | "full";
 const PEEK_PX = 120;
 const HALF_RATIO = 0.54;
 
-/** Resolves --tabbar-total (tokens.css: 56px tab bar + safe-area-inset-bottom)
- * to an actual pixel number. A custom property can't be read directly via
- * getComputedStyle -- calc()/env() inside one are only resolved once the
- * property is applied to a real layout property, so a throwaway probe
- * element is the standard way to get the number out.
- *
- * Reading the token here (rather than re-deriving 56 + inset separately)
- * keeps this in sync with BottomSheet.css's `bottom: var(--tabbar-total)`
- * by construction -- the two drifting apart is exactly how issue #142
- * happened (JS hardcoded 56, CSS also added the inset). */
 function readTabbarTotalPx(): number {
   const probe = document.createElement("div");
   probe.style.position = "absolute";
