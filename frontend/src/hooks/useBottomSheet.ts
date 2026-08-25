@@ -5,10 +5,20 @@ export type SheetSnap = "peek" | "half" | "full";
 
 const PEEK_PX = 120;
 const HALF_RATIO = 0.54;
-const TABBAR_PX = 56;
+
+function readTabbarTotalPx(): number {
+  const probe = document.createElement("div");
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  probe.style.height = "var(--tabbar-total)";
+  document.body.appendChild(probe);
+  const px = probe.getBoundingClientRect().height;
+  document.body.removeChild(probe);
+  return px;
+}
 
 function computeAnchors(viewportH: number) {
-  const containerH = viewportH - TABBAR_PX;
+  const containerH = viewportH - readTabbarTotalPx();
   return { peek: PEEK_PX, half: Math.round(containerH * HALF_RATIO), full: containerH };
 }
 
