@@ -238,7 +238,7 @@
         "type": "object"
       },
       "StopContextResponse": {
-        "description": "Weather + day-type context for one stop on one date (issue #47).\n\nprecipitation_type is a normalized display label (맑음/비/눈 등). is_forecast=True\nmeans the fields came from a short-range forecast rather than an observed\nreading; precipitation/snowfall are 0.0 on forecast rows.",
+        "description": "Weather + day-type context for one stop on one date (issue #47).\n\nprecipitation_type is a normalized display label (맑음/비/눈 등). is_forecast=True\nmeans the fields came from a short-range forecast rather than an observed\nreading; precipitation/snowfall are 0.0 on forecast rows. wind_speed is\nnull on the rare historical date where ASOS itself has no 평균풍속\nreading (issue #137) -- never fabricated, since unlike precipitation/\nsnowfall there's no \"0 means it didn't happen\" convention for wind.",
         "properties": {
           "congestion_note": {
             "title": "Congestion Note",
@@ -285,8 +285,15 @@
             "type": "number"
           },
           "wind_speed": {
-            "title": "Wind Speed",
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wind Speed"
           }
         },
         "required": [
