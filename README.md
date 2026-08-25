@@ -82,9 +82,10 @@ cp frontend/.env.example frontend/.env   # 카카오 지도 키
 `.env`는 `.gitignore`에 있습니다. 포털이 주는 키가 퍼센트 인코딩(`%2F`, `%3D` 등)돼
 있어도 그대로 붙여넣으면 됩니다 — 코드가 `unquote()`로 디코딩합니다.
 
-### 3. 원본 데이터 내려받기
+### 3. (선택) 원본 데이터로 최신화
 
-`data/processed/`의 parquet은 커밋되지 않으므로(용량·라이선스), 각자 로컬에서 재생성합니다.
+`data/processed/`의 parquet은 **이미 저장소에 포함**돼 있으므로 바로 5번(API 서버)으로
+건너뛰어도 됩니다. 원본을 다시 받아 최신 데이터로 갱신하고 싶을 때만 이 단계를 진행합니다.
 원본 CSV/XLSX는 기상청 로그인·공공데이터포털 인증키가 필요해 자동화할 수 없으니, 먼저
 [`data/README.md`](./data/README.md) §1~§7을 보고 `data/raw/`에 내려받습니다.
 
@@ -92,7 +93,10 @@ cp frontend/.env.example frontend/.env   # 카카오 지도 키
 XLSX). 기상청 ASOS 일자료만 회원가입·로그인이 필요하고, 특일정보(공휴일)는 위 2번과 같은
 방식의 오픈API 키를 씁니다.
 
-### 4. 파이프라인 실행
+### 4. (선택) 파이프라인 재실행
+
+이어서 재현하려면 이렇게 실행합니다 — 위 3번을 건너뛰었다면 이 단계도 건너뛰고, 저장소에
+이미 포함된 `data/processed/` 파일을 그대로 씁니다.
 
 ```bash
 python scripts/build_processed.py
