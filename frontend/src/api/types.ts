@@ -44,7 +44,7 @@ export interface StopContextResponse {
   precipitation: number;
   humidity: number;
   snowfall: number;
-  wind_speed: number;
+  wind_speed: number | null;
   congestion_note: string;
   precipitation_type?: string;
   is_forecast?: boolean;
