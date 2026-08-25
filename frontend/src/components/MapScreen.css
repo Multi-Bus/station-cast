@@ -173,13 +173,6 @@
   display: flex;
   gap: 7px;
   overflow-x: auto;
-  /* Per the CSS overflow spec, overflow-x: auto forces overflow-y's
-     computed value to auto too (it can't stay visible when the other
-     axis isn't) -- so this row clips vertically either way, and that
-     was silently shrinking .chip::after's expanded tap target back down
-     to the chip's visual size (issue #144). Padding big enough to hold
-     the full --touch-target-min (44px) expansion means nothing actually
-     overflows the box, so there's nothing left to clip. */
   padding-block: 8px;
 }
 

@@ -43,10 +43,6 @@ button:not(:disabled):active {
   opacity: 0.6;
 }
 
-/* Visually hidden but still read by screen readers -- used to insert a
-   word break between two visually-spaced-by-CSS-margin text nodes that
-   would otherwise concatenate into one run in the accessible name
-   (issue #144, e.g. "광화문역01010"). */
 .sr-only {
   position: absolute;
   width: 1px;
