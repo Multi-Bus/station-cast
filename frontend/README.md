@@ -1,7 +1,6 @@
 # Station Cast Frontend
 
-React + Vite + TypeScript. Mobile web UI implementing the design handoff in
-`design_source/design_handoff_station_cast/`.
+React + Vite + TypeScript. Station Cast의 모바일 웹 UI입니다.
 
 ## 실행
 

@@ -165,7 +165,6 @@ station-cast/
     validate/     # 물리 제약 검증 (비음수·용량)
     api/          # FastAPI 서비스
   frontend/       # React + Vite + TypeScript 모바일 웹 UI
-  design_source/  # 디자인 핸드오프 원본 (frontend/README.md 참고)
   tests/
   docs/           # LICENSE_POLICY.md 등
   data/           # processed는 커밋됨(issue #159), raw는 각자 수집
