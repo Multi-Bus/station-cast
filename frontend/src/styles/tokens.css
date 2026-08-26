@@ -1,5 +1,4 @@
-/* Design tokens from design_source/design_handoff_station_cast/README.md.
-   Congestion colors are absolute (never change with theme, per README).
+/* Congestion colors are absolute -- they never change with theme.
    The neutral-N ramp is also absolute; --color-* semantic tokens below map
    it (and a few standalone values) onto light/dark roles. */
 
