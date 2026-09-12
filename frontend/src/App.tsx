@@ -95,55 +95,61 @@ export default function App() {
   } = useStopDetail(selectedStop);
 
   return (
-    <main>
-      <MapScreen
-        stops={stops}
-        visibleStops={visibleStops}
-        activeFilters={activeFilters}
-        onToggleFilter={toggleFilter}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        selectedStopId={selectedStopId}
-        sheetHeightPx={sheet.heightPx}
-        controlsHidden={sheet.snap === "full"}
-        userPosition={location.position}
-        locationStatus={location.status}
-        onSelectStop={selectStop}
-        onRecenter={recenter}
-      />
-      <BottomSheet sheet={sheet}>
-        {selectedDetail && selectedStop ? (
-          <StopDetailView
-            stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
-            onBack={backToList}
-            onToggleFavorite={toggleFavorite}
-          />
-        ) : selectedStop && detailPending ? (
-          <StopDetailLoading
-            stop={selectedStop}
-            onBack={backToList}
-            onToggleFavorite={toggleFavorite}
-          />
-        ) : selectedStop ? (
-          <StopDetailError
-            stop={selectedStop}
-            onBack={backToList}
-            onToggleFavorite={toggleFavorite}
-            onRetry={retryDetail}
-          />
-        ) : (
-          <NearbyStopsPanel
-            stops={visibleStops}
-            compact={sheet.snap === "peek"}
-            loading={stopsLoading}
-            error={stopsError}
-            emptyReason={emptyReason}
-            onSelectStop={selectStop}
-            onToggleFavorite={toggleFavorite}
-            onRetry={retryStops}
-          />
-        )}
-      </BottomSheet>
-    </main>
+    // Fixed-position children (map, sheet) resolve against this frame instead
+    // of the viewport (see .app-frame's `contain: layout`), so the mobile
+    // layout centers as a capped-width column on wide screens instead of
+    // stretching edge to edge.
+    <div className="app-frame">
+      <main>
+        <MapScreen
+          stops={stops}
+          visibleStops={visibleStops}
+          activeFilters={activeFilters}
+          onToggleFilter={toggleFilter}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          selectedStopId={selectedStopId}
+          sheetHeightPx={sheet.heightPx}
+          controlsHidden={sheet.snap === "full"}
+          userPosition={location.position}
+          locationStatus={location.status}
+          onSelectStop={selectStop}
+          onRecenter={recenter}
+        />
+        <BottomSheet sheet={sheet}>
+          {selectedDetail && selectedStop ? (
+            <StopDetailView
+              stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
+            />
+          ) : selectedStop && detailPending ? (
+            <StopDetailLoading
+              stop={selectedStop}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
+            />
+          ) : selectedStop ? (
+            <StopDetailError
+              stop={selectedStop}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
+              onRetry={retryDetail}
+            />
+          ) : (
+            <NearbyStopsPanel
+              stops={visibleStops}
+              compact={sheet.snap === "peek"}
+              loading={stopsLoading}
+              error={stopsError}
+              emptyReason={emptyReason}
+              onSelectStop={selectStop}
+              onToggleFavorite={toggleFavorite}
+              onRetry={retryStops}
+            />
+          )}
+        </BottomSheet>
+      </main>
+    </div>
   );
 }

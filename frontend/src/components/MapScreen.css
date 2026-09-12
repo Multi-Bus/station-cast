@@ -148,6 +148,13 @@
   font-size: var(--text-base);
 }
 
+/* A squircle, not a circle: the count inside could otherwise be misread as
+   another stop's wait figure. The shape says "this is a group," the number
+   says how many, the colour still says how bad the worst one is. */
+.map-dot-cluster {
+  border-radius: 30%;
+}
+
 /* Only the selected stop is named. Twenty-one labels in a corridor this tight
    overlap into an unreadable stack, and the disc already carries the reading;
    the sheet's list is where names are browsed. */
@@ -185,6 +192,11 @@
   z-index: 10;
 }
 
+/* Kakao's roadmap tiles are always light, but this bar is app chrome floating
+   over the map, not a map annotation -- it reads as part of the app, so it
+   follows the theme like the sheet below it. The map stays whatever colour it
+   is; the elevation shadow is what separates the bar from busy map detail
+   either way, not a fixed light/dark surface. */
 .search-bar {
   display: flex;
   align-items: center;
@@ -193,8 +205,8 @@
   height: 48px;
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
-  background: var(--on-map-surface);
-  border: 1px solid var(--on-map-line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   box-shadow: var(--on-map-elevation);
 }
 
@@ -209,11 +221,11 @@
      smaller, which leaves the map scaled up after the keyboard closes. */
   font-size: var(--text-input);
   letter-spacing: -0.01em;
-  color: var(--on-map-text);
+  color: var(--color-text);
 }
 
 .search-bar-input::placeholder {
-  color: var(--on-map-muted);
+  color: var(--color-text-faint);
 }
 
 .filter-chip-row {
@@ -237,13 +249,13 @@
   height: 34px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--on-map-surface);
-  border: 1px solid var(--on-map-line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   box-shadow: var(--on-map-elevation);
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--on-map-text);
+  color: var(--color-text);
   white-space: nowrap;
 }
 
@@ -261,17 +273,17 @@
 
 .chip-count {
   font-size: 11px;
-  color: var(--on-map-muted);
+  color: var(--color-text-faint);
 }
 
 .chip[aria-pressed="true"] {
-  background: #12141a;
-  border-color: #12141a;
-  color: #ffffff;
+  background: var(--color-invert-bg);
+  border-color: var(--color-invert-bg);
+  color: var(--color-invert-fg);
 }
 
 .chip[aria-pressed="true"] .chip-count {
-  color: #ffffff;
+  color: var(--color-invert-fg);
   opacity: 0.65;
 }
 
@@ -309,11 +321,11 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-pill);
-  background: var(--on-map-surface);
-  border: 1px solid var(--on-map-line);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   box-shadow: var(--on-map-elevation);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--on-map-text);
+  color: var(--color-text);
 }
