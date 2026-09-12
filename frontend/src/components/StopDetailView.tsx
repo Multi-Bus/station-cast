@@ -1,20 +1,14 @@
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { ChevronLeft, Cloud, CloudRain, CloudSnow, Share2, Star, Sun } from "lucide-react";
 import { EstimateBadge } from "./EstimateBadge";
-import { CONGESTION_LABEL, type CongestionLevel, type StopDetail } from "../types/stop";
+import { CONGESTION_LABEL, type StopDetail } from "../types/stop";
 import "./StopDetailView.css";
 
-const BAR_COLOR: Record<CongestionLevel, string> = {
-  heavy: "var(--congestion-heavy-bg)",
-  moderate: "var(--congestion-moderate-bg)",
-  relaxed: "var(--congestion-relaxed-bg)",
-};
-
 function WeatherIcon({ sky }: { sky: string }) {
-  if (sky.includes("눈")) return <CloudSnow size={20} />;
-  if (sky.includes("비")) return <CloudRain size={20} />;
-  if (sky === "맑음") return <Sun size={20} />;
-  return <Cloud size={20} />;
+  if (sky.includes("눈")) return <CloudSnow size={18} strokeWidth={2} />;
+  if (sky.includes("비")) return <CloudRain size={18} strokeWidth={2} />;
+  if (sky === "맑음") return <Sun size={18} strokeWidth={2} />;
+  return <Cloud size={18} strokeWidth={2} />;
 }
 
 async function shareStop(stop: StopDetail): Promise<"shared" | "copied" | "failed"> {
@@ -61,20 +55,20 @@ export function StopDetailView({
     <div className="stop-detail">
       <div className="stop-detail-topbar">
         <button className="stop-detail-back" onClick={onBack}>
-          <ChevronLeft size={16} /> 목록
+          <ChevronLeft size={16} strokeWidth={2} /> 목록
         </button>
         <div className="stop-detail-topbar-actions">
           <button aria-pressed={stop.isFavorite} onClick={() => onToggleFavorite(stop.id)}>
             <Star
               size={14}
+              strokeWidth={2}
               fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
               color={stop.isFavorite ? "var(--color-favorite-star)" : "currentColor"}
             />{" "}
             즐겨찾기
           </button>
-          <span aria-hidden="true">·</span>
           <button aria-label="정류장 정보 공유" onClick={handleShare}>
-            <Share2 size={14} />{" "}
+            <Share2 size={14} strokeWidth={2} />{" "}
             <span aria-live="polite">
               {shareStatus === "copied" ? "복사됨" : shareStatus === "failed" ? "공유 실패" : "공유"}
             </span>
@@ -92,15 +86,20 @@ export function StopDetailView({
         )}
       </h1>
 
-      <section className={`stop-hero congestion-${level}`}>
-        <div className="stop-hero-top">
-          <span className="stop-hero-label">{CONGESTION_LABEL[level]}</span>
+      {/* The wait count is the whole product, so it is the largest thing on the
+          screen and the only saturated surface in the app. */}
+      <section className="stop-hero" data-level={level}>
+        <p className="stop-hero-figure">
+          <span className="stop-hero-count figure">{stop.waitEstimate}</span>
+          <span className="stop-hero-unit">명 대기</span>
+        </p>
+        <div className="stop-hero-side">
           <EstimateBadge />
+          <span className="stop-hero-label">{CONGESTION_LABEL[level]}</span>
         </div>
-        <p className="stop-hero-body">대기 약 {stop.waitEstimate}명</p>
       </section>
 
-      <section className="card stop-weather">
+      <section className="stop-weather">
         <WeatherIcon sky={stop.weather.sky} />
         <div>
           <p className="stop-weather-summary">
@@ -116,51 +115,66 @@ export function StopDetailView({
         </div>
       </section>
 
-      <section className="card stop-arrivals">
+      <section className="stop-section">
         <h2 className="section-header">버스 도착 정보</h2>
-        {stop.arrivals.map((a) => (
-          <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
-            <span className="stop-arrival-route">{a.route}</span>
-            <span className="stop-arrival-meta">{a.direction}행</span>
-            <span className="stop-arrival-eta">{a.message}</span>
-          </div>
-        ))}
-      </section>
-
-      <section className="stop-hourly">
-        <h2 className="section-header">시간대별 예상 대기인원</h2>
-        <div
-          className="stop-hourly-bars"
-          role="img"
-          aria-label={`시간대별 예상 대기인원. ${stop.hourly
-            .map((h) => `${h.hour}시 ${h.value}`)
-            .join(", ")}`}
-        >
-          {stop.hourly.map((h) => (
-            <div key={h.hour} className="stop-hourly-bar-col">
-              <div
-                className="stop-hourly-bar"
-                style={{
-                  height: `${Math.max(4, (h.value / peakBarValue) * 100)}%`,
-                  background: BAR_COLOR[h.level],
-                }}
-              />
-              <span className="stop-hourly-hour">{h.hour}</span>
+        <div>
+          {stop.arrivals.map((a) => (
+            <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
+              <span className="stop-arrival-route">{a.route}</span>
+              <span className="stop-arrival-meta">{a.direction}행</span>
+              <span className="stop-arrival-when">
+                <span className="stop-arrival-eta">{a.eta}</span>
+                {a.stopsAway && <span className="stop-arrival-away">{a.stopsAway}</span>}
+              </span>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="stop-stats">
-        <div className="stop-stat card">
-          <span className="stop-stat-label">최고 혼잡</span>
-          <span className="stop-stat-value">{stop.stats.peakHour}시</span>
+      <section className="stop-section">
+        <h2 className="section-header">
+          시간대별 예상 대기인원{" "}
+          <span className="stop-hourly-peak">
+            가장 붐비는 시간 <span className="figure">{stop.stats.peakHour}</span>시
+          </span>
+        </h2>
+        <div>
+          <div
+            className="stop-hourly-bars"
+            role="img"
+            aria-label={`시간대별 예상 대기인원. ${stop.hourly
+              .map((h) => `${h.hour}시 ${h.value}명`)
+              .join(", ")}`}
+          >
+            {stop.hourly.map((h, index) => (
+              <div key={h.hour} className="stop-hourly-bar-col">
+                <div
+                  className="stop-hourly-bar"
+                  data-level={h.level}
+                  data-peak={h.hour === stop.stats.peakHour || undefined}
+                  style={
+                    {
+                      height: `${Math.max(3, (h.value / peakBarValue) * 100)}%`,
+                      "--bar-index": index,
+                    } as CSSProperties
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <div className="stop-hourly-axis" aria-hidden="true">
+            <span>0시</span>
+            <span>6시</span>
+            <span>12시</span>
+            <span>18시</span>
+            <span>23시</span>
+          </div>
         </div>
       </section>
 
       <p className="stop-disclaimer">
-        대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장
-        OA-12913
+        대기인원은 노선별 실측 승차와 배차간격에 Little&apos;s Law를 적용한 추정치입니다. 실제로 센
+        값이 아닙니다. 출처: 서울 열린데이터광장 OA-12913
       </p>
     </div>
   );

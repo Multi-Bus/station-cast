@@ -1,256 +1,349 @@
 .stop-detail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding-top: var(--space-2);
+  gap: var(--space-5);
+  padding-top: var(--space-1);
 }
 
-.card {
-  border-radius: var(--radius-card);
-  border: 1px solid var(--color-card-border);
-  padding: var(--space-4);
+/* Each block rises in behind the one above it, so the reading lands first and
+   the supporting detail follows, rather than the whole sheet appearing at once. */
+.stop-detail > * {
+  animation: rise-in 420ms var(--sheet-snap-ease) backwards;
 }
 
-.stop-detail-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-6) 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
+.stop-detail > *:nth-child(2) {
+  animation-delay: 40ms;
 }
-
-.stop-detail-loading-spinner {
-  color: var(--neutral-500);
-  animation: stop-detail-spin 0.8s linear infinite;
+.stop-detail > *:nth-child(3) {
+  animation-delay: 80ms;
 }
-
-@keyframes stop-detail-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.stop-detail > *:nth-child(4) {
+  animation-delay: 120ms;
 }
-
-.stop-detail-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-6) 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-.stop-detail-error-retry {
-  min-height: var(--touch-target-min);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-card-border);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--color-text);
-}
-
-.section-header {
-  margin: 0 0 var(--space-2);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
+.stop-detail > *:nth-child(n + 5) {
+  animation-delay: 160ms;
 }
 
 .stop-detail-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .stop-detail-back {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  padding: var(--space-1) 0;
   color: var(--color-text-muted);
 }
 
 .stop-detail-topbar-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--color-text-muted);
+  gap: var(--space-3);
 }
 
 .stop-detail-topbar-actions button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-}
-
-.stop-detail-routes {
-  margin: 0;
-  font-size: 12px;
+  gap: 5px;
+  padding: var(--space-1) 0;
   color: var(--color-text-muted);
 }
 
 .stop-detail-title {
   margin: 0;
-  font-weight: 800;
-  font-size: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .stop-detail-ars-number {
-  margin-left: var(--space-2);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-faint);
 }
 
+/* The only saturated surface in the app. It is the answer to the one question
+   the product exists to answer, so it gets the fill and the display size. */
 .stop-hero {
-  border-radius: var(--radius-card);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
   padding: var(--space-4);
+  border-radius: var(--radius-lg);
 }
 
-.stop-hero-top {
+.stop-hero[data-level="relaxed"] {
+  background: var(--congestion-relaxed);
+  color: var(--congestion-relaxed-fg);
+}
+
+.stop-hero[data-level="moderate"] {
+  background: var(--congestion-moderate);
+  color: var(--congestion-moderate-fg);
+}
+
+.stop-hero[data-level="heavy"] {
+  background: var(--congestion-heavy);
+  color: var(--congestion-heavy-fg);
+}
+
+.stop-hero-figure {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+}
+
+.stop-hero-count {
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+
+.stop-hero-unit {
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.stop-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: var(--space-2);
-  margin-bottom: 6px;
+  padding-bottom: 3px;
 }
 
 .stop-hero-label {
-  font-weight: 800;
-  font-size: 16px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.stop-hero-body {
+/* Sections are separated by space and one hairline, not by boxes inside boxes. */
+.stop-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.section-header {
   margin: 0;
-  font-size: 12px;
-  opacity: 0.85;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-text-faint);
 }
 
 .stop-weather {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
-  background: var(--color-surface);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-text-muted);
 }
 
 .stop-weather-summary {
   margin: 0 0 2px;
-  font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
 }
 
 .forecast-badge {
   display: inline-flex;
   align-items: center;
   margin-left: 6px;
-  padding: 1px 4px;
-  border: 1px solid var(--color-card-border);
-  border-radius: var(--radius-badge-sm);
-  color: var(--color-text-muted);
-  font-weight: 700;
-  font-size: 9px;
+  padding: 1px 5px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .stop-weather-note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
+  line-height: 1.45;
   color: var(--color-text-muted);
-}
-
-.stop-arrivals {
-  background: var(--color-surface);
-  padding: var(--space-3) var(--space-4);
 }
 
 .stop-arrival-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) 0;
-}
-
-.stop-arrival-row + .stop-arrival-row {
-  border-top: 1px solid var(--color-divider);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-line);
 }
 
 .stop-arrival-route {
-  font-weight: 700;
-  font-size: 14px;
-  min-width: 44px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  min-width: 52px;
 }
 
 .stop-arrival-meta {
   flex: 1;
-  font-size: 11px;
-  color: var(--color-text-muted);
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stop-arrival-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
 }
 
 .stop-arrival-eta {
-  font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
+.stop-arrival-away {
+  font-size: 11px;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+/* Thin bars on a baseline, no rounded caps, no card. The shape of the day is
+   the point; the peak hour is marked rather than repeated as a stat tile. */
 .stop-hourly-bars {
   display: flex;
   align-items: flex-end;
-  gap: 3px;
-  height: 90px;
+  gap: 2px;
+  height: 104px;
+  border-bottom: 1px solid var(--color-line-strong);
 }
 
 .stop-hourly-bar-col {
   flex: 1;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  align-items: flex-end;
 }
 
 .stop-hourly-bar {
   width: 100%;
-  border-radius: 2px 2px 0 0;
+  border-radius: 1px;
+  transform-origin: bottom;
+  animation: bar-grow 520ms var(--sheet-snap-ease) backwards;
+  animation-delay: calc(var(--bar-index, 0) * 12ms);
 }
 
-.stop-hourly-hour {
-  font-size: 9px;
-  color: var(--color-text-muted);
+.stop-hourly-bar[data-level="relaxed"] {
+  background: var(--congestion-relaxed);
 }
 
-.stop-stats {
+.stop-hourly-bar[data-level="moderate"] {
+  background: var(--congestion-moderate);
+}
+
+.stop-hourly-bar[data-level="heavy"] {
+  background: var(--congestion-heavy);
+}
+
+.stop-hourly-bar[data-peak] {
+  box-shadow: 0 0 0 1px var(--color-text);
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.stop-hourly-axis {
   display: flex;
-  gap: var(--space-3);
-}
-
-.stop-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--color-surface);
-}
-
-.stop-stat-label {
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
   font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.stop-hourly-peak {
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
-.stop-stat-value {
-  font-weight: 800;
-  font-size: 16px;
+.stop-hourly-peak .figure {
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .stop-disclaimer {
   margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.55;
+  color: var(--color-text-faint);
+}
+
+.stop-detail-loading,
+.stop-detail-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-7) 0;
   color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+/* A skeleton shaped like the hero it replaces, not a spinner in empty space. */
+.stop-detail-skeleton {
+  height: 96px;
+  border-radius: var(--radius-lg);
+  background: var(--color-skeleton);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.stop-detail-error-retry {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line-strong);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
 }
