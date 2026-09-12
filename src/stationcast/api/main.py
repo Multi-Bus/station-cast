@@ -7,13 +7,15 @@ balancers probe it before the app has any business routes.
 """
 
 import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from stationcast.api.data import CorridorDataUnavailable
+from stationcast.api.data import CorridorDataUnavailable, load_corridor_data
 from stationcast.api.routers import arrivals, congestion, stops
 
 # Matches weather_forecast.py's own KMA call timeout (3.0s) -- /stops/{id}/context
@@ -22,7 +24,25 @@ REQUEST_TIMEOUT_SECONDS = 3.0
 
 STATIC_DIR = Path("frontend/dist")
 
-app = FastAPI(title="Station Cast API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Load data/processed/ once at startup instead of on the first request
+    (see api/data.py's get_corridor_data). A missing-data error is stored,
+    not raised, so startup still succeeds -- /health must respond even
+    without the data volume mounted (issue #141), and other routes degrade
+    to 503 via the exception handler below instead of the app failing to
+    come up at all.
+    """
+    try:
+        app.state.corridor_data = load_corridor_data()
+        app.state.corridor_data_error = None
+    except CorridorDataUnavailable as exc:
+        app.state.corridor_data_error = exc
+    yield
+
+
+app = FastAPI(title="Station Cast API", lifespan=lifespan)
 
 
 @app.exception_handler(CorridorDataUnavailable)

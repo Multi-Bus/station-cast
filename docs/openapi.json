@@ -428,7 +428,7 @@
   "paths": {
     "/api/corridor": {
       "get": {
-        "description": "Every stop's estimated wait and congestion grade at one hour (default: current hour).",
+        "description": "Every stop's estimated wait and congestion grade at one hour (default: current hour).\n\ndata.wait's [표준버스정류장ID, 시간대] index (api/data.py) makes both the\nper-hour cross-section and each row's capacity lookup (deps.stop_capacity,\nnow also indexed) O(1)-ish index lookups instead of full-table scans --\nthe old per-row deps.stop_capacity() call made this endpoint O(stops²).",
         "operationId": "get_corridor_api_corridor_get",
         "parameters": [
           {
@@ -477,8 +477,56 @@
     },
     "/api/stops": {
       "get": {
-        "description": "List every stop in the corridor with display metadata.",
+        "description": "List stops in the corridor, optionally viewport-filtered and paginated.\n\nNo bbox/limit returns every stop, same as before -- both are opt-in so\nSTATIONCAST_SCOPE=seoul's ~11,000 stops don't become a required query\nparam for demo-scope callers that don't need them yet.",
         "operationId": "list_stops_api_stops_get",
+        "parameters": [
+          {
+            "description": "minlon,minlat,maxlon,maxlat",
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "minlon,minlat,maxlon,maxlat",
+              "title": "Bbox"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -489,6 +537,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Stops"

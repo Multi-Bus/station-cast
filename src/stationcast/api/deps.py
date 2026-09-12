@@ -36,28 +36,36 @@ def validate_date(date: int) -> None:
 
 
 def stop_wait(data: CorridorData, stop_id: int) -> pd.DataFrame:
-    wait = data.wait[data.wait["표준버스정류장ID"] == stop_id]
-    if wait.empty:
-        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
-    return wait
+    """All hours' W for one stop -- an index lookup, not a full-table scan.
+
+    data.wait is indexed by [표준버스정류장ID, 시간대] (api/data.py), so this
+    is a sorted-index lookup instead of a boolean mask over every row.
+    """
+    try:
+        return data.wait.loc[[stop_id]]
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
 
 
 def stop_capacity(data: CorridorData, stop_id: int) -> float:
-    row = data.capacity[data.capacity["표준버스정류장ID"] == stop_id]
-    if row.empty:
-        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
-    return float(row["포용인원"].iloc[0])
+    try:
+        row = data.capacity.loc[stop_id]
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
+    return float(row["포용인원"])
 
 
 def stop_name(data: CorridorData, stop_id: int) -> str:
-    row = data.stops[data.stops["표준버스정류장ID"] == stop_id]
-    if row.empty:
-        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
-    return str(row["정류장명"].iloc[0])
+    try:
+        row = data.stops.loc[stop_id]
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
+    return str(row["정류장명"])
 
 
 def stop_ars_number(data: CorridorData, stop_id: int) -> str:
-    row = data.stops[data.stops["표준버스정류장ID"] == stop_id]
-    if row.empty:
-        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found")
-    return str(row["ARS번호"].iloc[0])
+    try:
+        row = data.stops.loc[stop_id]
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
+    return str(row["ARS번호"])

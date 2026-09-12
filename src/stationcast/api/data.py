@@ -19,13 +19,24 @@ parquet outputs of features/demand_factors.py and ingest/holiday.py:
   (요일×날씨×기온 라벨 조회용 -- 12그룹 보정계수의 컬럼명을 구성하는 데 씀)
 - weekday_weather_factor: 표준버스정류장ID·정류장명·요일구분×날씨구분×기온구분
   (12그룹)별 보정계수_승차·보정계수_하차 등
+
+stops/wait/capacity are indexed by 표준버스정류장ID (wait also by 시간대,
+CorridorData.__post_init__) so api/deps.py's per-stop lookups are a
+``.loc[]`` index lookup instead of a boolean-mask scan over every row -- at
+demo scope (21 stops) the difference is noise, but /corridor calls the
+capacity lookup once per stop per request, so an unindexed scan is
+O(stops²) and that stops being true well before STATIONCAST_SCOPE=seoul's
+~11,000 stops. Indexing lives on the dataclass rather than in
+load_corridor_data() so tests that build a CorridorData directly (see
+tests/test_api_stops.py's fixture) get the same indexing without having to
+remember to do it themselves.
 """
 
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
+from fastapi import Request
 
 from stationcast.ingest.stop_capacity import build_stop_capacity
 
@@ -70,6 +81,11 @@ class CorridorData:
     features_daily: pd.DataFrame
     weekday_weather_factor: pd.DataFrame
 
+    def __post_init__(self) -> None:
+        self.stops = self.stops.set_index("표준버스정류장ID", drop=False)
+        self.wait = self.wait.set_index(["표준버스정류장ID", "시간대"], drop=False).sort_index()
+        self.capacity = self.capacity.set_index("표준버스정류장ID", drop=False)
+
 
 def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     """Read the corridor's stop metadata and estimated-wait time series from disk.
@@ -105,13 +121,24 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     )
 
 
-@lru_cache(maxsize=1)
-def get_corridor_data() -> CorridorData:
-    """FastAPI dependency wrapper around load_corridor_data(); override in tests.
+def get_corridor_data(request: Request) -> CorridorData:
+    """FastAPI dependency reading the data api/main.py's lifespan loaded once
+    at startup; override in tests via app.dependency_overrides.
 
-    Cached for the process lifetime: data/processed/ doesn't change while the
-    server is running, and reloading all 7 parquet files costs ~120ms per
-    call otherwise -- every request was paying that cost before this cache
-    (issue #114).
+    Loading used to happen lazily on the first request (behind an
+    lru_cache) -- issue #114 fixed the *n* extra reloads that caused, but
+    the very first request still paid the full load cost inline, which
+    risked tripping REQUEST_TIMEOUT_SECONDS once STATIONCAST_SCOPE=seoul
+    makes that cost much bigger. Loading at startup instead means every
+    request just reads an attribute.
+
+    Raises CorridorDataUnavailable (-> 503 via main.py's exception handler)
+    if startup couldn't load the data, e.g. a container started without the
+    data volume mounted (issue #141) -- the lifespan captures that error
+    instead of letting it fail startup, so /health still responds and other
+    routes degrade to 503 instead of the whole app failing to come up.
     """
-    return load_corridor_data()
+    error = getattr(request.app.state, "corridor_data_error", None)
+    if error is not None:
+        raise error
+    return request.app.state.corridor_data
