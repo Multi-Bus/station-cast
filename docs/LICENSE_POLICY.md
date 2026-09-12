@@ -4,8 +4,8 @@
 
 | 층위 | 이유 | 대상 | 조치 |
 |---|---|---|---|
-| ① OSI 미승인 (절대 금지) | 비상업 조건 등이 포함돼 OSI 승인 오픈소스 정의를 충족하지 않음 | SSPL, RSALv2, ELv2, BUSL, CC-BY-NC 등 non-OSI | CI가 PR 차단 |
-| ② copyleft 회피 (팀 정책) | Apache-2.0 배포물과의 결합 이슈(라이선스 전염, 재배포 조건 충돌)를 피하기 위한 선택 | GPL / AGPL / LGPL 등 copyleft | CI가 PR 차단, 단 라이선스 자체의 결함은 아님 |
+| ① OSI 미승인 (절대 금지) | 비상업 조건 등이 포함돼 OSI 승인 오픈소스 정의를 충족하지 않음 | SSPL, RSALv2, ELv2, BUSL, CC-BY-NC 등 non-OSI | PR 리뷰에서 차단 |
+| ② copyleft 회피 (팀 정책) | Apache-2.0 배포물과의 결합 이슈(라이선스 전염, 재배포 조건 충돌)를 피하기 위한 선택 | GPL / AGPL / LGPL 등 copyleft | PR 리뷰에서 차단, 단 라이선스 자체의 결함은 아님 |
 
 ## 왜 이렇게 나누는가
 
@@ -43,5 +43,4 @@ MIT, Apache 2.0, GPL-2.0/3.0, LGPL, BSD 등은 전부 OSI 승인 라이선스다
 1. PyPI/npm 등에서 라이선스를 확인한다.
 2. 위 표에 없는 라이선스라면 [choosealicense.com](https://choosealicense.com) 또는 SPDX
    목록에서 OSI 승인 여부를 확인한다.
-3. CI의 라이선스 스캔(FOSSLight/ScanCode)이 자동으로 차단하지만,
-   추가 전에 이 문서에 없는 신규 라이브러리는 PR 설명에 라이선스를 명시한다.
+3. 위 표에 없는 신규 라이브러리는 PR 설명에 라이선스를 명시해 리뷰어가 확인할 수 있게 한다.

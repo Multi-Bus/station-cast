@@ -12,7 +12,7 @@
 
 - `main` 브랜치에 직접 push 하지 않습니다. 모든 변경은 Issue → 브랜치 → PR → 리뷰(작성자를
   제외한 팀원 전원 승인) → merge 순서를 따릅니다.
-- 모든 PR은 CI(ruff, mypy, pytest, 라이선스 스캔)를 통과해야 merge할 수 있습니다.
+- 모든 PR은 CI(ruff, mypy, pytest)를 통과해야 merge할 수 있습니다.
 - 페어로 작업한 경우 커밋 메시지에 `Co-authored-by:` 트레일러를 추가해 두 사람의 기여를
   모두 남깁니다.
 
@@ -46,8 +46,8 @@ type: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`
 
 ## 의존성 추가 시
 
-새 라이브러리를 추가하는 PR은 CI의 라이선스 스캔을 통과해야 합니다. non-OSI 라이선스
-(SSPL, RSALv2, ELv2 등)와 copyleft 계열(GPL, AGPL, LGPL)은 기본적으로 차단됩니다.
+새 라이브러리를 추가하는 PR은 리뷰에서 라이선스를 확인합니다. non-OSI 라이선스
+(SSPL, RSALv2, ELv2 등)와 copyleft 계열(GPL, AGPL, LGPL)은 기본적으로 배제합니다.
 자세한 기준은 [docs/LICENSE_POLICY.md](./docs/LICENSE_POLICY.md)를 참고하세요.
 
 ## 로컬 개발 환경
