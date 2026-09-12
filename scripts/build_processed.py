@@ -8,14 +8,16 @@ A-track pipeline with one command:
     python scripts/build_processed.py
 
 Inputs are resolved by pattern rather than fixed paths: the 기상청 file's name
-carries its download timestamp and the OA-12912 monthly CSVs live in their own
-subdirectory, so the per-module ``__main__`` blocks (weather.py's
-``data/raw/weather.csv``, oa12912.py's ``data/raw``) point at paths the real
-layout doesn't use. Every resolved input is printed so a run says exactly which
-files produced its output.
+carries its download timestamp and the OA-12912/OA-12913 monthly CSVs each
+live in their own subdirectory, so the per-module ``__main__`` blocks
+(weather.py's ``data/raw/weather.csv``, oa12912.py's ``data/raw``) point at
+paths the real layout doesn't use. Every resolved input is printed so a run
+says exactly which files produced its output.
 
-Scope is A-track only (ingest + features). estimator/wait_population.py, which
-turns these into corridor_wait.parquet, is B-track and runs separately.
+Also builds corridor_wait.parquet (estimator/wait_population.py) -- the W(s,t)
+the API actually serves -- once corridor_route_hourly/corridor_route_schedule
+exist, so this one command reproduces everything the live API needs, not just
+ingest+features.
 
 STATIONCAST_SCOPE controls how many stops oa12913/oa12912/route_schedule
 build for: ``demo`` (default) is the 21-stop Jongno-Myeongdong-Euljiro
@@ -28,10 +30,11 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from stationcast.estimator.wait_population import run as run_wait_population
 from stationcast.features.demand_factors import run as run_demand_factors
 from stationcast.ingest.holiday import run as run_holiday
 from stationcast.ingest.oa12912 import run as run_oa12912
-from stationcast.ingest.oa12913 import DEMO_STOP_IDS
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS, HOURLY_BOARDING_DIRNAME
 from stationcast.ingest.oa12913 import run as run_oa12913
 from stationcast.ingest.route_schedule import run as run_route_schedule
 from stationcast.ingest.stop_capacity import run as run_stop_capacity
@@ -40,6 +43,7 @@ from stationcast.ingest.weather import run as run_weather
 RAW_DIR = Path("data/raw")
 PROCESSED_DIR = Path("data/processed")
 BOARDING_MONTH_DIR = RAW_DIR / "BUS_STATION_BOARDING_MONTH"
+HOURLY_BOARDING_DIR = RAW_DIR / HOURLY_BOARDING_DIRNAME
 
 WEATHER_GLOB = "OBS_ASOS_DD_*.csv"
 HOLIDAY_GLOB = "SPCDE_HOLIDAY_*.csv"
@@ -49,7 +53,11 @@ STOP_COORD_GLOB = "*버스정류소*위치정보*.csv"
 ROUTE_SCHEDULE_GLOB = "*버스노선기본정보*.xlsx"
 
 REQUIRED_INPUTS: list[tuple[Path, str, str]] = [
-    (RAW_DIR, HOURLY_BOARDING_GLOB, "데이터셋① OA-12913 시간대별 승하차 (data/README.md §1)"),
+    (
+        HOURLY_BOARDING_DIR,
+        HOURLY_BOARDING_GLOB,
+        "데이터셋① OA-12913 시간대별 승하차, 최근 12개월 (data/README.md §1)",
+    ),
     (RAW_DIR, STOP_COORD_GLOB, "데이터셋② 버스정류소 위치정보 (data/README.md §2)"),
     (BOARDING_MONTH_DIR, BOARDING_MONTH_GLOB, "데이터셋③ OA-12912 일별 승하차 (data/README.md §3)"),
     (RAW_DIR, WEATHER_GLOB, "데이터셋④ 기상청 ASOS 일자료 (data/README.md §4)"),
@@ -109,17 +117,21 @@ def main() -> int:
     weather_csv = newest_match(RAW_DIR, WEATHER_GLOB)
     holiday_csv = newest_match(RAW_DIR, HOLIDAY_GLOB)
     month_count = len(sorted(BOARDING_MONTH_DIR.glob(BOARDING_MONTH_GLOB)))
+    hourly_month_count = len(sorted(HOURLY_BOARDING_DIR.glob(HOURLY_BOARDING_GLOB)))
 
     print(f"스코프: STATIONCAST_SCOPE={scope}")
     print(f"입력: {weather_csv}")
     print(f"입력: {holiday_csv}")
     print(f"입력: {BOARDING_MONTH_DIR}/ (월별 CSV {month_count}개)")
+    print(f"입력: {HOURLY_BOARDING_DIR}/ (월별 CSV {hourly_month_count}개)")
     print(f"출력: {PROCESSED_DIR}/\n")
 
     # oa12913/oa12912/route_schedule/weather/holiday/stop_capacity read only
-    # data/raw, so their order is free; demand_factors runs last because it
-    # reads corridor_daily/weather_daily/holiday_daily back out of
-    # data/processed.
+    # data/raw, so their order is free among themselves; demand_factors runs
+    # last because it reads corridor_daily/weather_daily/holiday_daily back
+    # out of data/processed. wait_population is the one exception -- it reads
+    # corridor_route_hourly and corridor_route_schedule back out of
+    # data/processed too, so it has to come after both of those.
     steps: list[tuple[str, Callable[[], None]]] = [
         (
             "corridor_route_hourly, corridor_stops",
@@ -132,6 +144,14 @@ def main() -> int:
         (
             "corridor_route_schedule",
             lambda: run_route_schedule(RAW_DIR, PROCESSED_DIR, stop_ids=stop_ids),
+        ),
+        (
+            "corridor_wait",
+            lambda: run_wait_population(
+                PROCESSED_DIR / "corridor_route_hourly.parquet",
+                PROCESSED_DIR / "corridor_route_schedule.parquet",
+                PROCESSED_DIR / "corridor_wait.parquet",
+            ),
         ),
         ("weather_daily", lambda: run_weather(weather_csv, PROCESSED_DIR)),
         ("holiday_daily, holiday_daily_all", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),

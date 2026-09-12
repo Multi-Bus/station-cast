@@ -43,9 +43,16 @@ DEMO_STOP_IDS: tuple[int, ...] = (
 
 _HOUR_RE = re.compile(r"(\d+)시")
 
+HOURLY_BOARDING_DIRNAME = "버스노선별_정류장별_시간대별_승하차_인원_정보"
+"""Subdirectory of data/raw/ holding every OA-12913 monthly CSV (see
+data/README.md §1) -- one recent year (2025-07~2026-06, 12 files) rather
+than the single June 2026 snapshot used before, since one month's hourly
+shape isn't representative of the corridor's real seasonal swings (school
+term vs. summer break, holidays, etc.)."""
+
 
 def load_boarding_alighting(csv_path: Path) -> pd.DataFrame:
-    """Load the raw OA-12913 monthly CSV (cp949-encoded)."""
+    """Load one raw OA-12913 monthly CSV (cp949-encoded)."""
     return read_cp949_csv(csv_path, low_memory=False)
 
 
@@ -75,10 +82,31 @@ def build_corridor_route_hourly(
     stop_ids=None keeps every stop (서울 전체); pass DEMO_STOP_IDS for the
     21-stop demo corridor. Flags night-bus routes (N-접두, is_night_bus()) in
     their own column instead of excluding them -- their registered headway
-    (25~140분, corridor_route_schedule.parquet) flows into Little's Law like
-    any other route's. The raw hourly columns are a full month's cumulative
-    total for that hour-of-day (data/README.md section 1); dividing by the
-    month's day count here turns that into the daily average the model needs.
+    (corridor_route_schedule.parquet) flows into Little's Law like any other
+    route's.
+
+    boarding_df may be several months concatenated together (see run()),
+    each with its own 사용년월 -- the raw hourly columns are that month's
+    cumulative total for that hour-of-day (data/README.md section 1), so
+    this sums every month's total per (stop, route, hour) and divides by
+    the sum of each month's day count, i.e. the true daily average over
+    the whole window rather than an average of monthly averages (which
+    would silently over-weight short months).
+
+    Grouped by 표준버스정류장ID alone, not also by 정류장명 (same reasoning
+    as oa12912.py's build_corridor_daily): a stop's registered name can
+    change mid-window (e.g. ID 101000042, 해운센터.롯데영플라자 ->
+    소공동.롯데영플라자 on 2026-05-11), and grouping by name too would
+    silently split one physical stop's boarding across two output rows for
+    any hour where its name changed between the concatenated months. The
+    most recent month's name is attached afterward as a single
+    representative label.
+
+    Melts the hourly columns into long form and does a single groupby
+    rather than looping per hour-of-day and re-grouping the whole frame
+    each time -- the loop cost used to be paid once per column (24x for a
+    day-typed set of columns); melting first pays it once regardless of
+    how many months or hour columns are concatenated together.
     """
     keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
     sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
@@ -88,25 +116,28 @@ def build_corridor_route_hourly(
         dict(zip(u := sub["노선번호"].unique(), map(is_night_bus, u), strict=True))
     )
 
-    days = _days_in_month(boarding_df["사용년월"].iloc[0])
+    total_days = sum(_days_in_month(ym) for ym in boarding_df["사용년월"].unique())
+    latest_name = sub.sort_values("사용년월").groupby("표준버스정류장ID")["정류장명"].last()
 
     on_cols = [c for c in boarding_df.columns if c.endswith("시승차총승객수")]
+    melted = sub.melt(
+        id_vars=["표준버스정류장ID", "노선번호", "is_night_bus"],
+        value_vars=on_cols,
+        var_name="_hour_col",
+        value_name="승차",
+    )
+    hours = melted["_hour_col"].str.extract(_HOUR_RE, expand=False)
+    assert hours.notna().all(), f"unexpected hour column name(s): {on_cols}"
+    melted["시간대"] = hours.astype(int)
 
-    frames = []
-    for on_col in on_cols:
-        match = _HOUR_RE.match(on_col)
-        assert match is not None, f"unexpected hour column name: {on_col}"
-        hour = int(match.group(1))
-        grp = (
-            sub.groupby(["표준버스정류장ID", "정류장명", "노선번호", "is_night_bus"])
-            .agg(승차=(on_col, "sum"))
-            .reset_index()
-        )
-        grp["승차"] = grp["승차"] / days
-        grp["시간대"] = hour
-        frames.append(grp)
+    result = (
+        melted.groupby(["표준버스정류장ID", "노선번호", "is_night_bus", "시간대"])
+        .agg(승차=("승차", "sum"))
+        .reset_index()
+    )
+    result["승차"] = result["승차"] / total_days
+    result = result.merge(latest_name, on="표준버스정류장ID", how="left")
 
-    result = pd.concat(frames, ignore_index=True)
     return (
         result[["표준버스정류장ID", "정류장명", "노선번호", "is_night_bus", "시간대", "승차"]]
         .sort_values(["표준버스정류장ID", "노선번호", "시간대"])
@@ -144,17 +175,26 @@ def build_corridor_stops(
 def run(raw_dir: Path, out_dir: Path, stop_ids: tuple[int, ...] | None = DEMO_STOP_IDS) -> None:
     """Build corridor_route_hourly.parquet and corridor_stops.parquet from raw_dir CSVs.
 
+    corridor_route_hourly averages over every OA-12913 monthly CSV found
+    under raw_dir/HOURLY_BOARDING_DIRNAME. corridor_stops only needs one
+    month for its per-stop metadata (name/ARS/coordinates), so it uses the
+    most recent file rather than paying to scan all of them.
+
     stop_ids defaults to the 21-stop demo corridor; pass None for 서울 전체
     (scripts/build_processed.py does this when STATIONCAST_SCOPE=seoul).
     """
-    boarding_csv = next(raw_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
+    hourly_dir = raw_dir / HOURLY_BOARDING_DIRNAME
+    hourly_csvs = sorted(hourly_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
+    if not hourly_csvs:
+        raise FileNotFoundError(f"No OA-12913 monthly CSVs found in {hourly_dir}")
     coord_csv = next(raw_dir.glob("*버스정류소*위치정보*.csv"))
 
-    boarding_df = load_boarding_alighting(boarding_csv)
+    monthly_frames = [load_boarding_alighting(p) for p in hourly_csvs]
+    boarding_df = pd.concat(monthly_frames, ignore_index=True)
     coord_df = load_stop_coordinates(coord_csv)
 
     route_hourly = build_corridor_route_hourly(boarding_df, stop_ids=stop_ids)
-    stops = build_corridor_stops(boarding_df, coord_df, stop_ids=stop_ids)
+    stops = build_corridor_stops(monthly_frames[-1], coord_df, stop_ids=stop_ids)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     route_hourly.to_parquet(out_dir / "corridor_route_hourly.parquet", index=False)
