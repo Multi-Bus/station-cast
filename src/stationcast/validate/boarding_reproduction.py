@@ -41,17 +41,33 @@ days before this (2023-07-01~2025-06-30, ~2 years) and evaluated against
 actual boarding on/after this date (2025-07-01~2026-06-30, ~1 year), so
 MAPE measures reproduction on days the factors never saw."""
 
-KNOWN_NIGHT_BUS_ONLY_DATES: tuple[int, ...] = (20260113, 20260114)
-"""Dates where every route passing the stop was night-bus-only, so boarding
-drops to near zero after the night-bus exclusion filter (documented,
-pre-existing phenomenon -- see data/README.md §10, not a bug). MAPE diverges
-when the actual value is near zero, so excluding these dates is necessary to
-get an honest read on "typical day" reproduction without that distortion."""
+ANOMALY_THRESHOLD = 0.1
+"""A date whose corridor-wide total 승차 (summed across every stop) falls
+below this fraction of the median date's total is treated as a source-data
+collection gap rather than real demand, and dropped before fitting or
+evaluating either prediction. Discovered via 2026-01-13/2026-01-14, where
+total boarding collapses to ~1% of the median day with no weather (no
+precipitation/snowfall either date, and 2026-01-12's actual snow saw normal
+boarding) or calendar explanation -- previously misattributed to every
+route serving those stops being night-bus-only (see git history), which
+doesn't hold up: totals stay collapsed even with night buses included.
+0.1 is well clear of real low-traffic days (the next-lowest dates in the
+3-year series sit at 40%+ of the median), so it isolates this specific kind
+of collapse without touching genuine variation."""
 
 
 _DAY_TYPES = ("평일", "주말+공휴일")
 _WEATHER_TYPES = ("맑음", "강수")
 _TEMP_TYPES = ("저온", "보통", "고온")
+
+
+def _anomalous_dates(
+    corridor_daily: pd.DataFrame, threshold: float = ANOMALY_THRESHOLD
+) -> set[int]:
+    """Dates where corridor-wide total 승차 collapses below `threshold` of the median date."""
+    daily_totals = corridor_daily.groupby("사용일자")["승차"].sum()
+    cutoff = daily_totals.median() * threshold
+    return set(daily_totals[daily_totals < cutoff].index)
 
 
 def _long_group_means(
@@ -91,11 +107,16 @@ def build_boarding_reproduction_report(
     features_daily: corridor_daily joined with 요일구분/날씨구분/기온구분 labels
         (features/demand_factors.py's build_features_daily output).
 
-    Both inputs cover the full 3-year range; this function splits them at
-    TRAIN_TEST_CUTOFF itself, fits both predictions on the train split
-    only, and returns one row per (stop, day) for the test split only, with
-    실측_승차 and the two predictions, ready for MAPE aggregation.
+    Both inputs cover the full 3-year range; this function drops
+    ANOMALY_THRESHOLD-flagged dates first, splits the remainder at
+    TRAIN_TEST_CUTOFF, fits both predictions on the train split only, and
+    returns one row per (stop, day) for the test split only, with 실측_승차
+    and the two predictions, ready for MAPE aggregation.
     """
+    anomalies = _anomalous_dates(corridor_daily)
+    corridor_daily = corridor_daily[~corridor_daily["사용일자"].isin(anomalies)]
+    features_daily = features_daily[~features_daily["사용일자"].isin(anomalies)]
+
     train_daily = corridor_daily[corridor_daily["사용일자"] < TRAIN_TEST_CUTOFF]
     train_features = features_daily[features_daily["사용일자"] < TRAIN_TEST_CUTOFF]
     test_features = features_daily[features_daily["사용일자"] >= TRAIN_TEST_CUTOFF]
@@ -142,33 +163,16 @@ def _mape(actual: pd.Series, predicted: pd.Series) -> float:
     return float(((predicted[valid] - actual[valid]).abs() / actual[valid]).mean() * 100)
 
 
-def _exclude_known_anomalies(report: pd.DataFrame) -> pd.DataFrame:
-    return report[~report["사용일자"].isin(KNOWN_NIGHT_BUS_ONLY_DATES)]
-
-
-def summarize_mape(report: pd.DataFrame, exclude_known_anomalies: bool = True) -> dict[str, float]:
-    """Corridor-wide MAPE for each of the two prediction versions.
-
-    A single near-zero 실측_승차 day makes MAPE's percentage error diverge
-    (e.g. 종로3가.탑골공원 on 2026-01-14: 실측 2명 vs 예측 ~3,345명 is a
-    162,291% error, alone worth a large share of that stop's test-period
-    average). KNOWN_NIGHT_BUS_ONLY_DATES excludes the specific dates this
-    happens on (documented, not a silent data-cleaning choice) by default;
-    pass ``exclude_known_anomalies=False`` to see the raw, undistorted-view
-    MAPE.
-    """
-    if exclude_known_anomalies:
-        report = _exclude_known_anomalies(report)
+def summarize_mape(report: pd.DataFrame) -> dict[str, float]:
+    """Corridor-wide MAPE for each of the two prediction versions."""
     return {
         "무보정_MAPE": _mape(report["실측_승차"], report["무보정_예측승차"]),
         "요일날씨기온보정_MAPE": _mape(report["실측_승차"], report["요일날씨기온보정_예측승차"]),
     }
 
 
-def per_stop_mape(report: pd.DataFrame, exclude_known_anomalies: bool = True) -> pd.DataFrame:
+def per_stop_mape(report: pd.DataFrame) -> pd.DataFrame:
     """Per-stop MAPE for each version, for the sensitivity/percentile breakdown."""
-    if exclude_known_anomalies:
-        report = _exclude_known_anomalies(report)
     rows = []
     for (stop_id, name), group in report.groupby(["표준버스정류장ID", "정류장명"], sort=False):
         rows.append(
@@ -188,26 +192,20 @@ def run(processed_dir: Path, out_dir: Path) -> None:
     corridor_daily = pd.read_parquet(processed_dir / "corridor_daily.parquet")
     features_daily = pd.read_parquet(processed_dir / "corridor_features_daily.parquet")
 
+    anomalies = _anomalous_dates(corridor_daily)
+    if anomalies:
+        print(f"이상치로 제외된 날짜 {len(anomalies)}개 (ANOMALY_THRESHOLD={ANOMALY_THRESHOLD}): "
+              f"{sorted(anomalies)}")
+
     report = build_boarding_reproduction_report(corridor_daily, features_daily)
-    summary_raw = summarize_mape(report, exclude_known_anomalies=False)
-    summary = summarize_mape(report, exclude_known_anomalies=True)
+    summary = summarize_mape(report)
     by_stop = per_stop_mape(report)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     report.to_parquet(out_dir / "boarding_reproduction_report.parquet", index=False)
     by_stop.to_csv(out_dir / "boarding_reproduction_by_stop.csv", index=False, encoding="utf-8-sig")
 
-    print(
-        f"=== 승차 재현 MAPE (원본, {KNOWN_NIGHT_BUS_ONLY_DATES} 포함, "
-        f"{TRAIN_TEST_CUTOFF} 이후 held-out 1년 기준) ==="
-    )
-    for k, v in summary_raw.items():
-        print(f"{k}: {v:.1f}%")
-    print()
-    print(
-        f"=== 승차 재현 MAPE ({KNOWN_NIGHT_BUS_ONLY_DATES} 제외, "
-        "data/README.md §10 문서화된 이상치) ==="
-    )
+    print(f"=== 승차 재현 MAPE ({TRAIN_TEST_CUTOFF} 이후 held-out 1년 기준) ===")
     for k, v in summary.items():
         print(f"{k}: {v:.1f}%")
 

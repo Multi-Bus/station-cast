@@ -16,8 +16,13 @@ files produced its output.
 
 Scope is A-track only (ingest + features). estimator/wait_population.py, which
 turns these into corridor_wait.parquet, is B-track and runs separately.
+
+STATIONCAST_SCOPE controls how many stops oa12913/oa12912/route_schedule
+build for: ``demo`` (default) is the 21-stop Jongno-Myeongdong-Euljiro
+corridor; ``seoul`` is every stop (no filter).
 """
 
+import os
 import sys
 import time
 from collections.abc import Callable
@@ -26,6 +31,7 @@ from pathlib import Path
 from stationcast.features.demand_factors import run as run_demand_factors
 from stationcast.ingest.holiday import run as run_holiday
 from stationcast.ingest.oa12912 import run as run_oa12912
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS
 from stationcast.ingest.oa12913 import run as run_oa12913
 from stationcast.ingest.route_schedule import run as run_route_schedule
 from stationcast.ingest.stop_capacity import run as run_stop_capacity
@@ -81,6 +87,15 @@ def newest_match(directory: Path, pattern: str) -> Path:
 
 
 def main() -> int:
+    scope = os.environ.get("STATIONCAST_SCOPE", "demo")
+    if scope not in ("demo", "seoul"):
+        print(
+            f"STATIONCAST_SCOPE는 demo 또는 seoul이어야 합니다 (받은 값: {scope!r})",
+            file=sys.stderr,
+        )
+        return 1
+    stop_ids = DEMO_STOP_IDS if scope == "demo" else None
+
     missing = missing_inputs()
     if missing:
         print("data/raw/에 필요한 원본 파일이 없습니다:", file=sys.stderr)
@@ -95,6 +110,7 @@ def main() -> int:
     holiday_csv = newest_match(RAW_DIR, HOLIDAY_GLOB)
     month_count = len(sorted(BOARDING_MONTH_DIR.glob(BOARDING_MONTH_GLOB)))
 
+    print(f"스코프: STATIONCAST_SCOPE={scope}")
     print(f"입력: {weather_csv}")
     print(f"입력: {holiday_csv}")
     print(f"입력: {BOARDING_MONTH_DIR}/ (월별 CSV {month_count}개)")
@@ -105,9 +121,18 @@ def main() -> int:
     # reads corridor_daily/weather_daily/holiday_daily back out of
     # data/processed.
     steps: list[tuple[str, Callable[[], None]]] = [
-        ("corridor_route_hourly, corridor_stops", lambda: run_oa12913(RAW_DIR, PROCESSED_DIR)),
-        ("corridor_daily", lambda: run_oa12912(BOARDING_MONTH_DIR, PROCESSED_DIR)),
-        ("corridor_route_schedule", lambda: run_route_schedule(RAW_DIR, PROCESSED_DIR)),
+        (
+            "corridor_route_hourly, corridor_stops",
+            lambda: run_oa12913(RAW_DIR, PROCESSED_DIR, stop_ids=stop_ids),
+        ),
+        (
+            "corridor_daily",
+            lambda: run_oa12912(BOARDING_MONTH_DIR, PROCESSED_DIR, stop_ids=stop_ids),
+        ),
+        (
+            "corridor_route_schedule",
+            lambda: run_route_schedule(RAW_DIR, PROCESSED_DIR, stop_ids=stop_ids),
+        ),
         ("weather_daily", lambda: run_weather(weather_csv, PROCESSED_DIR)),
         ("holiday_daily, holiday_daily_all", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
         ("stop_capacity", lambda: run_stop_capacity(PROCESSED_DIR)),

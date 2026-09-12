@@ -11,10 +11,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.ingest._common import clean_stop_name, read_cp949_csv
+from stationcast.ingest._common import clean_stop_name, is_night_bus, read_cp949_csv
 
-# Jongno-Myeongdong-Euljiro corridor: 21 stops confirmed in data/README.md
-CORRIDOR_STOP_IDS: tuple[int, ...] = (
+# 데모 스코프: Jongno-Myeongdong-Euljiro corridor, 21 stops confirmed in
+# data/README.md. build_* 함수들의 stop_ids=None은 필터 없음(서울 전체)을
+# 뜻하고, 이 튜플은 scripts/build_processed.py가 STATIONCAST_SCOPE=demo일 때
+# 명시적으로 넘기는 값이다.
+DEMO_STOP_IDS: tuple[int, ...] = (
     100000385,
     100000386,
     100000387,
@@ -38,23 +41,6 @@ CORRIDOR_STOP_IDS: tuple[int, ...] = (
     101000141,
 )
 
-# 서울심야버스(N-접두) 노선: 회랑 21개 정류장에 걸리는 10개 노선. 자정 이후에만
-# 운행하고 배차간격도 25~140분으로 일반 노선과 특성이 달라 모델 스코프에서
-# 제외한다. OA-12912·route_schedule.py 등 교통수단타입명 컬럼이 없는
-# 데이터셋에서도 동일하게 걸러낼 수 있도록 노선번호로 명시한다.
-CORRIDOR_NIGHT_BUS_ROUTES: tuple[str, ...] = (
-    "N15",
-    "N16",
-    "N26",
-    "N30",
-    "N31",
-    "N37",
-    "N51",
-    "N62",
-    "N73",
-    "N75",
-)
-
 _HOUR_RE = re.compile(r"(\d+)시")
 
 
@@ -75,7 +61,7 @@ def _days_in_month(year_month: int) -> int:
 
 
 def build_corridor_route_hourly(
-    boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] = CORRIDOR_STOP_IDS
+    boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] | None = None
 ) -> pd.DataFrame:
     """Aggregate to stop x route x hour daily-average boarding, keeping 노선번호.
 
@@ -86,15 +72,21 @@ def build_corridor_route_hourly(
     one has empty seats.
 
     Only 승차 is kept -- the wait-population model has no use for 하차.
-    Excludes CORRIDOR_NIGHT_BUS_ROUTES (see CORRIDOR_NIGHT_BUS_ROUTES's own
-    docstring). The raw hourly columns are a full month's cumulative total
-    for that hour-of-day (data/README.md section 1); dividing by the month's
-    day count here turns that into the daily average the model needs.
+    stop_ids=None keeps every stop (서울 전체); pass DEMO_STOP_IDS for the
+    21-stop demo corridor. Flags night-bus routes (N-접두, is_night_bus()) in
+    their own column instead of excluding them -- their registered headway
+    (25~140분, corridor_route_schedule.parquet) flows into Little's Law like
+    any other route's. The raw hourly columns are a full month's cumulative
+    total for that hour-of-day (data/README.md section 1); dividing by the
+    month's day count here turns that into the daily average the model needs.
     """
-    sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
-    sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
+    keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
+    sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
     sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     sub["노선번호"] = sub["노선번호"].astype(str)
+    sub["is_night_bus"] = sub["노선번호"].map(
+        dict(zip(u := sub["노선번호"].unique(), map(is_night_bus, u), strict=True))
+    )
 
     days = _days_in_month(boarding_df["사용년월"].iloc[0])
 
@@ -106,7 +98,7 @@ def build_corridor_route_hourly(
         assert match is not None, f"unexpected hour column name: {on_col}"
         hour = int(match.group(1))
         grp = (
-            sub.groupby(["표준버스정류장ID", "정류장명", "노선번호"])
+            sub.groupby(["표준버스정류장ID", "정류장명", "노선번호", "is_night_bus"])
             .agg(승차=(on_col, "sum"))
             .reset_index()
         )
@@ -116,7 +108,7 @@ def build_corridor_route_hourly(
 
     result = pd.concat(frames, ignore_index=True)
     return (
-        result[["표준버스정류장ID", "정류장명", "노선번호", "시간대", "승차"]]
+        result[["표준버스정류장ID", "정류장명", "노선번호", "is_night_bus", "시간대", "승차"]]
         .sort_values(["표준버스정류장ID", "노선번호", "시간대"])
         .reset_index(drop=True)
     )
@@ -125,10 +117,15 @@ def build_corridor_route_hourly(
 def build_corridor_stops(
     boarding_df: pd.DataFrame,
     coord_df: pd.DataFrame,
-    stop_ids: tuple[int, ...] = CORRIDOR_STOP_IDS,
+    stop_ids: tuple[int, ...] | None = None,
 ) -> pd.DataFrame:
-    """Build per-stop metadata (name, ARS number, coordinates) for the corridor."""
-    sub = boarding_df[boarding_df["표준버스정류장ID"].isin(stop_ids)].copy()
+    """Build per-stop metadata (name, ARS number, coordinates) for the corridor.
+
+    stop_ids=None keeps every stop (서울 전체); pass DEMO_STOP_IDS for the
+    21-stop demo corridor.
+    """
+    keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
+    sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
     sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     meta = sub[["표준버스정류장ID", "정류장명", "버스정류장ARS번호"]].drop_duplicates(
         subset="표준버스정류장ID"
@@ -144,16 +141,20 @@ def build_corridor_stops(
     )
 
 
-def run(raw_dir: Path, out_dir: Path) -> None:
-    """Build corridor_route_hourly.parquet and corridor_stops.parquet from raw_dir CSVs."""
+def run(raw_dir: Path, out_dir: Path, stop_ids: tuple[int, ...] | None = DEMO_STOP_IDS) -> None:
+    """Build corridor_route_hourly.parquet and corridor_stops.parquet from raw_dir CSVs.
+
+    stop_ids defaults to the 21-stop demo corridor; pass None for 서울 전체
+    (scripts/build_processed.py does this when STATIONCAST_SCOPE=seoul).
+    """
     boarding_csv = next(raw_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
     coord_csv = next(raw_dir.glob("*버스정류소*위치정보*.csv"))
 
     boarding_df = load_boarding_alighting(boarding_csv)
     coord_df = load_stop_coordinates(coord_csv)
 
-    route_hourly = build_corridor_route_hourly(boarding_df)
-    stops = build_corridor_stops(boarding_df, coord_df)
+    route_hourly = build_corridor_route_hourly(boarding_df, stop_ids=stop_ids)
+    stops = build_corridor_stops(boarding_df, coord_df, stop_ids=stop_ids)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     route_hourly.to_parquet(out_dir / "corridor_route_hourly.parquet", index=False)

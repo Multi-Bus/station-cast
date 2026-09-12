@@ -13,11 +13,17 @@ from typing import Any
 import pandas as pd
 
 _NAME_SUFFIX_RE = re.compile(r"\(\d+\)$")
+_NIGHT_BUS_RE = re.compile(r"^N\d")
 
 
 def clean_stop_name(name: object) -> str:
     """Strip the trailing per-route sequence number from a raw 역명 value."""
     return _NAME_SUFFIX_RE.sub("", str(name))
+
+
+def is_night_bus(route_number: object) -> bool:
+    """서울 심야버스 노선은 전부 N-접두(N15, N16, ...)라 이 정규식 하나로 식별된다."""
+    return bool(_NIGHT_BUS_RE.match(str(route_number)))
 
 
 def read_cp949_csv(csv_path: Path, **kwargs: Any) -> pd.DataFrame:

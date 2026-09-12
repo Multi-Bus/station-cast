@@ -1,6 +1,6 @@
 """Tests for the field-survey-derived per-stop capacity table (issue #12)."""
 
-from stationcast.ingest.oa12913 import CORRIDOR_STOP_IDS
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS
 from stationcast.ingest.stop_capacity import (
     CAPACITY_PER_PLATFORM,
     PLATFORM_COUNTS,
@@ -9,8 +9,8 @@ from stationcast.ingest.stop_capacity import (
 
 
 def test_platform_counts_cover_every_corridor_stop_exactly_once() -> None:
-    assert set(PLATFORM_COUNTS.keys()) == set(CORRIDOR_STOP_IDS)
-    assert len(PLATFORM_COUNTS) == len(CORRIDOR_STOP_IDS)
+    assert set(PLATFORM_COUNTS.keys()) == set(DEMO_STOP_IDS)
+    assert len(PLATFORM_COUNTS) == len(DEMO_STOP_IDS)
 
 
 def test_build_stop_capacity_derives_capacity_from_platform_count() -> None:
@@ -27,5 +27,5 @@ def test_build_stop_capacity_derives_capacity_from_platform_count() -> None:
 
 def test_build_stop_capacity_has_one_row_per_stop() -> None:
     result = build_stop_capacity()
-    assert len(result) == len(CORRIDOR_STOP_IDS)
+    assert len(result) == len(DEMO_STOP_IDS)
     assert result["표준버스정류장ID"].is_unique

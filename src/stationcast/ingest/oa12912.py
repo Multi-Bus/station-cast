@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 
 from stationcast.ingest._common import clean_stop_name, read_cp949_csv
-from stationcast.ingest.oa12913 import CORRIDOR_NIGHT_BUS_ROUTES, CORRIDOR_STOP_IDS
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS
 
 
 def load_daily_boarding(csv_path: Path) -> pd.DataFrame:
@@ -20,14 +20,16 @@ def load_daily_boarding(csv_path: Path) -> pd.DataFrame:
 
 
 def build_corridor_daily(
-    boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] = CORRIDOR_STOP_IDS
+    boarding_df: pd.DataFrame, stop_ids: tuple[int, ...] | None = None
 ) -> pd.DataFrame:
     """Aggregate route-level daily rows into stop x date boarding/alighting totals.
 
-    Sums across every route serving a stop: this dataset only feeds
+    Sums across every route serving a stop (night buses included -- see
+    oa12913.py's build_corridor_route_hourly): this dataset only feeds
     features/ (issue #10)'s weekday/weekend/holiday correction factors,
     which are stop-scoped, not route-scoped. ``boarding_df`` may span
-    multiple months concatenated together (see run()).
+    multiple months concatenated together (see run()). stop_ids=None keeps
+    every stop (서울 전체); pass DEMO_STOP_IDS for the 21-stop demo corridor.
 
     Grouped by 표준버스정류장ID alone (not also by name): a stop's
     registered name can change mid-period (e.g., ID 101000042 was renamed
@@ -35,11 +37,6 @@ def build_corridor_daily(
     the 12-month history), and grouping by name too would split one
     physical stop's continuous series into two. The most recent name is
     attached afterward as a single representative label.
-
-    Excludes CORRIDOR_NIGHT_BUS_ROUTES (same exclusion as
-    build_corridor_route_hourly in oa12913.py) -- this dataset has no
-    교통수단타입명 column, so night-bus routes are filtered by number here
-    instead.
 
     표준버스정류장ID is coerced to numeric before filtering: some monthly
     CSVs (e.g. 202312, 202401) have a single row using '~' as a
@@ -49,9 +46,9 @@ def build_corridor_daily(
     nothing and drops the entire month.
     """
     stop_id_num = pd.to_numeric(boarding_df["표준버스정류장ID"], errors="coerce")
-    sub = boarding_df[stop_id_num.isin(stop_ids)].copy()
-    sub["표준버스정류장ID"] = stop_id_num[stop_id_num.isin(stop_ids)].astype("int64")
-    sub = sub[~sub["노선번호"].astype(str).isin(CORRIDOR_NIGHT_BUS_ROUTES)]
+    keep = stop_id_num.notna() if stop_ids is None else stop_id_num.isin(stop_ids)
+    sub = boarding_df[keep].copy()
+    sub["표준버스정류장ID"] = stop_id_num[keep].astype("int64")
     sub["정류장명"] = sub["역명"].apply(clean_stop_name)
 
     daily_totals = (
@@ -69,12 +66,16 @@ def build_corridor_daily(
     )
 
 
-def run(raw_dir: Path, out_dir: Path) -> None:
+def run(
+    raw_dir: Path, out_dir: Path, stop_ids: tuple[int, ...] | None = DEMO_STOP_IDS
+) -> None:
     """Build corridor_daily.parquet from every OA-12912 monthly CSV in raw_dir.
 
     Picks up all files matching ``BUS_STATION_BOARDING_MONTH_*.csv`` so
     additional months can be dropped into raw_dir and reprocessed without
-    code changes.
+    code changes. stop_ids defaults to the 21-stop demo corridor; pass None
+    for 서울 전체 (scripts/build_processed.py does this when
+    STATIONCAST_SCOPE=seoul).
     """
     csv_paths = sorted(raw_dir.glob("BUS_STATION_BOARDING_MONTH_*.csv"))
     if not csv_paths:
@@ -82,7 +83,7 @@ def run(raw_dir: Path, out_dir: Path) -> None:
 
     monthly_frames = [load_daily_boarding(p) for p in csv_paths]
     combined = pd.concat(monthly_frames, ignore_index=True)
-    daily = build_corridor_daily(combined)
+    daily = build_corridor_daily(combined, stop_ids=stop_ids)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     daily.to_parquet(out_dir / "corridor_daily.parquet", index=False)

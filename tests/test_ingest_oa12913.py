@@ -15,12 +15,10 @@ def _boarding_df() -> pd.DataFrame:
             "사용년월": [202606, 202606, 202606, 202606],  # June 2026 -> 30 days
             # values are x30 of the old fixture so that, after the
             # daily-average normalization, the expected sums are unchanged.
-            # The N15 (night bus) row's large values would blow up the
-            # expected totals below if it weren't excluded.
-            "0시승차총승객수": [300, 150, 9000, 90],
-            "0시하차총승객수": [30, 60, 9000, 120],
-            "1시승차총승객수": [210, 90, 9000, 30],
-            "1시하차총승객수": [0, 30, 9000, 60],
+            "0시승차총승객수": [300, 150, 60, 90],
+            "0시하차총승객수": [30, 60, 60, 120],
+            "1시승차총승객수": [210, 90, 30, 30],
+            "1시하차총승객수": [0, 30, 30, 60],
         }
     )
 
@@ -55,20 +53,26 @@ def test_build_corridor_route_hourly_normalizes_by_days_in_month() -> None:
     assert result.iloc[0]["승차"] == 10.0  # 280 / 28
 
 
-def test_build_corridor_route_hourly_keeps_routes_separate_and_excludes_night_buses() -> None:
+def test_build_corridor_route_hourly_keeps_routes_separate_and_flags_night_buses() -> None:
     result = build_corridor_route_hourly(_boarding_df(), stop_ids=(100000389,))
 
     assert list(result["표준버스정류장ID"].unique()) == [100000389]
     assert set(result["정류장명"]) == {"종로2가"}
-    # 2 routes (150, 271; N15 excluded) x 2 hours = 4 rows, not summed together.
-    assert len(result) == 4
-    assert set(result["노선번호"]) == {"150", "271"}
+    # 3 routes (150, 271, N15) x 2 hours = 6 rows, not summed together.
+    assert len(result) == 6
+    assert set(result["노선번호"]) == {"150", "271", "N15"}
 
     hour0_150 = result[(result["시간대"] == 0) & (result["노선번호"] == "150")].iloc[0]
     assert hour0_150["승차"] == 10  # 300 / 30, not summed with 271's 150
+    assert bool(hour0_150["is_night_bus"]) is False
 
     hour0_271 = result[(result["시간대"] == 0) & (result["노선번호"] == "271")].iloc[0]
     assert hour0_271["승차"] == 5  # 150 / 30
+    assert bool(hour0_271["is_night_bus"]) is False
+
+    hour0_n15 = result[(result["시간대"] == 0) & (result["노선번호"] == "N15")].iloc[0]
+    assert hour0_n15["승차"] == 2  # 60 / 30
+    assert bool(hour0_n15["is_night_bus"]) is True
 
 
 def test_build_corridor_stops_merges_name_ars_and_coordinates() -> None:

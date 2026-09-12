@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 
 from stationcast.validate.boarding_reproduction import (
-    KNOWN_NIGHT_BUS_ONLY_DATES,
     TRAIN_TEST_CUTOFF,
+    _anomalous_dates,
     build_boarding_reproduction_report,
     per_stop_mape,
     summarize_mape,
@@ -68,16 +68,6 @@ def _test_rows() -> list[dict]:
             "날씨구분": "맑음",
             "기온구분": "보통",
         },
-        {
-            "표준버스정류장ID": STOP,
-            "정류장명": NAME,
-            "사용일자": KNOWN_NIGHT_BUS_ONLY_DATES[0],
-            "승차": 2.0,
-            "하차": 1.0,
-            "요일구분": "평일",
-            "날씨구분": "맑음",
-            "기온구분": "보통",
-        },
     ]
 
 
@@ -93,7 +83,7 @@ def _corridor_daily() -> pd.DataFrame:
 def test_report_only_covers_test_split() -> None:
     report = build_boarding_reproduction_report(_corridor_daily(), _features_daily())
 
-    assert len(report) == 3
+    assert len(report) == 2
     assert (report["사용일자"] >= TRAIN_TEST_CUTOFF).all()
 
 
@@ -106,20 +96,49 @@ def test_predictions_are_fit_on_train_split_only() -> None:
     assert row["요일날씨기온보정_예측승차"] == pytest.approx(100.0)
 
 
-def test_summarize_mape_excludes_known_anomaly_by_default() -> None:
+def test_summarize_mape_reports_both_predictions() -> None:
     report = build_boarding_reproduction_report(_corridor_daily(), _features_daily())
 
-    clean = summarize_mape(report, exclude_known_anomalies=True)
-    assert clean["요일날씨기온보정_MAPE"] < 30.0
-
-    raw = summarize_mape(report, exclude_known_anomalies=False)
-    assert raw["요일날씨기온보정_MAPE"] > clean["요일날씨기온보정_MAPE"]
+    summary = summarize_mape(report)
+    assert summary["요일날씨기온보정_MAPE"] < 30.0
 
 
-def test_per_stop_mape_excludes_known_anomaly_by_default() -> None:
+def test_per_stop_mape_reports_one_row_per_stop() -> None:
     report = build_boarding_reproduction_report(_corridor_daily(), _features_daily())
     by_stop = per_stop_mape(report)
 
     assert len(by_stop) == 1
     assert by_stop.iloc[0]["표준버스정류장ID"] == STOP
     assert by_stop.iloc[0]["요일날씨기온보정_MAPE"] < 30.0
+
+
+def test_anomalous_dates_flags_only_collapsed_totals() -> None:
+    df = pd.DataFrame(
+        {"사용일자": [1, 2, 3, 4], "승차": [100.0, 100.0, 100.0, 5.0]}
+    )
+    assert _anomalous_dates(df) == {4}
+
+
+def test_build_boarding_reproduction_report_drops_anomalous_dates() -> None:
+    # 5.0 is well under 10% of this fixture's ~100 median -- a source-data
+    # collapse, not real demand (see 2026-01-13/14, ANOMALY_THRESHOLD's
+    # docstring), and must not reach the report at all (neither as a train
+    # day nor a test day).
+    anomalous_row = {
+        "표준버스정류장ID": STOP,
+        "정류장명": NAME,
+        "사용일자": 20250703,
+        "승차": 5.0,
+        "하차": 2.5,
+        "요일구분": "평일",
+        "날씨구분": "맑음",
+        "기온구분": "보통",
+    }
+    features = pd.concat([_features_daily(), pd.DataFrame([anomalous_row])], ignore_index=True)
+    cols = ["표준버스정류장ID", "정류장명", "사용일자", "승차", "하차"]
+    corridor_daily = features[cols]
+
+    report = build_boarding_reproduction_report(corridor_daily, features)
+
+    assert 20250703 not in set(report["사용일자"])
+    assert len(report) == 2
