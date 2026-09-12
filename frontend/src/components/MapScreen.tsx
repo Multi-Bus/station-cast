@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
-import { Layers, Navigation, Search } from "lucide-react";
+import { Navigation, Search, Star } from "lucide-react";
 import { CustomOverlayMap, Map } from "react-kakao-maps-sdk";
 import type { UserLocationState } from "../hooks/useUserLocation";
 import type { FilterKey, NearbyStop } from "../types/stop";
@@ -7,7 +7,6 @@ import "./MapScreen.css";
 
 const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
 const KAKAO_SCRIPT_ID = "kakao-maps-sdk";
-type KakaoMapType = "ROADMAP" | "HYBRID";
 
 function useKakaoScript(appkey: string | undefined): { ready: boolean; failed: boolean } {
   const [state, setState] = useState(() => ({
@@ -75,6 +74,9 @@ function StopMarker({
       onClick={() => onSelectStop(stop.id)}
     >
       <span className="map-marker-label">{stop.name}</span>
+      {/* The pin carries congestion twice over: fill color and diameter. Size
+          is the channel that still works for a colorblind user, and it makes
+          the busy stops the ones that read first when the map is full. */}
       <span className={`map-marker-pin congestion-${level}`} />
     </button>
   );
@@ -110,14 +112,12 @@ function KakaoStopsMap({
   selectedStopId,
   onSelectStop,
   center,
-  mapType,
   userPosition,
 }: {
   visibleStops: NearbyStop[];
   selectedStopId: string | null;
   onSelectStop: (id: string) => void;
   center: { lat: number; lng: number };
-  mapType: KakaoMapType;
   userPosition: { lat: number; lng: number } | null;
 }) {
   const { ready, failed } = useKakaoScript(KAKAO_MAP_KEY);
@@ -127,7 +127,7 @@ function KakaoStopsMap({
   }
 
   return (
-    <Map center={center} isPanto level={5} mapTypeId={mapType} style={{ position: "absolute", inset: 0 }}>
+    <Map center={center} isPanto level={5} style={{ position: "absolute", inset: 0 }}>
       {userPosition && (
         <CustomOverlayMap position={userPosition}>
           <div className="user-location-dot" aria-label="내 위치" role="img" />
@@ -175,7 +175,6 @@ export function MapScreen({
   onRecenter: () => void;
 }) {
   const [center, setCenter] = useState(FALLBACK_CENTER);
-  const [mapType, setMapType] = useState<KakaoMapType>("ROADMAP");
   const corridorCenter = useMemo(() => centroid(stops) ?? FALLBACK_CENTER, [stops]);
   const didInitialCenter = useRef(false);
   useEffect(() => {
@@ -186,6 +185,7 @@ export function MapScreen({
   }, [stops, corridorCenter]);
 
   const heavyCount = stops.filter((s) => s.congestionLevel === "heavy").length;
+  const favoriteCount = stops.filter((s) => s.isFavorite).length;
 
   // Gating on "granted" is load-bearing: retry() flips the status to "pending"
   // first, and reading that as an answer would end the wait before the fix lands.
@@ -218,7 +218,6 @@ export function MapScreen({
           selectedStopId={selectedStopId}
           onSelectStop={onSelectStop}
           center={center}
-          mapType={mapType}
           userPosition={userPosition}
         />
       ) : (
@@ -236,7 +235,6 @@ export function MapScreen({
             placeholder="정류장 이름 검색"
             aria-label="정류장 이름 검색"
           />
-          <span className="search-bar-profile">SC</span>
         </div>
         <div className="filter-chip-row">
           <button
@@ -246,23 +244,23 @@ export function MapScreen({
           >
             혼잡 {heavyCount}
           </button>
+          {/* Hidden rather than disabled at zero: a permanently greyed-out
+              control is just clutter until the user has starred something. */}
+          {favoriteCount > 0 && (
+            <button
+              className={`chip ${activeFilters.has("favorite") ? "chip-on" : ""}`}
+              aria-pressed={activeFilters.has("favorite")}
+              onClick={() => onToggleFilter("favorite")}
+            >
+              <Star size={12} aria-hidden="true" /> 즐겨찾기 {favoriteCount}
+            </button>
+          )}
         </div>
       </div>
 
       <div className={`map-controls ${controlsHidden ? "map-controls-hidden" : ""}`}>
-        <button
-          className="map-control-btn"
-          aria-label={mapType === "ROADMAP" ? "위성 지도로 보기" : "일반 지도로 보기"}
-          aria-pressed={mapType === "HYBRID"}
-          disabled={!KAKAO_MAP_KEY}
-          onClick={() => setMapType((t) => (t === "ROADMAP" ? "HYBRID" : "ROADMAP"))}
-        >
-          <span className={`map-control-visual ${mapType === "HYBRID" ? "map-control-visual-active" : ""}`}>
-            <Layers size={17} />
-          </span>
-        </button>
         <button className="map-control-btn" aria-label="내 위치로" onClick={handleRecenter}>
-          <span className="map-control-visual map-control-visual-active">
+          <span className="map-control-visual">
             <Navigation size={17} />
           </span>
         </button>

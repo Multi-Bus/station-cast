@@ -2,9 +2,9 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: var(--tabbar-total);
+  bottom: var(--app-bottom-inset);
   background: var(--color-surface);
-  border-radius: var(--radius-sheet);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: var(--shadow-sheet);
   display: flex;
   flex-direction: column;

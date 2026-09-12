@@ -5,11 +5,16 @@ import { congestionLevelFromGrade, type NearbyStop } from "../types/stop";
 const PLACEHOLDER_ROUTES: string[] = [];
 const PLACEHOLDER_DISTANCE_M = 0;
 
+/** Grid for the no-Kakao-key fallback map. Spacing is sized so the whole
+ *  corridor lands inside 0-100% -- the old 18% row pitch pushed the last rows
+ *  past the bottom edge, where they were clipped and unreachable. */
 function placeholderMapPosition(index: number): { xPct: number; yPct: number } {
   const cols = 4;
   return {
-    xPct: 15 + (index % cols) * 22,
-    yPct: 15 + Math.floor(index / cols) * 18,
+    xPct: 14 + (index % cols) * 24,
+    // Starts below the search bar and filter chips, ends above the peeking
+    // sheet, so no marker is born underneath a piece of chrome.
+    yPct: 21 + Math.floor(index / cols) * 12,
   };
 }
 
