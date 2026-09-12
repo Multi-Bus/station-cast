@@ -1,4 +1,5 @@
 @import "pretendard/dist/web/variable/pretendardvariable.css";
+@import "@fontsource-variable/jetbrains-mono";
 @import "./tokens.css";
 
 *,
@@ -19,6 +20,7 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -32,23 +34,25 @@ button {
   border: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms var(--sheet-snap-ease);
 }
 
-button:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-/* A press should feel like the surface gives, not like it fades out.
-   Transform-only so it stays on the compositor; the reduced-motion block
-   below collapses the transition, and scale is small enough that the static
-   end state is still correct without it. */
+/* A press should feel like the surface gives, not like it fades out. */
 button:not(:disabled):active {
   transform: scale(0.97);
 }
 
-button {
-  transition: transform 90ms var(--sheet-snap-ease);
+button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Every figure in the app is set in the mono face with lining, fixed-width
+   digits, so a number never shuffles sideways as it ticks. */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 .sr-only {
@@ -66,6 +70,20 @@ button {
 :focus-visible {
   outline: 2px solid var(--color-text);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Content arriving in the sheet is staggered so the eye lands on the reading
+   first and the supporting rows after, rather than everything at once. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -74,5 +92,6 @@ button {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

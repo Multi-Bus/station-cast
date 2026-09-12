@@ -1,6 +1,6 @@
+import type { CSSProperties } from "react";
 import { Star } from "lucide-react";
 import { CongestionBadge } from "./CongestionBadge";
-import { EstimateBadge } from "./EstimateBadge";
 import type { NearbyStop } from "../types/stop";
 import "./NearbyStopsPanel.css";
 
@@ -72,10 +72,14 @@ export function NearbyStopsPanel({
         </div>
       )}
       <ul className="nearby-rows">
-        {stops.map((stop) => {
+        {stops.map((stop, index) => {
           const level = stop.congestionLevel;
           return (
-            <li key={stop.id} className="nearby-row">
+            <li
+              key={stop.id}
+              className="nearby-row"
+              style={{ "--row-index": index } as CSSProperties}
+            >
               {/* The star is a sibling, not a child: nesting a button inside a
                   button is invalid HTML and the inner one is unreachable by
                   keyboard. */}
@@ -92,11 +96,11 @@ export function NearbyStopsPanel({
                   </span>
                 </span>
                 <span className="nearby-row-side">
-                  <CongestionBadge level={level} />
                   <span className="nearby-row-wait">
-                    <EstimateBadge tone="surface" />
-                    대기 약 {stop.waitEstimate}명
+                    <span className="figure">{stop.waitEstimate}</span>
+                    <span className="nearby-row-wait-unit">명</span>
                   </span>
+                  <CongestionBadge level={level} />
                 </span>
               </button>
               <button
@@ -107,8 +111,9 @@ export function NearbyStopsPanel({
               >
                 <Star
                   size={16}
+                  strokeWidth={2}
                   fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
-                  color={stop.isFavorite ? "var(--color-favorite-star)" : "var(--neutral-400)"}
+                  color={stop.isFavorite ? "var(--color-favorite-star)" : "var(--color-text-faint)"}
                 />
               </button>
             </li>
