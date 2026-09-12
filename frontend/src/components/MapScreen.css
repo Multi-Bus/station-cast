@@ -37,7 +37,9 @@
   height: 14px;
   border-radius: 50%;
   background: var(--color-user-location);
-  box-shadow: 0 0 0 3px var(--marker-ring);
+  box-shadow:
+    0 0 0 3px var(--marker-ring),
+    var(--on-map-elevation);
 }
 
 .user-location-dot::before {
@@ -102,7 +104,9 @@
   border-radius: 50%;
   /* A ring in the page background colour, not a white stroke: the marker reads
      as punched out of the map rather than stuck on top of it. */
-  box-shadow: 0 0 0 2.5px var(--marker-ring);
+  box-shadow:
+    0 0 0 2.5px var(--marker-ring),
+    var(--on-map-elevation);
   transition:
     width 200ms var(--sheet-snap-ease),
     height 200ms var(--sheet-snap-ease);
@@ -135,36 +139,38 @@
 
 .map-marker[data-selected] .map-dot {
   box-shadow:
-    0 0 0 2.5px var(--marker-ring),
-    0 0 0 5px currentColor;
+    0 0 0 3px var(--marker-ring),
+    0 0 0 6px currentColor,
+    var(--on-map-elevation);
 }
 
 .map-marker[data-selected] .map-dot-value {
   font-size: var(--text-base);
 }
 
+/* Only the selected stop is named. Twenty-one labels in a corridor this tight
+   overlap into an unreadable stack, and the disc already carries the reading;
+   the sheet's list is where names are browsed. */
 .map-dot-label {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  max-width: 112px;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: #12141a;
+  color: #ffffff;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  box-shadow: var(--on-map-elevation);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .map-marker[data-selected] .map-dot-label {
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
-  max-width: none;
+  opacity: 1;
 }
 
 .map-floating-top {
@@ -187,8 +193,9 @@
   height: 48px;
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: var(--on-map-surface);
+  border: 1px solid var(--on-map-line);
+  box-shadow: var(--on-map-elevation);
 }
 
 .search-bar-input {
@@ -202,11 +209,11 @@
      smaller, which leaves the map scaled up after the keyboard closes. */
   font-size: var(--text-input);
   letter-spacing: -0.01em;
-  color: var(--color-text);
+  color: var(--on-map-text);
 }
 
 .search-bar-input::placeholder {
-  color: var(--color-text-faint);
+  color: var(--on-map-muted);
 }
 
 .filter-chip-row {
@@ -230,12 +237,13 @@
   height: 34px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: var(--on-map-surface);
+  border: 1px solid var(--on-map-line);
+  box-shadow: var(--on-map-elevation);
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--color-text);
+  color: var(--on-map-text);
   white-space: nowrap;
 }
 
@@ -253,17 +261,17 @@
 
 .chip-count {
   font-size: 11px;
-  color: var(--color-text-muted);
+  color: var(--on-map-muted);
 }
 
 .chip[aria-pressed="true"] {
-  background: var(--color-invert-bg);
-  border-color: var(--color-invert-bg);
-  color: var(--color-invert-fg);
+  background: #12141a;
+  border-color: #12141a;
+  color: #ffffff;
 }
 
 .chip[aria-pressed="true"] .chip-count {
-  color: var(--color-invert-fg);
+  color: #ffffff;
   opacity: 0.65;
 }
 
@@ -301,10 +309,11 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: var(--on-map-surface);
+  border: 1px solid var(--on-map-line);
+  box-shadow: var(--on-map-elevation);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text);
+  color: var(--on-map-text);
 }
