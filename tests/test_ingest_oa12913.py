@@ -1,6 +1,7 @@
 """Tests for the OA-12913 corridor builder."""
 
 import pandas as pd
+import pytest
 
 from stationcast.ingest.oa12913 import build_corridor_route_hourly, build_corridor_stops
 
@@ -73,6 +74,75 @@ def test_build_corridor_route_hourly_keeps_routes_separate_and_flags_night_buses
     hour0_n15 = result[(result["시간대"] == 0) & (result["노선번호"] == "N15")].iloc[0]
     assert hour0_n15["승차"] == 2  # 60 / 30
     assert bool(hour0_n15["is_night_bus"]) is True
+
+
+def test_build_corridor_route_hourly_weights_multi_month_average_by_day_count() -> None:
+    # Feb 2026 (28 days, 10/day alone) and June 2026 (30 days, 20/day alone)
+    # for the same stop/route/hour, concatenated the way run() does across
+    # every monthly CSV. The two months have deliberately different per-day
+    # rates so the correct combined average -- (month totals summed) /
+    # (day counts summed) = 880 / 58 -- can't be produced by a bug that
+    # drops one month, swaps in the wrong day count, or averages the two
+    # months' own daily rates instead of their raw totals.
+    feb = pd.DataFrame(
+        {
+            "표준버스정류장ID": [100000389],
+            "노선번호": ["150"],
+            "역명": ["종로2가(00063)"],
+            "버스정류장ARS번호": ["01014"],
+            "사용년월": [202602],
+            "0시승차총승객수": [280],  # 280 / 28 = 10/day alone
+        }
+    )
+    june = pd.DataFrame(
+        {
+            "표준버스정류장ID": [100000389],
+            "노선번호": ["150"],
+            "역명": ["종로2가(00063)"],
+            "버스정류장ARS번호": ["01014"],
+            "사용년월": [202606],
+            "0시승차총승객수": [600],  # 600 / 30 = 20/day alone
+        }
+    )
+    combined = pd.concat([feb, june], ignore_index=True)
+
+    result = build_corridor_route_hourly(combined, stop_ids=(100000389,))
+
+    assert len(result) == 1  # one (stop, route, hour) row, months merged
+    assert result.iloc[0]["승차"] == pytest.approx(880 / 58)  # (280 + 600) / (28 + 30)
+
+
+def test_build_corridor_route_hourly_keeps_one_series_when_stop_name_changes() -> None:
+    # ID 101000042 was renamed 해운센터.롯데영플라자 -> 소공동.롯데영플라자
+    # mid-window in the real 12-month data; grouping by name as well as ID
+    # would silently split one physical stop's hour-0 boarding into two rows.
+    old_name_month = pd.DataFrame(
+        {
+            "표준버스정류장ID": [101000042],
+            "노선번호": ["150"],
+            "역명": ["해운센터.롯데영플라자(00001)"],
+            "버스정류장ARS번호": ["02001"],
+            "사용년월": [202503],
+            "0시승차총승객수": [300],
+        }
+    )
+    new_name_month = pd.DataFrame(
+        {
+            "표준버스정류장ID": [101000042],
+            "노선번호": ["150"],
+            "역명": ["소공동.롯데영플라자(00001)"],
+            "버스정류장ARS번호": ["02001"],
+            "사용년월": [202606],
+            "0시승차총승객수": [300],
+        }
+    )
+    combined = pd.concat([old_name_month, new_name_month], ignore_index=True)
+
+    result = build_corridor_route_hourly(combined, stop_ids=(101000042,))
+
+    assert len(result) == 1  # one (stop, route, hour) row, not split by name
+    assert result.iloc[0]["정류장명"] == "소공동.롯데영플라자"  # most recent name wins
+    assert result.iloc[0]["승차"] == pytest.approx((300 + 300) / (31 + 30))
 
 
 def test_build_corridor_stops_merges_name_ars_and_coordinates() -> None:
