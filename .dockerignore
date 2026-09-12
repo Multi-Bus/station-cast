@@ -1,0 +1,16 @@
+.git/
+.venv/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Rebuilt inside the frontend stage; never ship a local build.
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+frontend/vite.config.https.local.ts
+
+# Only data/processed/ is needed at runtime.
+data/raw/

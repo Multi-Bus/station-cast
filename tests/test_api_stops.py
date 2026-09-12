@@ -106,7 +106,7 @@ def test_health_check(client: TestClient) -> None:
 
 
 def test_list_stops(client: TestClient) -> None:
-    response = client.get("/stops")
+    response = client.get("/api/stops")
 
     assert response.status_code == 200
     body = response.json()
@@ -122,7 +122,7 @@ def test_list_stops(client: TestClient) -> None:
 
 
 def test_congestion_returns_estimate_and_grade_for_given_hour(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_A}/congestion", params={"hour": 9})
+    response = client.get(f"/api/stops/{STOP_A}/congestion", params={"hour": 9})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -138,7 +138,7 @@ def test_congestion_returns_raw_estimate_without_clamping(client: TestClient) ->
     # wait_population's W is always >= 0 by construction (sum of
     # non-negative boarding times non-negative wait), so the API no longer
     # needs to clamp it -- it's a plain pass-through.
-    response = client.get(f"/stops/{STOP_B}/congestion", params={"hour": 8})
+    response = client.get(f"/api/stops/{STOP_B}/congestion", params={"hour": 8})
 
     assert response.status_code == 200
     body = response.json()
@@ -149,8 +149,8 @@ def test_congestion_returns_raw_estimate_without_clamping(client: TestClient) ->
 def test_congestion_defaults_to_current_hour_when_omitted(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("stationcast.api.main._current_hour", lambda: 9)
-    response = client.get(f"/stops/{STOP_A}/congestion")
+    monkeypatch.setattr("stationcast.api.deps.current_hour", lambda: 9)
+    response = client.get(f"/api/stops/{STOP_A}/congestion")
 
     assert response.status_code == 200
     body = response.json()
@@ -159,25 +159,25 @@ def test_congestion_defaults_to_current_hour_when_omitted(
 
 
 def test_congestion_unknown_stop_returns_404(client: TestClient) -> None:
-    response = client.get("/stops/999999999/congestion", params={"hour": 9})
+    response = client.get("/api/stops/999999999/congestion", params={"hour": 9})
 
     assert response.status_code == 404
 
 
 def test_congestion_unknown_hour_returns_404(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_A}/congestion", params={"hour": 3})
+    response = client.get(f"/api/stops/{STOP_A}/congestion", params={"hour": 3})
 
     assert response.status_code == 404
 
 
 def test_congestion_rejects_hour_out_of_range(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_A}/congestion", params={"hour": 24})
+    response = client.get(f"/api/stops/{STOP_A}/congestion", params={"hour": 24})
 
     assert response.status_code == 422
 
 
 def test_timeline_returns_full_curve_sorted_by_hour_with_grade(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_A}/timeline")
+    response = client.get(f"/api/stops/{STOP_A}/timeline")
 
     assert response.status_code == 200
     body = response.json()
@@ -189,7 +189,7 @@ def test_timeline_returns_full_curve_sorted_by_hour_with_grade(client: TestClien
 
 
 def test_timeline_returns_raw_estimate_without_clamping(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_B}/timeline")
+    response = client.get(f"/api/stops/{STOP_B}/timeline")
 
     assert response.status_code == 200
     body = response.json()
@@ -197,13 +197,13 @@ def test_timeline_returns_raw_estimate_without_clamping(client: TestClient) -> N
 
 
 def test_timeline_unknown_stop_returns_404(client: TestClient) -> None:
-    response = client.get("/stops/999999999/timeline")
+    response = client.get("/api/stops/999999999/timeline")
 
     assert response.status_code == 404
 
 
 def test_corridor_returns_every_stop_at_given_hour(client: TestClient) -> None:
-    response = client.get("/corridor", params={"hour": 8})
+    response = client.get("/api/corridor", params={"hour": 8})
 
     assert response.status_code == 200
     body = response.json()
@@ -217,8 +217,8 @@ def test_corridor_returns_every_stop_at_given_hour(client: TestClient) -> None:
 def test_corridor_defaults_to_current_hour_when_omitted(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("stationcast.api.main._current_hour", lambda: 8)
-    response = client.get("/corridor")
+    monkeypatch.setattr("stationcast.api.deps.current_hour", lambda: 8)
+    response = client.get("/api/corridor")
 
     assert response.status_code == 200
     body = response.json()
@@ -230,7 +230,7 @@ def test_corridor_defaults_to_current_hour_when_omitted(
 
 
 def test_corridor_empty_at_hour_with_no_data(client: TestClient) -> None:
-    response = client.get("/corridor", params={"hour": 15})
+    response = client.get("/api/corridor", params={"hour": 15})
 
     assert response.status_code == 200
     assert response.json() == {"hour": 15, "stops": []}
@@ -240,7 +240,7 @@ def test_context_returns_weather_and_holiday_note(client: TestClient) -> None:
     # 20260101 is a Thursday but flagged as 신정 in the holiday fixture, so
     # holiday takes priority over weekday in day_type, and STOP_A's
     # 보정계수_승차=0.85 becomes "15% lower than usual".
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260101})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260101})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -262,7 +262,7 @@ def test_context_returns_weather_and_holiday_note(client: TestClient) -> None:
 def test_context_weekday_returns_baseline_note(client: TestClient) -> None:
     # 20260102 is a plain Friday (not weekend, not holiday) -- day_type is
     # 평일, so the note is a flat baseline regardless of STOP_B's factor.
-    response = client.get(f"/stops/{STOP_B}/context", params={"date": 20260102})
+    response = client.get(f"/api/stops/{STOP_B}/context", params={"date": 20260102})
 
     assert response.status_code == 200
     body = response.json()
@@ -273,8 +273,8 @@ def test_context_weekday_returns_baseline_note(client: TestClient) -> None:
 def test_context_defaults_to_current_date_when_omitted(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("stationcast.api.main._current_date", lambda: 20260102)
-    response = client.get(f"/stops/{STOP_B}/context")
+    monkeypatch.setattr("stationcast.api.deps.current_date", lambda: 20260102)
+    response = client.get(f"/api/stops/{STOP_B}/context")
 
     assert response.status_code == 200
     body = response.json()
@@ -283,13 +283,13 @@ def test_context_defaults_to_current_date_when_omitted(
 
 
 def test_context_unknown_stop_returns_404(client: TestClient) -> None:
-    response = client.get("/stops/999999999/context", params={"date": 20260101})
+    response = client.get("/api/stops/999999999/context", params={"date": 20260101})
 
     assert response.status_code == 404
 
 
 def test_context_unknown_date_returns_404(client: TestClient) -> None:
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260201})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260201})
 
     assert response.status_code == 404
 
@@ -300,7 +300,7 @@ def test_context_missing_features_daily_combo_returns_404(client: TestClient) ->
     # 17 corridor-wide combinations missing from corridor_features_daily.parquet
     # in real data (data/README.md §10, night-bus-only days). boarding_factor()
     # used to crash on an empty frame's .iloc[0] here (issue #137).
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260102})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260102})
 
     assert response.status_code == 404
 
@@ -310,7 +310,7 @@ def test_context_rejects_invalid_date(client: TestClient, bad_date: int) -> None
     # 0/-5/1 aren't parseable as YYYYMMDD at all; 20261332 has month 13;
     # 20260230 is Feb 30, which doesn't exist. All used to reach
     # classify_day_type()'s pd.to_datetime() and crash as an unhandled 500.
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": bad_date})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": bad_date})
 
     assert response.status_code == 422
 
@@ -319,7 +319,7 @@ def test_context_wind_speed_null_when_asos_reading_missing(client: TestClient) -
     # STOP_B/20260102's 평균풍속 fixture value is NaN (ASOS instrument gap) --
     # the response should expose null rather than crash or fabricate a value
     # (issue #137).
-    response = client.get(f"/stops/{STOP_B}/context", params={"date": 20260102})
+    response = client.get(f"/api/stops/{STOP_B}/context", params={"date": 20260102})
 
     assert response.status_code == 200
     assert response.json()["wind_speed"] is None
@@ -334,9 +334,9 @@ def test_context_falls_back_to_forecast_for_date_outside_weather_range(
     # 보정계수_승차_주말+공휴일_맑음_저온=0.85.
     from stationcast.ingest.weather_forecast import DailyForecast
 
-    monkeypatch.setattr("stationcast.api.main.fetch_forecast_items", lambda: [])
+    monkeypatch.setattr("stationcast.api.routers.congestion.fetch_forecast_items", lambda: [])
     monkeypatch.setattr(
-        "stationcast.api.main.build_daily_forecast",
+        "stationcast.api.routers.congestion.build_daily_forecast",
         lambda items, target_date: DailyForecast(
             date=target_date,
             temperature=10.0,
@@ -348,7 +348,7 @@ def test_context_falls_back_to_forecast_for_date_outside_weather_range(
         ),
     )
 
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260815})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260815})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -375,9 +375,9 @@ def test_context_returns_404_when_forecast_also_unavailable(
     def _raise() -> list[dict]:
         raise ForecastUnavailable("KMA_FORECAST_API_KEY is not set")
 
-    monkeypatch.setattr("stationcast.api.main.fetch_forecast_items", _raise)
+    monkeypatch.setattr("stationcast.api.routers.congestion.fetch_forecast_items", _raise)
 
-    response = client.get(f"/stops/{STOP_A}/context", params={"date": 20260815})
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260815})
 
     assert response.status_code == 404
 
@@ -386,7 +386,7 @@ def test_arrivals_returns_routes_for_stop(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "stationcast.api.main.fetch_arrivals",
+        "stationcast.api.routers.arrivals.fetch_arrivals",
         lambda ars_id: [
             {
                 "busRouteAbrv": "101",
@@ -400,7 +400,7 @@ def test_arrivals_returns_routes_for_stop(
         ],
     )
 
-    response = client.get(f"/stops/{STOP_A}/arrivals")
+    response = client.get(f"/api/stops/{STOP_A}/arrivals")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -431,9 +431,9 @@ def test_arrivals_uses_stop_ars_number_not_stop_id(
         captured["ars_id"] = ars_id
         return []
 
-    monkeypatch.setattr("stationcast.api.main.fetch_arrivals", _fake_fetch)
+    monkeypatch.setattr("stationcast.api.routers.arrivals.fetch_arrivals", _fake_fetch)
 
-    client.get(f"/stops/{STOP_A}/arrivals")
+    client.get(f"/api/stops/{STOP_A}/arrivals")
 
     assert captured["ars_id"] == "01010"  # STOP_A's ARS번호, not its 표준버스정류장ID
 
@@ -446,9 +446,9 @@ def test_arrivals_available_false_when_topis_unavailable(
     def _raise(ars_id: str) -> list[dict]:
         raise ArrivalInfoUnavailable("timed out")
 
-    monkeypatch.setattr("stationcast.api.main.fetch_arrivals", _raise)
+    monkeypatch.setattr("stationcast.api.routers.arrivals.fetch_arrivals", _raise)
 
-    response = client.get(f"/stops/{STOP_A}/arrivals")
+    response = client.get(f"/api/stops/{STOP_A}/arrivals")
 
     # A TOPIS outage must not surface as a 500 -- issue #48's graceful
     # degradation requirement.
@@ -460,6 +460,6 @@ def test_arrivals_available_false_when_topis_unavailable(
 
 
 def test_arrivals_unknown_stop_returns_404(client: TestClient) -> None:
-    response = client.get("/stops/999999999/arrivals")
+    response = client.get("/api/stops/999999999/arrivals")
 
     assert response.status_code == 404
