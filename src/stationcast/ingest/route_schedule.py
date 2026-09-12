@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 
 from stationcast.ingest._common import clean_stop_name, is_night_bus, read_cp949_csv
-from stationcast.ingest.oa12913 import DEMO_STOP_IDS
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS, HOURLY_BOARDING_DIRNAME
 
 _SHEET_TO_DAY_TYPE = {
     "평일공동배차": "평일",
@@ -155,10 +155,16 @@ def run(
 ) -> None:
     """Build corridor_route_schedule.parquet from raw_dir CSV/XLSX.
 
+    Route-stop membership only needs one month's OA-12913 file (routes
+    don't come and go month to month), so this uses the most recent one
+    under raw_dir/HOURLY_BOARDING_DIRNAME rather than reading all of them.
+
     stop_ids defaults to the 21-stop demo corridor; pass None for 서울 전체
     (scripts/build_processed.py does this when STATIONCAST_SCOPE=seoul).
     """
-    boarding_csv = next(raw_dir.glob("*버스노선별_정류장별_시간대별_승하차*.csv"))
+    boarding_csv = sorted(
+        (raw_dir / HOURLY_BOARDING_DIRNAME).glob("*버스노선별_정류장별_시간대별_승하차*.csv")
+    )[-1]
     schedule_xlsx = next(raw_dir.glob("*버스노선기본정보*.xlsx"))
 
     boarding_df = read_cp949_csv(boarding_csv, low_memory=False)
