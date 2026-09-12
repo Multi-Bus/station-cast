@@ -61,11 +61,9 @@ function buildStopDetail(
     level: congestionLevelFromGrade(t.grade),
   }));
   const peak = hourly.reduce((max, h) => (h.value > max.value ? h : max), hourly[0]);
-  const routes = [...new Set(arrivals.map((a) => a.route_name))];
 
   return {
     ...base,
-    routes: routes.length > 0 ? routes : base.routes,
     weather: weatherFromContext(context),
     arrivals: toArrivals(arrivals),
     hourly,

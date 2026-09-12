@@ -117,7 +117,7 @@ export function StopDetailView({
 
       <section className="stop-section">
         <h2 className="section-header">버스 도착 정보</h2>
-        <div>
+        <div className="stop-arrivals">
           {stop.arrivals.map((a) => (
             <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
               <span className="stop-arrival-route">{a.route}</span>
@@ -132,12 +132,12 @@ export function StopDetailView({
       </section>
 
       <section className="stop-section">
-        <h2 className="section-header">
-          시간대별 예상 대기인원{" "}
+        <header className="stop-section-head">
+          <h2 className="section-header">시간대별 예상 대기인원</h2>
           <span className="stop-hourly-peak">
             가장 붐비는 시간 <span className="figure">{stop.stats.peakHour}</span>시
           </span>
-        </h2>
+        </header>
         <div>
           <div
             className="stop-hourly-bars"
