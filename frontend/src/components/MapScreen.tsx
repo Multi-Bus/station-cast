@@ -66,18 +66,22 @@ function StopMarker({
   selected: boolean;
   onSelectStop: (id: string) => void;
 }) {
-  const level = stop.congestionLevel;
   return (
     <button
-      className={`map-marker ${selected ? "map-marker-selected" : ""}`}
+      className="map-marker"
+      data-level={stop.congestionLevel}
+      data-selected={selected || undefined}
       aria-pressed={selected}
+      aria-label={`${stop.name}, 대기 약 ${stop.waitEstimate}명`}
       onClick={() => onSelectStop(stop.id)}
     >
-      <span className="map-marker-label">{stop.name}</span>
-      {/* The pin carries congestion twice over: fill color and diameter. Size
-          is the channel that still works for a colorblind user, and it makes
-          the busy stops the ones that read first when the map is full. */}
-      <span className={`map-marker-pin congestion-${level}`} />
+      {/* The reading sits inside the marker instead of behind a tap. Fill
+          colour, diameter and the number itself all carry congestion, so the
+          map still parses with colour vision that cannot separate the fills. */}
+      <span className="map-dot" style={{ "--wait": stop.waitEstimate } as CSSProperties}>
+        <span className="map-dot-value figure">{stop.waitEstimate}</span>
+      </span>
+      <span className="map-dot-label">{stop.name}</span>
     </button>
   );
 }
@@ -134,7 +138,7 @@ function KakaoStopsMap({
         </CustomOverlayMap>
       )}
       {visibleStops.map((stop) => (
-        <CustomOverlayMap key={stop.id} position={stop.latLng} clickable yAnchor={1}>
+        <CustomOverlayMap key={stop.id} position={stop.latLng} clickable yAnchor={0.5}>
           <StopMarker stop={stop} selected={selectedStopId === stop.id} onSelectStop={onSelectStop} />
         </CustomOverlayMap>
       ))}
@@ -226,7 +230,7 @@ export function MapScreen({
 
       <div className="map-floating-top">
         <div className="search-bar">
-          <Search size={15} color="var(--neutral-500)" />
+          <Search size={16} strokeWidth={2} color="var(--color-text-faint)" />
           <input
             className="search-bar-input"
             type="text"
@@ -237,22 +241,25 @@ export function MapScreen({
           />
         </div>
         <div className="filter-chip-row">
-          <button
-            className={`chip ${activeFilters.has("heavy") ? "chip-on" : ""}`}
-            aria-pressed={activeFilters.has("heavy")}
-            onClick={() => onToggleFilter("heavy")}
-          >
-            혼잡 {heavyCount}
-          </button>
+          {heavyCount > 0 && (
+            <button
+              className="chip"
+              aria-pressed={activeFilters.has("heavy")}
+              onClick={() => onToggleFilter("heavy")}
+            >
+              혼잡 <span className="chip-count figure">{heavyCount}</span>
+            </button>
+          )}
           {/* Hidden rather than disabled at zero: a permanently greyed-out
               control is just clutter until the user has starred something. */}
           {favoriteCount > 0 && (
             <button
-              className={`chip ${activeFilters.has("favorite") ? "chip-on" : ""}`}
+              className="chip"
               aria-pressed={activeFilters.has("favorite")}
               onClick={() => onToggleFilter("favorite")}
             >
-              <Star size={12} aria-hidden="true" /> 즐겨찾기 {favoriteCount}
+              <Star size={12} strokeWidth={2} aria-hidden="true" /> 즐겨찾기{" "}
+              <span className="chip-count figure">{favoriteCount}</span>
             </button>
           )}
         </div>
@@ -261,7 +268,7 @@ export function MapScreen({
       <div className={`map-controls ${controlsHidden ? "map-controls-hidden" : ""}`}>
         <button className="map-control-btn" aria-label="내 위치로" onClick={handleRecenter}>
           <span className="map-control-visual">
-            <Navigation size={17} />
+            <Navigation size={17} strokeWidth={2} />
           </span>
         </button>
       </div>
