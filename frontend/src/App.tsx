@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "./components/BottomSheet";
-import { ComingSoon } from "./components/ComingSoon";
 import { MapScreen } from "./components/MapScreen";
 import { NearbyStopsPanel } from "./components/NearbyStopsPanel";
 import { StopDetailError } from "./components/StopDetailError";
 import { StopDetailLoading } from "./components/StopDetailLoading";
 import { StopDetailView } from "./components/StopDetailView";
-import { TabBar, type TabKey } from "./components/TabBar";
 import { useBottomSheet } from "./hooks/useBottomSheet";
 import { useCorridorStops } from "./hooks/useCorridorStops";
 import { useFavorites } from "./hooks/useFavorites";
@@ -16,7 +14,6 @@ import { applySearchQuery, applyStopFilters, type FilterKey } from "./types/stop
 import { haversineDistanceM } from "./utils/geo";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabKey>("map");
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,14 +71,6 @@ export default function App() {
     if (sheet.snap === "peek") setSelectedStopId(null);
   }, [sheet.snap]);
 
-  // Resetting here rather than in an effect on activeTab: the reset belongs to
-  // the act of switching tabs, and an effect would also fire on mount.
-  function changeTab(tab: TabKey) {
-    setActiveTab(tab);
-    setSelectedStopId(null);
-    sheet.setSnap("peek");
-  }
-
   function selectStop(id: string) {
     setSelectedStopId(id);
     sheet.setSnap("half");
@@ -106,65 +95,61 @@ export default function App() {
   } = useStopDetail(selectedStop);
 
   return (
-    <>
+    // Fixed-position children (map, sheet) resolve against this frame instead
+    // of the viewport (see .app-frame's `contain: layout`), so the mobile
+    // layout centers as a capped-width column on wide screens instead of
+    // stretching edge to edge.
+    <div className="app-frame">
       <main>
-        {activeTab === "map" && (
-          <>
-            <MapScreen
-              stops={stops}
-              visibleStops={visibleStops}
-              activeFilters={activeFilters}
-              onToggleFilter={toggleFilter}
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              selectedStopId={selectedStopId}
-              sheetHeightPx={sheet.heightPx}
-              controlsHidden={sheet.snap === "full"}
-              userPosition={location.position}
-              locationStatus={location.status}
-              onSelectStop={selectStop}
-              onRecenter={recenter}
+        <MapScreen
+          stops={stops}
+          visibleStops={visibleStops}
+          activeFilters={activeFilters}
+          onToggleFilter={toggleFilter}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          selectedStopId={selectedStopId}
+          sheetHeightPx={sheet.heightPx}
+          controlsHidden={sheet.snap === "full"}
+          userPosition={location.position}
+          locationStatus={location.status}
+          onSelectStop={selectStop}
+          onRecenter={recenter}
+        />
+        <BottomSheet sheet={sheet}>
+          {selectedDetail && selectedStop ? (
+            <StopDetailView
+              stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
             />
-            <BottomSheet sheet={sheet}>
-              {selectedDetail && selectedStop ? (
-                <StopDetailView
-                  stop={{ ...selectedDetail, isFavorite: selectedStop.isFavorite }}
-                  onBack={backToList}
-                  onToggleFavorite={toggleFavorite}
-                />
-              ) : selectedStop && detailPending ? (
-                <StopDetailLoading
-                  stop={selectedStop}
-                  onBack={backToList}
-                  onToggleFavorite={toggleFavorite}
-                />
-              ) : selectedStop ? (
-                <StopDetailError
-                  stop={selectedStop}
-                  onBack={backToList}
-                  onToggleFavorite={toggleFavorite}
-                  onRetry={retryDetail}
-                />
-              ) : (
-                <NearbyStopsPanel
-                  stops={visibleStops}
-                  compact={sheet.snap === "peek"}
-                  loading={stopsLoading}
-                  error={stopsError}
-                  emptyReason={emptyReason}
-                  onSelectStop={selectStop}
-                  onToggleFavorite={toggleFavorite}
-                  onRetry={retryStops}
-                />
-              )}
-            </BottomSheet>
-          </>
-        )}
-        {activeTab === "favorites" && <ComingSoon label="즐겨찾기" />}
-        {activeTab === "settings" && <ComingSoon label="설정" />}
+          ) : selectedStop && detailPending ? (
+            <StopDetailLoading
+              stop={selectedStop}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
+            />
+          ) : selectedStop ? (
+            <StopDetailError
+              stop={selectedStop}
+              onBack={backToList}
+              onToggleFavorite={toggleFavorite}
+              onRetry={retryDetail}
+            />
+          ) : (
+            <NearbyStopsPanel
+              stops={visibleStops}
+              compact={sheet.snap === "peek"}
+              loading={stopsLoading}
+              error={stopsError}
+              emptyReason={emptyReason}
+              onSelectStop={selectStop}
+              onToggleFavorite={toggleFavorite}
+              onRetry={retryStops}
+            />
+          )}
+        </BottomSheet>
       </main>
-
-      <TabBar active={activeTab} onChange={changeTab} />
-    </>
+    </div>
   );
 }

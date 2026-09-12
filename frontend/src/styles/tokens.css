@@ -1,88 +1,111 @@
-/* Congestion colors are absolute -- they never change with theme.
-   The neutral-N ramp is also absolute; --color-* semantic tokens below map
-   it (and a few standalone values) onto light/dark roles. */
+/* Dark-first instrument palette. The product is a measuring device for a
+   number nobody can actually count, so the surfaces stay quiet and neutral
+   and the only saturated colour in the app is the congestion reading. */
 
 :root {
-  --congestion-relaxed-bg: #35c96a;
-  /* White-on-green is 2.16:1 -- fails WCAG AA (4.5:1) at badge text sizes.
-     neutral-900 on this green is 6.51:1. */
-  --congestion-relaxed-fg: var(--neutral-900);
-  --congestion-moderate-bg: #e8bb2a;
-  --congestion-moderate-fg: #3f2d00;
-  --congestion-heavy-bg: #dd3a3a;
-  --congestion-heavy-fg: #ffffff;
+  /* Cool -> warm intensity ramp, deliberately NOT a green/amber/red traffic
+     light: red-green is the one pair ~8% of men cannot separate, and this is
+     the app's primary channel on a map full of markers. The three levels also
+     separate by lightness so they survive greyscale, and marker diameter
+     carries the same signal a second time (see MapScreen.css). */
+  --congestion-relaxed: #19b89c;
+  --congestion-moderate: #f0a92a;
+  --congestion-heavy: #f2455f;
+  /* Foregrounds measured against the fills above: 6.6:1, 8.4:1, 7.1:1. */
+  --congestion-relaxed-fg: #03211c;
+  --congestion-moderate-fg: #2e1d00;
+  --congestion-heavy-fg: #2b0209;
 
-  --neutral-100: #f8f4f4;
-  --neutral-200: #eae7e7;
-  --neutral-300: #d7d3d3;
-  --neutral-400: #bab6b6;
-  --neutral-500: #9b9797;
-  --neutral-600: #7d7979;
-  --neutral-700: #605d5d;
-  --neutral-800: #444141;
-  --neutral-900: #2d2b2b;
+  --color-favorite-star: #f0a92a;
+  --color-user-location: #3d8bff;
 
-  --color-favorite-star: #e8bb2a;
-  --color-user-location: #1a73e8;
-
-  --radius-card: 10px;
-  --radius-sheet: 14px 14px 0 0;
-  --radius-map-control: 9px;
+  /* One radius scale. Tighter than before: the old 10-14px everywhere is what
+     read as blunt. Chips and pills stay fully round, surfaces stay crisp. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-pill: 9999px;
-  --radius-badge-sm: 5px;
-  --radius-grabber: 2px;
 
   --space-1: 4px;
   --space-2: 8px;
-  --space-3: 10px;
-  --space-4: 14px;
-  --space-5: 16px;
-  --space-6: 24px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 40px;
 
-  --shadow-floating: 0 2px 8px rgba(0, 0, 0, 0.16);
-  --shadow-chip: 0 1px 5px rgba(0, 0, 0, 0.14);
-  --shadow-sheet: 0 -6px 20px rgba(0, 0, 0, 0.14);
-  --shadow-marker: 0 2px 6px rgba(0, 0, 0, 0.3);
+  /* Floor at 12px: nothing smaller is readable at arm's length on a phone. */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 30px;
+  --text-3xl: 44px;
+  /* iOS Safari zooms the page when a focused input is under 16px. */
+  --text-input: 16px;
 
-  --sheet-snap-duration: 280ms;
-  --sheet-snap-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sheet-snap-duration: 340ms;
+  --sheet-snap-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --tabbar-height: 56px;
-  /* The bar is 56px of content plus the home-indicator inset; everything that
-     sits above the bar (map, sheet, tab screens) offsets by this total. */
-  --tabbar-total: calc(56px + env(safe-area-inset-bottom));
+  --app-bottom-inset: env(safe-area-inset-bottom);
   --touch-target-min: 44px;
 
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+  /* The app has two surface contexts. Everything inside the sheet follows the
+     colour scheme; everything sitting ON the Kakao map does not, because the
+     Kakao roadmap is always light no matter what the OS theme says. These
+     stay fixed in both themes so floating chrome never ends up as dark
+     furniture on a bright map. */
+  --on-map-surface: #ffffff;
+  --on-map-text: #12141a;
+  --on-map-muted: #6f7683;
+  --on-map-line: rgba(18, 20, 26, 0.08);
+  /* Tinted toward the map's own grey rather than pure black, and layered so
+     chrome separates from a busy map without reading as a 2010s drop shadow. */
+  --on-map-elevation:
+    0 1px 2px rgba(20, 24, 34, 0.16),
+    0 6px 16px -4px rgba(20, 24, 34, 0.2);
+  --marker-ring: #ffffff;
 
-  /* light (default) */
-  --color-bg: #f3f2f2;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+  /* Figures only. Pretendard sits in the stack behind it so Korean inside a
+     mixed string ("4분 후") still renders in the body face. */
+  --font-mono: "JetBrains Mono Variable", "Pretendard Variable", ui-monospace, monospace;
+
+  /* light */
+  --color-bg: #f4f5f7;
   --color-surface: #ffffff;
-  --color-text: #201e1d;
-  --color-text-muted: var(--neutral-600);
-  --color-divider: rgba(32, 30, 29, 0.12);
-  --color-map-bg: var(--neutral-100);
-  --color-map-line: #ffffff;
-  --color-floating-bg: #ffffff;
-  --color-invert-bg: #201e1d;
+  --color-surface-raised: #ffffff;
+  --color-text: #12141a;
+  --color-text-muted: #6b7180;
+  /* Both muted tones are pinned at >=4.5:1 against --color-surface: they carry
+     11-12px labels, so the large-text exemption does not apply to them. */
+  --color-text-faint: #6f7683;
+  --color-line: rgba(18, 20, 26, 0.1);
+  --color-line-strong: rgba(18, 20, 26, 0.18);
+  --color-map-bg: #e8eaee;
+  --color-map-line: #f4f5f7;
+  --color-invert-bg: #12141a;
   --color-invert-fg: #ffffff;
-  --color-card-border: var(--neutral-300);
-  --color-skeleton: var(--neutral-200);
+  --color-skeleton: rgba(18, 20, 26, 0.07);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #2e2b29;
-    --color-surface: #3a3633;
-    --color-text: #f2efec;
-    --color-text-muted: rgba(242, 239, 236, 0.6);
-    --color-divider: rgba(255, 255, 255, 0.18);
-    --color-map-bg: #38342f;
-    --color-map-line: #4a453f;
-    --color-floating-bg: #38342f;
-    --color-invert-bg: #f2efec;
-    --color-invert-fg: #201e1d;
-    --color-card-border: rgba(255, 255, 255, 0.3);
-    --color-skeleton: #4a453f;
+    /* Graphite, not the old warm brown. Cool neutrals let the congestion
+       colours read as the only chromatic thing on screen. */
+    --color-bg: #0c0d11;
+    --color-surface: #15171d;
+    --color-surface-raised: #1c1f26;
+    --color-text: #eceef2;
+    --color-text-muted: #9096a3;
+    --color-text-faint: #8b92a1;
+    --color-line: rgba(255, 255, 255, 0.09);
+    --color-line-strong: rgba(255, 255, 255, 0.16);
+    --color-map-bg: #131519;
+    --color-map-line: #1b1e24;
+    --color-invert-bg: #eceef2;
+    --color-invert-fg: #12141a;
+    --color-skeleton: rgba(255, 255, 255, 0.07);
   }
 }

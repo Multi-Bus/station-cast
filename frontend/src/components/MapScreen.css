@@ -1,8 +1,12 @@
 .map-screen {
   position: fixed;
   inset: 0;
-  bottom: var(--tabbar-total);
-  overflow: hidden;
+  bottom: var(--app-bottom-inset);
+  /* clip, not hidden: `hidden` still makes this a scroll container, so when a
+     marker was focused and the sheet then covered it, the browser scrolled the
+     map to reveal it and dragged the search bar off the top of the screen.
+     `clip` gives the same clipping with no scrollable overflow to exploit. */
+  overflow: clip;
 }
 
 .map-placeholder {
@@ -12,31 +16,30 @@
   background-image:
     linear-gradient(var(--color-map-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--color-map-line) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-size: 40px 40px;
 }
 
 .user-dot {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--color-invert-bg);
-  border: 2px solid #fff;
+  background: var(--color-user-location);
+  box-shadow: 0 0 0 3px var(--marker-ring);
   transform: translate(-50%, -50%);
 }
 
 .user-location-dot {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--color-user-location);
-  border: 3px solid #fff;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.16),
-    0 2px 6px rgba(0, 0, 0, 0.35);
+    0 0 0 3px var(--marker-ring),
+    var(--on-map-elevation);
 }
 
 .user-location-dot::before {
@@ -44,22 +47,22 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
   border-radius: 50%;
   background: var(--color-user-location);
-  animation: user-location-pulse 2.2s ease-out infinite;
+  animation: user-location-pulse 2.4s ease-out infinite;
 }
 
 @keyframes user-location-pulse {
   0% {
-    transform: scale(0.4);
-    opacity: 0.4;
+    transform: scale(0.35);
+    opacity: 0.35;
   }
   70% {
     transform: scale(1);
-    opacity: 0.06;
+    opacity: 0.04;
   }
   100% {
     transform: scale(1);
@@ -70,74 +73,141 @@
 @media (prefers-reduced-motion: reduce) {
   .user-location-dot::before {
     animation: none;
-    opacity: 0.18;
+    opacity: 0.16;
   }
 }
 
 .map-marker-anchor {
   position: absolute;
-  transform: translate(-50%, -100%);
+  transform: translate(-50%, -50%);
 }
 
+/* The button's box is exactly the dot, so the dot itself lands on the stop's
+   coordinate. The name hangs off it absolutely and does not shift the anchor
+   when the dot grows on selection. */
 .map-marker {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: var(--space-1);
+  position: relative;
+  display: block;
+  padding: 0;
 }
 
-.map-marker-label {
-  background: var(--color-floating-bg);
-  color: var(--color-text);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 800;
-  font-size: 10px;
-  white-space: nowrap;
-  box-shadow: var(--shadow-chip);
+/* Diameter tracks the headcount, not the grade. The grade is relative to each
+   stop's capacity, so a big number can legitimately be 여유 while a smaller one
+   at a cramped stop is 보통 -- but once the number is printed inside the dot,
+   sizing by grade makes the two look like they contradict each other. Size
+   follows the digit; colour carries the grade. */
+.map-dot {
+  display: grid;
+  place-items: center;
+  width: clamp(28px, calc(26px + var(--wait, 0) * 1px), 52px);
+  height: clamp(28px, calc(26px + var(--wait, 0) * 1px), 52px);
+  border-radius: 50%;
+  /* A ring in the page background colour, not a white stroke: the marker reads
+     as punched out of the map rather than stuck on top of it. */
+  box-shadow:
+    0 0 0 2.5px var(--marker-ring),
+    var(--on-map-elevation);
+  transition:
+    width 200ms var(--sheet-snap-ease),
+    height 200ms var(--sheet-snap-ease);
 }
 
-.map-marker-pin {
-  width: 26px;
-  height: 26px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  border: 2px solid #fff;
-  box-shadow: var(--shadow-marker);
+.map-dot-value {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
-/* Selected pin grows and lifts above neighbouring markers so its label
-   is not clipped by an overlapping pin. */
-.map-marker-selected {
+.map-marker[data-level="relaxed"] .map-dot {
+  background: var(--congestion-relaxed);
+  color: var(--congestion-relaxed-fg);
+}
+
+.map-marker[data-level="moderate"] .map-dot {
+  background: var(--congestion-moderate);
+  color: var(--congestion-moderate-fg);
+}
+
+.map-marker[data-level="heavy"] .map-dot {
+  background: var(--congestion-heavy);
+  color: var(--congestion-heavy-fg);
+}
+
+.map-marker[data-selected] {
   z-index: 1;
 }
 
-.map-marker-selected .map-marker-pin {
-  width: 34px;
-  height: 34px;
+.map-marker[data-selected] .map-dot {
+  box-shadow:
+    0 0 0 3px var(--marker-ring),
+    0 0 0 6px currentColor,
+    var(--on-map-elevation);
+}
+
+.map-marker[data-selected] .map-dot-value {
+  font-size: var(--text-base);
+}
+
+/* A squircle, not a circle: the count inside could otherwise be misread as
+   another stop's wait figure. The shape says "this is a group," the number
+   says how many, the colour still says how bad the worst one is. */
+.map-dot-cluster {
+  border-radius: 30%;
+}
+
+/* Only the selected stop is named. Twenty-one labels in a corridor this tight
+   overlap into an unreadable stack, and the disc already carries the reading;
+   the sheet's list is where names are browsed. */
+.map-dot-label {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: #12141a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: var(--on-map-elevation);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-marker[data-selected] .map-dot-label {
+  opacity: 1;
 }
 
 .map-floating-top {
   position: absolute;
   top: calc(env(safe-area-inset-top) + 12px);
-  left: 16px;
-  right: 16px;
+  left: 12px;
+  right: 12px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  align-items: flex-start;
+  gap: var(--space-2);
   z-index: 10;
 }
 
+/* Kakao's roadmap tiles are always light, but this bar is app chrome floating
+   over the map, not a map annotation -- it reads as part of the app, so it
+   follows the theme like the sheet below it. The map stays whatever colour it
+   is; the elevation shadow is what separates the bar from busy map detail
+   either way, not a fixed light/dark surface. */
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 46px;
-  padding: 0 14px;
+  gap: var(--space-2);
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
-  background: var(--color-floating-bg);
-  box-shadow: var(--shadow-floating);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--on-map-elevation);
 }
 
 .search-bar-input {
@@ -147,50 +217,50 @@
   outline: none;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  /* 16px on purpose: iOS Safari zooms the page when a focused input is
+     smaller, which leaves the map scaled up after the keyboard closes. */
+  font-size: var(--text-input);
+  letter-spacing: -0.01em;
   color: var(--color-text);
-  text-align: left;
 }
 
 .search-bar-input::placeholder {
-  color: var(--neutral-500);
-}
-
-.search-bar-profile {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 12px;
+  color: var(--color-text-faint);
 }
 
 .filter-chip-row {
   display: flex;
-  gap: 7px;
+  gap: var(--space-2);
+  max-width: 100%;
   overflow-x: auto;
-  padding-block: 8px;
+  scrollbar-width: none;
+}
+
+.filter-chip-row::-webkit-scrollbar {
+  display: none;
 }
 
 .chip {
   position: relative;
   flex: none;
-  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--color-floating-bg);
-  box-shadow: var(--shadow-chip);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--on-map-elevation);
+  font-size: var(--text-xs);
   font-weight: 600;
-  font-size: 12px;
+  letter-spacing: -0.01em;
   color: var(--color-text);
+  white-space: nowrap;
 }
 
-/* Same trick as the sheet grabber: the pill stays visually compact while the
-   actual tap target grows to --touch-target-min. Vertical-only so it can't
-   swallow neighbouring chips in the row. */
+/* The pill stays visually compact while the actual tap target grows to
+   --touch-target-min. Vertical-only so it cannot swallow its neighbours. */
 .chip::after {
   content: "";
   position: absolute;
@@ -201,22 +271,31 @@
   transform: translateY(-50%);
 }
 
-.chip-on {
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
-  font-weight: 700;
+.chip-count {
+  font-size: 11px;
+  color: var(--color-text-faint);
 }
 
-/* Controls ride just above the sheet instead of sitting at a fixed offset --
-   with a hard-coded bottom they were swallowed by the sheet at Half/Full.
+.chip[aria-pressed="true"] {
+  background: var(--color-invert-bg);
+  border-color: var(--color-invert-bg);
+  color: var(--color-invert-fg);
+}
+
+.chip[aria-pressed="true"] .chip-count {
+  color: var(--color-invert-fg);
+  opacity: 0.65;
+}
+
+/* Controls ride just above the sheet instead of sitting at a fixed offset.
    --sheet-height is set inline by MapScreen from the live sheet height. */
 .map-controls {
   position: absolute;
-  right: 16px;
+  right: 12px;
   bottom: calc(var(--sheet-height, 120px) + 12px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   transition: bottom var(--sheet-snap-duration) var(--sheet-snap-ease);
   z-index: 10;
 }
@@ -239,18 +318,14 @@
 }
 
 .map-control-visual {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-map-control);
-  background: var(--color-floating-bg);
-  box-shadow: var(--shadow-floating);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--on-map-elevation);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text);
-}
-
-.map-control-visual-active {
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
 }

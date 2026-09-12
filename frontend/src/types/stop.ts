@@ -15,13 +15,14 @@ export function congestionLevelFromGrade(grade: string): CongestionLevel {
   return "relaxed";
 }
 
-export type FilterKey = "heavy";
+export type FilterKey = "heavy" | "favorite";
 
 /** Shared by MapScreen (markers) and NearbyStopsPanel (list) so the two
  * views can never show a different set of stops for the same filter state. */
 export function applyStopFilters(stops: NearbyStop[], activeFilters: Set<FilterKey>): NearbyStop[] {
   return stops.filter((s) => {
     if (activeFilters.has("heavy") && s.congestionLevel !== "heavy") return false;
+    if (activeFilters.has("favorite") && !s.isFavorite) return false;
     return true;
   });
 }
@@ -51,7 +52,11 @@ export interface NearbyStop {
 export interface Arrival {
   route: string;
   direction: string;
-  message: string;
+  /** When the next bus arrives, e.g. "8분 후" or "곧 도착". */
+  eta: string;
+  /** How far back it currently is, e.g. "2정거장 전". Null when TOPIS didn't
+   *  report a position (곧 도착, 출발대기, and similar). */
+  stopsAway: string | null;
 }
 
 export interface HourlyPoint {
