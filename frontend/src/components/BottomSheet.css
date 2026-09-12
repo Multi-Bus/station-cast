@@ -48,6 +48,13 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 var(--space-4) var(--space-5);
+  /* Mobile scrolling doesn't need a visible track; a permanent desktop-style
+     scrollbar here only shows up on desktop browsers, not in the app. */
+  scrollbar-width: none;
+}
+
+.bottom-sheet-content::-webkit-scrollbar {
+  display: none;
 }
 
 /* At Peek the sheet is a summary strip. Letting it scroll there would hide a

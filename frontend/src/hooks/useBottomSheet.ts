@@ -33,13 +33,22 @@ export function useBottomSheet(initial: SheetSnap = "peek") {
   // Anchors live in state, not a ref: a ref would be mutated on resize without
   // re-rendering, leaving the sheet sized to the old viewport until something
   // else happened to render.
-  const [anchors, setAnchors] = useState(() => computeAnchors(window.innerHeight));
+  const [anchors, setAnchors] = useState(() =>
+    computeAnchors(window.visualViewport?.height ?? window.innerHeight),
+  );
   const dragStart = useRef<{ y: number; height: number } | null>(null);
 
+  // iOS Safari collapses/expands its address bar without firing `resize` on
+  // `window`, so a "half" anchor computed while the bar was showing stayed
+  // pinned at that stale pixel height after the bar hid and the viewport grew
+  // -- the same absolute height then read as a much taller fraction of the
+  // now-taller screen. `visualViewport` is what actually fires on that
+  // transition, on iOS and elsewhere.
   useEffect(() => {
-    const onResize = () => setAnchors(computeAnchors(window.innerHeight));
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const viewport = window.visualViewport;
+    const onResize = () => setAnchors(computeAnchors(viewport?.height ?? window.innerHeight));
+    (viewport ?? window).addEventListener("resize", onResize);
+    return () => (viewport ?? window).removeEventListener("resize", onResize);
   }, []);
 
   const onPointerDown = useCallback(
