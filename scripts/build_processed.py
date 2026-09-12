@@ -14,8 +14,10 @@ live in their own subdirectory, so the per-module ``__main__`` blocks
 paths the real layout doesn't use. Every resolved input is printed so a run
 says exactly which files produced its output.
 
-Scope is A-track only (ingest + features). estimator/wait_population.py, which
-turns these into corridor_wait.parquet, is B-track and runs separately.
+Also builds corridor_wait.parquet (estimator/wait_population.py) -- the W(s,t)
+the API actually serves -- once corridor_route_hourly/corridor_route_schedule
+exist, so this one command reproduces everything the live API needs, not just
+ingest+features.
 
 STATIONCAST_SCOPE controls how many stops oa12913/oa12912/route_schedule
 build for: ``demo`` (default) is the 21-stop Jongno-Myeongdong-Euljiro
@@ -28,6 +30,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from stationcast.estimator.wait_population import run as run_wait_population
 from stationcast.features.demand_factors import run as run_demand_factors
 from stationcast.ingest.holiday import run as run_holiday
 from stationcast.ingest.oa12912 import run as run_oa12912
@@ -124,9 +127,11 @@ def main() -> int:
     print(f"출력: {PROCESSED_DIR}/\n")
 
     # oa12913/oa12912/route_schedule/weather/holiday/stop_capacity read only
-    # data/raw, so their order is free; demand_factors runs last because it
-    # reads corridor_daily/weather_daily/holiday_daily back out of
-    # data/processed.
+    # data/raw, so their order is free among themselves; demand_factors runs
+    # last because it reads corridor_daily/weather_daily/holiday_daily back
+    # out of data/processed. wait_population is the one exception -- it reads
+    # corridor_route_hourly and corridor_route_schedule back out of
+    # data/processed too, so it has to come after both of those.
     steps: list[tuple[str, Callable[[], None]]] = [
         (
             "corridor_route_hourly, corridor_stops",
@@ -139,6 +144,14 @@ def main() -> int:
         (
             "corridor_route_schedule",
             lambda: run_route_schedule(RAW_DIR, PROCESSED_DIR, stop_ids=stop_ids),
+        ),
+        (
+            "corridor_wait",
+            lambda: run_wait_population(
+                PROCESSED_DIR / "corridor_route_hourly.parquet",
+                PROCESSED_DIR / "corridor_route_schedule.parquet",
+                PROCESSED_DIR / "corridor_wait.parquet",
+            ),
         ),
         ("weather_daily", lambda: run_weather(weather_csv, PROCESSED_DIR)),
         ("holiday_daily, holiday_daily_all", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
