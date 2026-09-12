@@ -17,15 +17,13 @@ def _daily_df(usage_date: int) -> pd.DataFrame:
                 "종로2가(00099)",
                 "다른정류장(00001)",
             ],
-            # N15's large values would blow up the expected totals below
-            # if the night-bus filter didn't exclude it.
-            "승차총승객수": [100, 50, 9000, 30],
-            "하차총승객수": [80, 40, 9000, 20],
+            "승차총승객수": [100, 50, 20, 30],
+            "하차총승객수": [80, 40, 15, 20],
         }
     )
 
 
-def test_build_corridor_daily_sums_across_routes_and_excludes_night_buses() -> None:
+def test_build_corridor_daily_sums_across_routes_including_night_buses() -> None:
     combined = pd.concat([_daily_df(20260601), _daily_df(20260701)], ignore_index=True)
 
     result = build_corridor_daily(combined, stop_ids=(100000389,))
@@ -35,12 +33,12 @@ def test_build_corridor_daily_sums_across_routes_and_excludes_night_buses() -> N
     assert len(result) == 2  # one row per (stop, date)
 
     june_row = result[result["사용일자"] == 20260601].iloc[0]
-    assert june_row["승차"] == 150  # 100 + 50, N15 excluded
-    assert june_row["하차"] == 120  # 80 + 40, N15 excluded
+    assert june_row["승차"] == 170  # 100 + 50 + 20, N15 now included
+    assert june_row["하차"] == 135  # 80 + 40 + 15
 
     july_row = result[result["사용일자"] == 20260701].iloc[0]
-    assert july_row["승차"] == 150
-    assert july_row["하차"] == 120
+    assert july_row["승차"] == 170
+    assert july_row["하차"] == 135
 
 
 def test_build_corridor_daily_keeps_one_series_when_stop_name_changes() -> None:
