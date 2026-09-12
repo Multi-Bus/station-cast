@@ -117,21 +117,56 @@ function KakaoStopsMap({
   onSelectStop,
   center,
   userPosition,
+  sheetHeightPx,
 }: {
   visibleStops: NearbyStop[];
   selectedStopId: string | null;
   onSelectStop: (id: string) => void;
   center: { lat: number; lng: number };
   userPosition: { lat: number; lng: number } | null;
+  sheetHeightPx: number;
 }) {
   const { ready, failed } = useKakaoScript(KAKAO_MAP_KEY);
+  const mapRef = useRef<kakao.maps.Map | null>(null);
+  const selected = visibleStops.find((s) => s.id === selectedStopId);
+  const selectedLat = selected?.latLng.lat;
+  const selectedLng = selected?.latLng.lng;
+
+  // Tapping a marker opens the sheet over the bottom half of the map, which is
+  // usually where the marker just was. Push the map down by half the sheet so
+  // the stop you picked stays in the strip you can still see.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || selectedLat === undefined || selectedLng === undefined) return;
+
+    const projection = map.getProjection();
+    const point = projection.pointFromCoords(
+      new window.kakao.maps.LatLng(selectedLat, selectedLng),
+    );
+    point.y += sheetHeightPx / 2;
+    const target = projection.coordsFromPoint(point);
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) map.setCenter(target);
+    else map.panTo(target);
+    // sheetHeightPx is read but not depended on: it changes on every drag frame,
+    // and re-panning mid-drag would fight the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLat, selectedLng]);
 
   if (!ready || failed) {
     return <PlaceholderMap visibleStops={visibleStops} selectedStopId={selectedStopId} onSelectStop={onSelectStop} />;
   }
 
   return (
-    <Map center={center} isPanto level={5} style={{ position: "absolute", inset: 0 }}>
+    <Map
+      center={center}
+      isPanto
+      level={5}
+      style={{ position: "absolute", inset: 0 }}
+      onCreate={(map) => {
+        mapRef.current = map;
+      }}
+    >
       {userPosition && (
         <CustomOverlayMap position={userPosition}>
           <div className="user-location-dot" aria-label="내 위치" role="img" />
@@ -223,6 +258,7 @@ export function MapScreen({
           onSelectStop={onSelectStop}
           center={center}
           userPosition={userPosition}
+          sheetHeightPx={sheetHeightPx}
         />
       ) : (
         <PlaceholderMap visibleStops={visibleStops} selectedStopId={selectedStopId} onSelectStop={onSelectStop} />
@@ -230,7 +266,7 @@ export function MapScreen({
 
       <div className="map-floating-top">
         <div className="search-bar">
-          <Search size={16} strokeWidth={2} color="var(--color-text-faint)" />
+          <Search size={16} strokeWidth={2} color="var(--on-map-muted)" />
           <input
             className="search-bar-input"
             type="text"

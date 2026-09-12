@@ -51,6 +51,22 @@
   --app-bottom-inset: env(safe-area-inset-bottom);
   --touch-target-min: 44px;
 
+  /* The app has two surface contexts. Everything inside the sheet follows the
+     colour scheme; everything sitting ON the Kakao map does not, because the
+     Kakao roadmap is always light no matter what the OS theme says. These
+     stay fixed in both themes so floating chrome never ends up as dark
+     furniture on a bright map. */
+  --on-map-surface: #ffffff;
+  --on-map-text: #12141a;
+  --on-map-muted: #6f7683;
+  --on-map-line: rgba(18, 20, 26, 0.08);
+  /* Tinted toward the map's own grey rather than pure black, and layered so
+     chrome separates from a busy map without reading as a 2010s drop shadow. */
+  --on-map-elevation:
+    0 1px 2px rgba(20, 24, 34, 0.16),
+    0 6px 16px -4px rgba(20, 24, 34, 0.2);
+  --marker-ring: #ffffff;
+
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
   /* Figures only. Pretendard sits in the stack behind it so Korean inside a
      mixed string ("4분 후") still renders in the body face. */
@@ -72,7 +88,6 @@
   --color-invert-bg: #12141a;
   --color-invert-fg: #ffffff;
   --color-skeleton: rgba(18, 20, 26, 0.07);
-  --marker-ring: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -92,6 +107,5 @@
     --color-invert-bg: #eceef2;
     --color-invert-fg: #12141a;
     --color-skeleton: rgba(255, 255, 255, 0.07);
-    --marker-ring: #0c0d11;
   }
 }
