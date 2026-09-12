@@ -59,7 +59,7 @@ def test_api_returns_503_not_500_when_data_is_missing(monkeypatch: pytest.Monkey
 
     client = TestClient(app)
     try:
-        response = client.get("/stops")
+        response = client.get("/api/stops")
         assert response.status_code == 503
         assert "missing parquet files" in response.json()["detail"]
     finally:

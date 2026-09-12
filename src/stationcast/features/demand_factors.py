@@ -74,32 +74,6 @@ def build_features_daily(
     return merged
 
 
-def build_weekday_holiday_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
-    """Per-stop 평일 vs 주말+공휴일 average ratio for 승차/하차.
-
-    Flags stops whose ratio falls outside [0.5, 2.0] via 극단치주의 for
-    manual review (e.g., an unusually small or large swing).
-    """
-    grouped = (
-        features_daily.groupby(["표준버스정류장ID", "정류장명", "요일구분"])
-        .agg(평균승차=("승차", "mean"), 평균하차=("하차", "mean"), 표본수=("사용일자", "count"))
-        .reset_index()
-    )
-    pivot = grouped.pivot(
-        index=["표준버스정류장ID", "정류장명"],
-        columns="요일구분",
-        values=["평균승차", "평균하차", "표본수"],
-    )
-    pivot.columns = [f"{value}_{day_type}" for value, day_type in pivot.columns]
-    pivot = pivot.reset_index()
-
-    pivot["보정계수_승차"] = pivot["평균승차_주말+공휴일"] / pivot["평균승차_평일"]
-    pivot["보정계수_하차"] = pivot["평균하차_주말+공휴일"] / pivot["평균하차_평일"]
-    pivot["극단치주의"] = ~pivot["보정계수_승차"].between(_OUTLIER_LOW, _OUTLIER_HIGH)
-
-    return pivot.sort_values("표준버스정류장ID").reset_index(drop=True)
-
-
 def factor_column_name(value: str, day_type: str, weather_type: str, temp_type: str) -> str:
     """Build a 요일구분×날씨구분×기온구분 wide-format column name (issue #105).
 
@@ -210,9 +184,7 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     """Per-stop 요일구분×날씨구분×기온구분(12그룹) average ratio for 승차/하차.
 
     Baseline is 평일·맑음·보통 (largest sample, and the natural "business
-    as usual" reference point). Separate from build_weekday_holiday_factor's
-    2-group (요일구분 only) output -- this is a distinct file (the
-    /stops/{id}/context API now reads this one instead, see issue #78).
+    as usual" reference point).
 
     12 groups over a 3-year corridor (issue: temperature added, 2023-07
     range extension) keeps every group's sample size >= ~30 days; the
@@ -261,14 +233,7 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def run(processed_dir: Path) -> None:
-    """Build corridor_features_daily.parquet and weekday_weather_factor.parquet.
-
-    build_weekday_holiday_factor()'s 2-group table is no longer written to
-    disk: weekday_weather_factor already has 요일구분 as one of its three
-    axes, and nothing has read the 2-group file since /stops/{id}/context
-    switched over (issue #78). The function stays for ad-hoc weekday-only
-    comparisons -- it just isn't part of the pipeline's output any more.
-    """
+    """Build corridor_features_daily.parquet and weekday_weather_factor.parquet."""
     corridor_daily = pd.read_parquet(processed_dir / "corridor_daily.parquet")
     weather_daily = pd.read_parquet(processed_dir / "weather_daily.parquet")
     holiday_daily = pd.read_parquet(processed_dir / "holiday_daily.parquet")

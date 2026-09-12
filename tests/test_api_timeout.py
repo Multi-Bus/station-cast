@@ -82,11 +82,11 @@ def client(corridor_data: CorridorData) -> TestClient:
 @pytest.mark.parametrize(
     "path",
     [
-        "/stops",
-        f"/stops/{STOP_A}/congestion?hour=8",
-        f"/stops/{STOP_A}/timeline",
-        "/corridor?hour=8",
-        f"/stops/{STOP_A}/context?date=20260101",
+        "/api/stops",
+        f"/api/stops/{STOP_A}/congestion?hour=8",
+        f"/api/stops/{STOP_A}/timeline",
+        "/api/corridor?hour=8",
+        f"/api/stops/{STOP_A}/context?date=20260101",
     ],
 )
 def test_endpoint_responds_within_timeout(client: TestClient, path: str) -> None:
@@ -109,9 +109,9 @@ def test_slow_handler_is_cut_off_with_504(
         time.sleep(REQUEST_TIMEOUT_SECONDS + 1.0)
         return 8
 
-    monkeypatch.setattr("stationcast.api.main._current_hour", slow_current_hour)
+    monkeypatch.setattr("stationcast.api.deps.current_hour", slow_current_hour)
 
-    response = client.get(f"/stops/{STOP_A}/congestion")
+    response = client.get(f"/api/stops/{STOP_A}/congestion")
 
     assert response.status_code == 504
     assert response.json() == {"detail": "request timed out"}

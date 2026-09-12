@@ -9,7 +9,6 @@ from stationcast.features.demand_factors import (
     boarding_factor,
     boarding_factor_for_labels,
     build_features_daily,
-    build_weekday_holiday_factor,
     build_weekday_weather_factor,
     classify_temperature,
 )
@@ -55,17 +54,6 @@ def test_build_features_daily_labels_weekday_weekend_and_holiday() -> None:
 
     assert "평균기온" in result.columns
     assert "강수량" in result.columns
-
-
-def test_build_weekday_holiday_factor_computes_ratio_and_flags_outliers() -> None:
-    features = build_features_daily(_corridor_daily(), _weather_daily(), _holiday_daily())
-    factor = build_weekday_holiday_factor(features)
-
-    row = factor[factor["표준버스정류장ID"] == 100000389].iloc[0]
-    assert row["평균승차_평일"] == 1000
-    assert row["평균승차_주말+공휴일"] == 350  # (400 + 300) / 2
-    assert row["보정계수_승차"] == 0.35
-    assert bool(row["극단치주의"]) is True  # 0.35 is below the 0.5 threshold
 
 
 def test_temp_type_uses_fixed_boundaries() -> None:

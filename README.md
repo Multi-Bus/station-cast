@@ -1,7 +1,7 @@
 # Station Cast
 
 버스 정류장에 **지금 몇 명이 서서 기다리는지**를 공개 실데이터에서 역추정해 보여주는
-오픈소스 서비스입니다. 2026 오픈소스 개발자대회 출품작입니다.
+오픈소스 서비스입니다.
 
 ## 문제
 
@@ -40,8 +40,7 @@ W(s,t) = Σ_r  B_r(s,t) × (headway_r / 2) × (1 + cv_r²) / 60
 `B_r`(승차)과 `headway_r`(배차간격) 모두 공개 실데이터입니다. 검증 결과는 물리 제약
 위반율 **0.0%**(비음수·용량), 승차 재현 MAPE **11.9%**(학습/검증 구간 분리)입니다.
 
-자세한 근거와 대안 검토는 [ARCHITECTURE.md](./ARCHITECTURE.md)와
-[docs/s3_validation_report.md](./docs/s3_validation_report.md)에 있습니다.
+자세한 근거와 대안 검토는 [ARCHITECTURE.md](./ARCHITECTURE.md)에 있습니다.
 
 ## 실행
 
@@ -122,23 +121,20 @@ uvicorn stationcast.api.main:app --reload
 `api/main.py`·`api/schemas.py` 변경 시 `python scripts/export_openapi.py`로
 재생성해야 CI가 통과합니다.
 
-### 5-1. Docker로 API 서버 실행 (선택)
+### 5-1. Docker로 실행 (선택)
 
-Dockerfile은 `src/`와 의존성 파일만 COPY하므로 이미지에 `data/processed/`가 들어가지
-않습니다. 따라서 **볼륨 마운트가 필요합니다.** 마운트 없이 띄우면 `/health`만 응답하고
-나머지 엔드포인트는 503을 반환합니다(issue #141).
+`data/processed/`가 이미지에 포함돼 있고 프론트엔드도 함께 빌드되므로, 볼륨 마운트 없이
+컨테이너 하나로 API와 웹 UI가 같은 주소에서 뜹니다.
 
 ```bash
-docker build -t station-cast .
-docker run -p 8000:8000 -v "$(pwd)/data/processed:/app/data/processed" station-cast
+docker compose up --build
 ```
 
-원본 데이터 없이 컨테이너 기동만 빠르게 확인하려면 합성 스모크 데이터로 대신할
-수 있습니다(실데이터 아님, `/stops` 등 응답이 실제 회랑 값과 다릅니다):
+`http://localhost:8000`에서 웹 UI, `http://localhost:8000/api/...`에서 API가 응답합니다.
+Kakao 지도 키를 빌드에 넣으려면(Vite가 빌드 타임에 인라인하므로 런타임 환경변수가 아닙니다):
 
 ```bash
-python scripts/build_smoke_data.py /tmp/smoke-data
-docker run -p 8000:8000 -v /tmp/smoke-data:/app/data/processed station-cast
+docker compose build --build-arg VITE_KAKAO_MAP_KEY=<키>
 ```
 
 ### 6. 프론트엔드 (issue #56)

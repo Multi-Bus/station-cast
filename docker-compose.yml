@@ -1,5 +1,13 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_KAKAO_MAP_KEY: ${VITE_KAKAO_MAP_KEY:-}
     ports:
       - "8000:8000"
+    environment:
+      # /stops/{id}/arrivals and /stops/{id}/context degrade gracefully when
+      # these are unset (issue #48), so an empty value is a valid local setup.
+      SEOUL_BUS_API_KEY: ${SEOUL_BUS_API_KEY:-}
+      KMA_FORECAST_API_KEY: ${KMA_FORECAST_API_KEY:-}
