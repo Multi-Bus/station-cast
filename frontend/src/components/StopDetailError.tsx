@@ -1,4 +1,4 @@
-import { AlertCircle, ChevronLeft, Star } from "lucide-react";
+import { CaretLeft, Star, WarningCircle } from "@phosphor-icons/react";
 import type { NearbyStop } from "../types/stop";
 // Shares StopDetailView's layout classes, so it must pull that stylesheet in
 // itself rather than relying on the sibling happening to be imported first.
@@ -24,14 +24,13 @@ export function StopDetailError({
     <div className="stop-detail">
       <div className="stop-detail-topbar">
         <button className="stop-detail-back" onClick={onBack}>
-          <ChevronLeft size={16} strokeWidth={2} /> 목록
+          <CaretLeft size={16} /> 목록
         </button>
         <div className="stop-detail-topbar-actions">
           <button aria-pressed={stop.isFavorite} onClick={() => onToggleFavorite(stop.id)}>
             <Star
               size={14}
-              strokeWidth={2}
-              fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
+              weight={stop.isFavorite ? "fill" : "regular"}
               color={stop.isFavorite ? "var(--color-favorite-star)" : "currentColor"}
             />{" "}
             즐겨찾기
@@ -40,7 +39,7 @@ export function StopDetailError({
       </div>
       <h1 className="stop-detail-title">{stop.name}</h1>
       <div className="stop-detail-error">
-        <AlertCircle size={22} strokeWidth={2} />
+        <WarningCircle size={22} />
         <span>정류장 정보를 불러오지 못했습니다.</span>
         <button className="stop-detail-error-retry" onClick={onRetry}>
           다시 시도

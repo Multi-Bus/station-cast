@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { getCorridor, getStops } from "../api/client";
 import { congestionLevelFromGrade, type NearbyStop } from "../types/stop";
 
-const PLACEHOLDER_ROUTES: string[] = [];
 const PLACEHOLDER_DISTANCE_M = 0;
 
 /** Grid for the no-Kakao-key fallback map. Spacing is sized so the whole
@@ -50,7 +49,6 @@ export function useCorridorStops(): {
               id: String(s.stop_id),
               name: s.name,
               arsNumber: s.ars_number,
-              routes: PLACEHOLDER_ROUTES,
               distanceM: PLACEHOLDER_DISTANCE_M,
               waitEstimate: Math.round(snapshot.estimated_wait),
               congestionLevel: congestionLevelFromGrade(snapshot.grade),

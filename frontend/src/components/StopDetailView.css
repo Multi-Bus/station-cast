@@ -58,6 +58,7 @@
   margin: 0;
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: var(--space-2);
   font-size: var(--text-xl);
   font-weight: 700;
@@ -146,6 +147,16 @@
   color: var(--color-text-faint);
 }
 
+/* The section title and its headline stat are two separate readings. Run
+   together on one line at the same size they parse as a single run-on
+   sentence, so they sit at opposite ends like the list header does. */
+.stop-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .stop-weather {
   display: flex;
   align-items: center;
@@ -181,12 +192,26 @@
   font-size: var(--text-xs);
   line-height: 1.45;
   color: var(--color-text-muted);
+  text-wrap: pretty;
 }
 
-.stop-arrival-row {
-  display: flex;
+/* One grid for the whole list rather than three columns per row: the route
+   column then sizes to the widest route across every row, so a long name like
+   심야A21번 no longer pushes its own destination out of line with the rest. */
+.stop-arrivals {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
+}
+
+/* The row keeps its key and its semantics but generates no box, so its three
+   children become cells of the grid above. The hairline moves onto them. */
+.stop-arrival-row {
+  display: contents;
+}
+
+.stop-arrival-row > * {
   padding: var(--space-3) 0;
   border-top: 1px solid var(--color-line);
 }
@@ -196,11 +221,11 @@
   font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: -0.02em;
-  min-width: 52px;
 }
 
+/* min-width keeps a long destination inside the 1fr track instead of widening
+   it and shoving the ETA column off the right edge. */
 .stop-arrival-meta {
-  flex: 1;
   min-width: 0;
   font-size: var(--text-xs);
   color: var(--color-text-faint);
@@ -298,6 +323,7 @@
   font-weight: 600;
 }
 
+/* pretty, so the last line never comes out as a single stranded syllable. */
 .stop-disclaimer {
   margin: 0;
   padding-top: var(--space-3);
@@ -305,6 +331,7 @@
   font-size: 11px;
   line-height: 1.55;
   color: var(--color-text-faint);
+  text-wrap: pretty;
 }
 
 .stop-detail-loading,

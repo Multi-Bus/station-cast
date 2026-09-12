@@ -21,6 +21,12 @@ body {
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* CJK breaks at any character by default, which splits Korean words down the
+     middle ("추정치입니 / 다"). keep-all breaks at spaces instead, the way the
+     language actually reads; overflow-wrap is the escape hatch for a single
+     token too long for its column, which keep-all would otherwise overflow. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* The app is one mobile-shaped column. 480px already exceeds every real
