@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
-import { Navigation, Search, Star } from "lucide-react";
+import { MagnifyingGlass, NavigationArrow, Star } from "@phosphor-icons/react";
 import { CustomOverlayMap, Map } from "react-kakao-maps-sdk";
 import type { UserLocationState } from "../hooks/useUserLocation";
 import type { FilterKey, NearbyStop } from "../types/stop";
@@ -387,7 +387,7 @@ export function MapScreen({
 
       <div className="map-floating-top">
         <div className="search-bar">
-          <Search size={16} strokeWidth={2} color="var(--color-text-faint)" />
+          <MagnifyingGlass size={16} color="var(--color-text-faint)" />
           <input
             className="search-bar-input"
             type="text"
@@ -415,7 +415,7 @@ export function MapScreen({
               aria-pressed={activeFilters.has("favorite")}
               onClick={() => onToggleFilter("favorite")}
             >
-              <Star size={12} strokeWidth={2} aria-hidden="true" /> 즐겨찾기{" "}
+              <Star size={12} aria-hidden="true" /> 즐겨찾기{" "}
               <span className="chip-count figure">{favoriteCount}</span>
             </button>
           )}
@@ -425,7 +425,7 @@ export function MapScreen({
       <div className={`map-controls ${controlsHidden ? "map-controls-hidden" : ""}`}>
         <button className="map-control-btn" aria-label="내 위치로" onClick={handleRecenter}>
           <span className="map-control-visual">
-            <Navigation size={17} strokeWidth={2} />
+            <NavigationArrow size={17} />
           </span>
         </button>
       </div>

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ChevronRight, Star } from "lucide-react";
+import { CaretRight, MagnifyingGlass, SlidersHorizontal, Star, WarningCircle } from "@phosphor-icons/react";
 import { CongestionBadge } from "./CongestionBadge";
 import type { NearbyStop } from "../types/stop";
 import "./NearbyStopsPanel.css";
@@ -42,6 +42,11 @@ export function NearbyStopsPanel({
         ? "검색 결과가 없습니다."
         : "필터 조건에 맞는 정류장이 없습니다.";
 
+  // No icon while loading -- the skeleton-like wait itself is the signal, and
+  // a static icon next to "불러오는 중" would just be a decoration that never
+  // resolves into anything.
+  const EmptyIcon = loading ? null : error ? WarningCircle : emptyReason === "search" ? MagnifyingGlass : SlidersHorizontal;
+
   if (compact) {
     const nearest = stops[0];
     return (
@@ -74,12 +79,7 @@ export function NearbyStopsPanel({
               <span className="nearby-row-wait-unit">명</span>
             </span>
             <CongestionBadge level={nearest.congestionLevel} />
-            <ChevronRight
-              size={16}
-              strokeWidth={2}
-              color="var(--color-text-faint)"
-              aria-hidden="true"
-            />
+            <CaretRight size={16} color="var(--color-text-faint)" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -94,6 +94,7 @@ export function NearbyStopsPanel({
       </div>
       {stops.length === 0 && (
         <div className="nearby-empty">
+          {EmptyIcon && <EmptyIcon size={28} color="var(--color-text-faint)" />}
           <p>{emptyMessage}</p>
           {!loading && error && (
             <button className="nearby-empty-retry" onClick={onRetry}>
@@ -138,8 +139,7 @@ export function NearbyStopsPanel({
               >
                 <Star
                   size={16}
-                  strokeWidth={2}
-                  fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
+                  weight={stop.isFavorite ? "fill" : "regular"}
                   color={stop.isFavorite ? "var(--color-favorite-star)" : "var(--color-text-faint)"}
                 />
               </button>

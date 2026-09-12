@@ -31,10 +31,17 @@
   text-align: left;
 }
 
+/* flex: 1 on a min-height:100% ancestor chain (.bottom-sheet-content down to
+   .nearby-list) lets this take the rest of the Full sheet instead of sitting
+   in a top strip above a wall of blank space -- the sheet can be 812px tall
+   and the message is one line. */
 .nearby-empty {
+  flex: 1;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--space-3);
   padding: var(--space-6) 0;
   text-align: center;
@@ -60,6 +67,15 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-text);
+}
+
+/* min-height, not height: a full list still just scrolls normally, this only
+   gives the empty state (flex: 1 below) something to fill when the list has
+   nothing in it. */
+.nearby-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
 .nearby-list-header {

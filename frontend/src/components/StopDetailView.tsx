@@ -1,14 +1,22 @@
 import { type CSSProperties, useState } from "react";
-import { ChevronLeft, Cloud, CloudRain, CloudSnow, Share2, Star, Sun } from "lucide-react";
+import {
+  CaretLeft,
+  Cloud,
+  CloudRain,
+  CloudSnow,
+  ShareNetwork,
+  Star,
+  Sun,
+} from "@phosphor-icons/react";
 import { EstimateBadge } from "./EstimateBadge";
 import { CONGESTION_LABEL, type StopDetail } from "../types/stop";
 import "./StopDetailView.css";
 
 function WeatherIcon({ sky }: { sky: string }) {
-  if (sky.includes("눈")) return <CloudSnow size={18} strokeWidth={2} />;
-  if (sky.includes("비")) return <CloudRain size={18} strokeWidth={2} />;
-  if (sky === "맑음") return <Sun size={18} strokeWidth={2} />;
-  return <Cloud size={18} strokeWidth={2} />;
+  if (sky.includes("눈")) return <CloudSnow size={18} />;
+  if (sky.includes("비")) return <CloudRain size={18} />;
+  if (sky === "맑음") return <Sun size={18} />;
+  return <Cloud size={18} />;
 }
 
 async function shareStop(stop: StopDetail): Promise<"shared" | "copied" | "failed"> {
@@ -55,20 +63,19 @@ export function StopDetailView({
     <div className="stop-detail">
       <div className="stop-detail-topbar">
         <button className="stop-detail-back" onClick={onBack}>
-          <ChevronLeft size={16} strokeWidth={2} /> 목록
+          <CaretLeft size={16} /> 목록
         </button>
         <div className="stop-detail-topbar-actions">
           <button aria-pressed={stop.isFavorite} onClick={() => onToggleFavorite(stop.id)}>
             <Star
               size={14}
-              strokeWidth={2}
-              fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
+              weight={stop.isFavorite ? "fill" : "regular"}
               color={stop.isFavorite ? "var(--color-favorite-star)" : "currentColor"}
             />{" "}
             즐겨찾기
           </button>
           <button aria-label="정류장 정보 공유" onClick={handleShare}>
-            <Share2 size={14} strokeWidth={2} />{" "}
+            <ShareNetwork size={14} />{" "}
             <span aria-live="polite">
               {shareStatus === "copied" ? "복사됨" : shareStatus === "failed" ? "공유 실패" : "공유"}
             </span>
