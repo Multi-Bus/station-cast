@@ -13,13 +13,13 @@
 }
 
 .error-fallback-title {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 700;
   margin: 0;
 }
 
 .error-fallback-body {
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--color-text-muted);
   margin: 0 0 var(--space-2);
 }
@@ -31,5 +31,5 @@
   background: var(--color-invert-bg);
   color: var(--color-invert-fg);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-base);
 }

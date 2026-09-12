@@ -39,8 +39,16 @@ button:disabled {
   opacity: 0.45;
 }
 
+/* A press should feel like the surface gives, not like it fades out.
+   Transform-only so it stays on the compositor; the reduced-motion block
+   below collapses the transition, and scale is small enough that the static
+   end state is still correct without it. */
 button:not(:disabled):active {
-  opacity: 0.6;
+  transform: scale(0.97);
+}
+
+button {
+  transition: transform 90ms var(--sheet-snap-ease);
 }
 
 .sr-only {

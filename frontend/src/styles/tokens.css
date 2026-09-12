@@ -3,13 +3,20 @@
    it (and a few standalone values) onto light/dark roles. */
 
 :root {
-  --congestion-relaxed-bg: #35c96a;
-  /* White-on-green is 2.16:1 -- fails WCAG AA (4.5:1) at badge text sizes.
-     neutral-900 on this green is 6.51:1. */
-  --congestion-relaxed-fg: var(--neutral-900);
-  --congestion-moderate-bg: #e8bb2a;
-  --congestion-moderate-fg: #3f2d00;
-  --congestion-heavy-bg: #dd3a3a;
+  /* Cool -> warm intensity ramp, deliberately NOT a green/amber/red traffic
+     light: red-green is the one pair ~8% of men cannot separate, and this is
+     the app's primary information channel on a map full of markers.
+     Teal sits far off the red axis, and the three levels also separate by
+     lightness (L* ~58 / ~71 / ~42) so they survive greyscale. Marker size is
+     a second, color-free channel (see MapScreen.css). */
+  --congestion-relaxed-bg: #2e9e8f;
+  /* Each level carries its own foreground because no single one passes on all
+     three fills. Measured against the bg above: 6.9:1, 8.1:1, 6.4:1 -- all
+     clear of WCAG AA (4.5:1) at badge text sizes. */
+  --congestion-relaxed-fg: #04211d;
+  --congestion-moderate-bg: #e0a01f;
+  --congestion-moderate-fg: #3a2400;
+  --congestion-heavy-bg: #c0243c;
   --congestion-heavy-fg: #ffffff;
 
   --neutral-100: #f8f4f4;
@@ -22,14 +29,16 @@
   --neutral-800: #444141;
   --neutral-900: #2d2b2b;
 
-  --color-favorite-star: #e8bb2a;
+  --color-favorite-star: #e0a01f;
   --color-user-location: #1a73e8;
 
-  --radius-card: 10px;
-  --radius-sheet: 14px 14px 0 0;
-  --radius-map-control: 9px;
+  /* One radius scale for the whole app: sm for chips/badges, md for cards and
+     controls, lg for the sheet, pill for anything fully rounded. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-pill: 9999px;
-  --radius-badge-sm: 5px;
+  /* The grabber is a 4px bar; anything larger than 2px would square it off. */
   --radius-grabber: 2px;
 
   --space-1: 4px;
@@ -39,6 +48,17 @@
   --space-5: 16px;
   --space-6: 24px;
 
+  /* Six steps, floor at 12px. Nothing below that is readable at arm's length
+     on a phone, and the old scale had 9px and 10px body text. */
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  /* iOS Safari zooms the page when a focused input is under 16px. */
+  --text-input: 16px;
+
   --shadow-floating: 0 2px 8px rgba(0, 0, 0, 0.16);
   --shadow-chip: 0 1px 5px rgba(0, 0, 0, 0.14);
   --shadow-sheet: 0 -6px 20px rgba(0, 0, 0, 0.14);
@@ -47,10 +67,9 @@
   --sheet-snap-duration: 280ms;
   --sheet-snap-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  --tabbar-height: 56px;
-  /* The bar is 56px of content plus the home-indicator inset; everything that
-     sits above the bar (map, sheet, tab screens) offsets by this total. */
-  --tabbar-total: calc(56px + env(safe-area-inset-bottom));
+  /* The map and the sheet both sit on the home-indicator inset now that there
+     is no tab bar to clear. */
+  --app-bottom-inset: env(safe-area-inset-bottom);
   --touch-target-min: 44px;
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;

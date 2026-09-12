@@ -59,7 +59,7 @@ export function NearbyStopsPanel({
     <div className="nearby-list">
       <div className="nearby-list-header">
         <h2>내 주변 정류장</h2>
-        <span className="nearby-sort">거리순 ⌄</span>
+        <span className="nearby-sort-note">가까운 순</span>
       </div>
       {stops.length === 0 && (
         <div className="nearby-empty">

@@ -92,12 +92,18 @@ export function StopDetailView({
         )}
       </h1>
 
+      {/* The wait count is the whole product, so it is the largest thing on the
+          screen. It used to be 12px body text under a 16px grade label, which
+          inverted the hierarchy. */}
       <section className={`stop-hero congestion-${level}`}>
         <div className="stop-hero-top">
           <span className="stop-hero-label">{CONGESTION_LABEL[level]}</span>
           <EstimateBadge />
         </div>
-        <p className="stop-hero-body">대기 약 {stop.waitEstimate}명</p>
+        <p className="stop-hero-figure">
+          <span className="stop-hero-count">{stop.waitEstimate}</span>
+          <span className="stop-hero-unit">명 대기</span>
+        </p>
       </section>
 
       <section className="card stop-weather">
@@ -122,7 +128,10 @@ export function StopDetailView({
           <div key={`${a.route}-${a.direction}`} className="stop-arrival-row">
             <span className="stop-arrival-route">{a.route}</span>
             <span className="stop-arrival-meta">{a.direction}행</span>
-            <span className="stop-arrival-eta">{a.message}</span>
+            <span className="stop-arrival-when">
+              <span className="stop-arrival-eta">{a.eta}</span>
+              {a.stopsAway && <span className="stop-arrival-away">{a.stopsAway}</span>}
+            </span>
           </div>
         ))}
       </section>
@@ -159,8 +168,8 @@ export function StopDetailView({
       </section>
 
       <p className="stop-disclaimer">
-        대기인원은 승·하차 실측 데이터에 큐 수지 모델을 적용한 추정치입니다. 출처: 서울 열린데이터광장
-        OA-12913
+        대기인원은 노선별 실측 승차와 배차간격에 Little&apos;s Law를 적용한 추정치입니다. 실제로 센
+        값이 아닙니다. 출처: 서울 열린데이터광장 OA-12913
       </p>
     </div>
   );

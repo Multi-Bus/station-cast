@@ -6,7 +6,7 @@
 }
 
 .card {
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-card-border);
   padding: var(--space-4);
 }
@@ -19,7 +19,7 @@
   gap: var(--space-3);
   padding: var(--space-6) 0;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .stop-detail-loading-spinner {
@@ -41,7 +41,7 @@
   gap: var(--space-3);
   padding: var(--space-6) 0;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   text-align: center;
 }
 
@@ -51,24 +51,23 @@
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-card-border);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text);
 }
 
 .section-header {
   margin: 0 0 var(--space-2);
   font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
   color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
 .stop-detail-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .stop-detail-back {
@@ -91,27 +90,21 @@
   gap: 4px;
 }
 
-.stop-detail-routes {
-  margin: 0;
-  font-size: 12px;
-  color: var(--color-text-muted);
-}
-
 .stop-detail-title {
   margin: 0;
   font-weight: 800;
-  font-size: 20px;
+  font-size: var(--text-xl);
 }
 
 .stop-detail-ars-number {
   margin-left: var(--space-2);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
 .stop-hero {
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
 }
 
@@ -124,12 +117,29 @@
 
 .stop-hero-label {
   font-weight: 800;
-  font-size: 16px;
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
 }
 
-.stop-hero-body {
+.stop-hero-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   margin: 0;
-  font-size: 12px;
+}
+
+.stop-hero-count {
+  font-weight: 800;
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+  /* Lining figures of even width so the number does not shuffle sideways
+     when it ticks between 9 and 10. */
+  font-variant-numeric: tabular-nums;
+}
+
+.stop-hero-unit {
+  font-weight: 700;
+  font-size: var(--text-sm);
   opacity: 0.85;
 }
 
@@ -144,7 +154,7 @@
 .stop-weather-summary {
   margin: 0 0 2px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-base);
 }
 
 .forecast-badge {
@@ -153,15 +163,15 @@
   margin-left: 6px;
   padding: 1px 4px;
   border: 1px solid var(--color-card-border);
-  border-radius: var(--radius-badge-sm);
+  border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   font-weight: 700;
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .stop-weather-note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
@@ -183,19 +193,34 @@
 
 .stop-arrival-route {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-base);
   min-width: 44px;
 }
 
 .stop-arrival-meta {
   flex: 1;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
+}
+
+.stop-arrival-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
 }
 
 .stop-arrival-eta {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stop-arrival-away {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .stop-hourly-bars {
@@ -221,7 +246,7 @@
 }
 
 .stop-hourly-hour {
-  font-size: 9px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
@@ -239,18 +264,19 @@
 }
 
 .stop-stat-label {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
 .stop-stat-value {
   font-weight: 800;
-  font-size: 16px;
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
 }
 
 .stop-disclaimer {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: 1.45;
   color: var(--color-text-muted);
 }

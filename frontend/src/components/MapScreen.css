@@ -1,8 +1,12 @@
 .map-screen {
   position: fixed;
   inset: 0;
-  bottom: var(--tabbar-total);
-  overflow: hidden;
+  bottom: var(--app-bottom-inset);
+  /* clip, not hidden: `hidden` still makes this a scroll container, so when a
+     marker was focused and the sheet then covered it, the browser scrolled the
+     map to reveal it and dragged the search bar off the top of the screen.
+     `clip` gives the same clipping with no scrollable overflow to exploit. */
+  overflow: clip;
 }
 
 .map-placeholder {
@@ -91,31 +95,48 @@
   background: var(--color-floating-bg);
   color: var(--color-text);
   padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 800;
-  font-size: 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--text-xs);
   white-space: nowrap;
   box-shadow: var(--shadow-chip);
 }
 
 .map-marker-pin {
-  width: 26px;
-  height: 26px;
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   border: 2px solid #fff;
   box-shadow: var(--shadow-marker);
 }
 
-/* Selected pin grows and lifts above neighbouring markers so its label
-   is not clipped by an overlapping pin. */
+/* Diameter is the colour-free half of the congestion encoding: a user who
+   cannot separate the three fills still reads "bigger dot = busier stop",
+   and at a glance the crowded stops are the ones that pull the eye. */
+.map-marker-pin.congestion-relaxed {
+  width: 20px;
+  height: 20px;
+}
+
+.map-marker-pin.congestion-moderate {
+  width: 26px;
+  height: 26px;
+}
+
+.map-marker-pin.congestion-heavy {
+  width: 32px;
+  height: 32px;
+}
+
+/* Selected pin lifts above neighbouring markers so its label is not clipped
+   by an overlapping pin. Declared after the level sizes so it wins the
+   same-specificity tie and stays larger than every level. */
 .map-marker-selected {
   z-index: 1;
 }
 
 .map-marker-selected .map-marker-pin {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
 }
 
 .map-floating-top {
@@ -147,26 +168,15 @@
   outline: none;
   background: transparent;
   font: inherit;
-  font-size: 14px;
+  /* 16px on purpose: iOS Safari zooms the page when a focused input is
+     smaller, which leaves the map scaled up after the keyboard closes. */
+  font-size: var(--text-input);
   color: var(--color-text);
   text-align: left;
 }
 
 .search-bar-input::placeholder {
-  color: var(--neutral-500);
-}
-
-.search-bar-profile {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 12px;
+  color: var(--neutral-600);
 }
 
 .filter-chip-row {
@@ -179,13 +189,17 @@
 .chip {
   position: relative;
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 7px 14px;
   border-radius: var(--radius-pill);
   background: var(--color-floating-bg);
   box-shadow: var(--shadow-chip);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text);
+  white-space: nowrap;
 }
 
 /* Same trick as the sheet grabber: the pill stays visually compact while the
@@ -241,16 +255,11 @@
 .map-control-visual {
   width: 38px;
   height: 38px;
-  border-radius: var(--radius-map-control);
+  border-radius: var(--radius-md);
   background: var(--color-floating-bg);
   box-shadow: var(--shadow-floating);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text);
-}
-
-.map-control-visual-active {
-  background: var(--color-invert-bg);
-  color: var(--color-invert-fg);
 }

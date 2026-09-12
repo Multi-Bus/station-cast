@@ -3,17 +3,35 @@ import { getArrivals, getContext, getTimeline } from "../api/client";
 import type { ApiArrivalInfo, StopContextResponse, TimelineResponse } from "../api/types";
 import { congestionLevelFromGrade, type Arrival, type NearbyStop, type StopDetail } from "../types/stop";
 
-function arrivalMinutes(message: string): number {
-  if (message === "곧 도착") return 0;
-  const match = message.match(/(\d+)분후/);
+/** Sort key. Runs on the normalised eta ("8분 후"), not on TOPIS's raw string. */
+function arrivalMinutes(eta: string): number {
+  if (eta === "곧 도착") return 0;
+  const match = eta.match(/(\d+)분/);
   return match ? Number(match[1]) : Infinity;
+}
+
+/** TOPIS returns one packed string, e.g. "8분후[2번째 전]". Split it so the
+ *  minutes can be the number the rider acts on and the position can sit beside
+ *  it as context, instead of shipping the raw bracket notation to the screen. */
+function parseArrivalMessage(message: string): { eta: string; stopsAway: string | null } {
+  const match = message.match(/^(\d+)분\s*(\d+초)?후\s*\[(\d+)번째\s*전\]$/);
+  if (match) return { eta: `${match[1]}분 후`, stopsAway: `${match[3]}정거장 전` };
+
+  const minutesOnly = message.match(/^(\d+)분\s*(?:\d+초)?후/);
+  if (minutesOnly) return { eta: `${minutesOnly[1]}분 후`, stopsAway: null };
+
+  return { eta: message, stopsAway: null };
 }
 
 function toArrivals(arrivals: ApiArrivalInfo[]): Arrival[] {
   return arrivals
     .filter((a) => a.arrival_message_1 !== "운행종료")
-    .map((a) => ({ route: `${a.route_name}번`, direction: a.direction, message: a.arrival_message_1 }))
-    .sort((a, b) => arrivalMinutes(a.message) - arrivalMinutes(b.message));
+    .map((a) => ({
+      route: `${a.route_name}번`,
+      direction: a.direction,
+      ...parseArrivalMessage(a.arrival_message_1),
+    }))
+    .sort((a, b) => arrivalMinutes(a.eta) - arrivalMinutes(b.eta));
 }
 
 function weatherFromContext(context: StopContextResponse | null): StopDetail["weather"] {

@@ -5,7 +5,7 @@
 .nearby-peek-title {
   margin: 0 0 var(--space-2);
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .nearby-peek-row {
@@ -14,7 +14,7 @@
   min-height: var(--touch-target-min);
   padding: var(--space-2) 0;
   text-align: left;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
@@ -25,7 +25,7 @@
   gap: var(--space-3);
   padding: var(--space-4) 0;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
 }
 
@@ -39,7 +39,7 @@
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-card-border);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-text);
 }
 
@@ -53,14 +53,13 @@
 .nearby-list-header h2 {
   margin: 0;
   font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
   color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
-.nearby-sort {
-  font-size: 12px;
+.nearby-sort-note {
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
@@ -100,11 +99,11 @@
 
 .nearby-row-name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .nearby-row-meta {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
@@ -119,7 +118,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
