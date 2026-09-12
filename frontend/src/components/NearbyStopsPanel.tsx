@@ -1,8 +1,16 @@
 import type { CSSProperties } from "react";
-import { Star } from "lucide-react";
+import { CaretRight, MagnifyingGlass, SlidersHorizontal, Star, WarningCircle } from "@phosphor-icons/react";
 import { CongestionBadge } from "./CongestionBadge";
 import type { NearbyStop } from "../types/stop";
 import "./NearbyStopsPanel.css";
+
+/** Distance is only known once geolocation is granted, so the ARS number is
+ * what the line falls back to rather than leaving it blank. */
+function stopMeta(stop: NearbyStop): string {
+  return [stop.arsNumber, stop.distanceM > 0 ? `${stop.distanceM}m` : null]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 export function NearbyStopsPanel({
   stops,
@@ -34,21 +42,44 @@ export function NearbyStopsPanel({
         ? "검색 결과가 없습니다."
         : "필터 조건에 맞는 정류장이 없습니다.";
 
+  // No icon while loading -- the skeleton-like wait itself is the signal, and
+  // a static icon next to "불러오는 중" would just be a decoration that never
+  // resolves into anything.
+  const EmptyIcon = loading ? null : error ? WarningCircle : emptyReason === "search" ? MagnifyingGlass : SlidersHorizontal;
+
   if (compact) {
     const nearest = stops[0];
     return (
       <div className="nearby-peek">
-        <p className="nearby-peek-title">
-          {loading
-            ? "정류장을 불러오는 중..."
-            : error
-              ? "정류장 정보를 불러오지 못했습니다."
-              : `내 주변 정류장 ${stops.length}곳`}
-        </p>
+        <div className="nearby-peek-head">
+          <p className="nearby-peek-title">
+            {loading
+              ? "정류장을 불러오는 중..."
+              : error
+                ? "정류장 정보를 불러오지 못했습니다."
+                : `내 주변 정류장 ${stops.length}곳`}
+          </p>
+          {nearest && <span className="nearby-sort-note">가장 가까운 곳</span>}
+        </div>
+        {/* Peek is the state the app sits in, so it carries the reading itself
+            rather than only naming the stop: the question is "is my stop busy",
+            and answering it should not cost a tap. */}
         {nearest && (
-          <button className="nearby-peek-row" onClick={() => onSelectStop(nearest.id)}>
-            가장 가까운 곳 · {nearest.name}
-            {nearest.distanceM > 0 ? ` ${nearest.distanceM}m` : ""}
+          <button
+            className="nearby-peek-row"
+            onClick={() => onSelectStop(nearest.id)}
+            aria-label={`가장 가까운 정류장 ${nearest.name}, 대기 약 ${nearest.waitEstimate}명`}
+          >
+            <span className="nearby-row-main">
+              <span className="nearby-row-name">{nearest.name}</span>
+              <span className="nearby-row-meta figure">{stopMeta(nearest)}</span>
+            </span>
+            <span className="nearby-row-wait">
+              <span className="figure">{nearest.waitEstimate}</span>
+              <span className="nearby-row-wait-unit">명</span>
+            </span>
+            <CongestionBadge level={nearest.congestionLevel} />
+            <CaretRight size={16} color="var(--color-text-faint)" aria-hidden="true" />
           </button>
         )}
       </div>
@@ -63,6 +94,7 @@ export function NearbyStopsPanel({
       </div>
       {stops.length === 0 && (
         <div className="nearby-empty">
+          {EmptyIcon && <EmptyIcon size={28} color="var(--color-text-faint)" />}
           <p>{emptyMessage}</p>
           {!loading && error && (
             <button className="nearby-empty-retry" onClick={onRetry}>
@@ -86,14 +118,10 @@ export function NearbyStopsPanel({
               <button className="nearby-row-btn" onClick={() => onSelectStop(stop.id)}>
                 <span className="nearby-row-main">
                   <span className="nearby-row-name">{stop.name}</span>
-                  <span className="nearby-row-meta">
-                    {[
-                      stop.routes.length > 0 ? `${stop.routes.join(", ")}번` : null,
-                      stop.distanceM > 0 ? `${stop.distanceM}m` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
+                  {/* The corridor has several pairs of stops sharing a name --
+                      opposite sides of the same street. The ARS number is what
+                      tells them apart, and it is what is printed on the pole. */}
+                  <span className="nearby-row-meta figure">{stopMeta(stop)}</span>
                 </span>
                 <span className="nearby-row-side">
                   <span className="nearby-row-wait">
@@ -111,8 +139,7 @@ export function NearbyStopsPanel({
               >
                 <Star
                   size={16}
-                  strokeWidth={2}
-                  fill={stop.isFavorite ? "var(--color-favorite-star)" : "none"}
+                  weight={stop.isFavorite ? "fill" : "regular"}
                   color={stop.isFavorite ? "var(--color-favorite-star)" : "var(--color-text-faint)"}
                 />
               </button>

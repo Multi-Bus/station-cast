@@ -40,7 +40,6 @@ export interface NearbyStop {
   id: string;
   name: string;
   arsNumber?: string;
-  routes: string[];
   distanceM: number;
   waitEstimate: number;
   congestionLevel: CongestionLevel;
