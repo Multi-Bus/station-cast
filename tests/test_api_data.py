@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from stationcast.api.data import CorridorDataUnavailable, load_corridor_data
+from stationcast.api.data import CorridorData, CorridorDataUnavailable, load_corridor_data
 from stationcast.api.main import app
 
 
@@ -42,25 +42,24 @@ def test_load_corridor_data_lists_every_missing_file(tmp_path: Path) -> None:
 
 
 def test_api_returns_503_not_500_when_data_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    # get_corridor_data() is @lru_cache'd and load_corridor_data()'s data_dir
-    # default is bound at import time, so neither can be redirected by
-    # monkeypatching DATA_DIR in a test -- swap load_corridor_data itself
-    # instead, which is exactly what get_corridor_data() calls. This exercises
-    # the real path end to end: dependency -> exception -> the app's own
+    # Data is loaded once at startup by main.py's lifespan, not lazily on
+    # the first request, so this has to make load_corridor_data() fail
+    # *before* the app starts up -- swap it on the main module (where
+    # lifespan's `from stationcast.api.data import load_corridor_data`
+    # bound it), then enter the TestClient as a context manager, which is
+    # what actually runs the ASGI lifespan startup/shutdown events (a plain
+    # TestClient(app) does not). This exercises the real path end to end:
+    # lifespan -> captured exception -> get_corridor_data -> the app's own
     # exception_handler(CorridorDataUnavailable), the same as a container
     # started without the data volume mounted.
-    import stationcast.api.data as data_module
+    import stationcast.api.main as main_module
 
-    def raise_unavailable() -> data_module.CorridorData:
+    def raise_unavailable() -> CorridorData:
         raise CorridorDataUnavailable("missing parquet files in data/processed: [...]")
 
-    data_module.get_corridor_data.cache_clear()
-    monkeypatch.setattr(data_module, "load_corridor_data", raise_unavailable)
+    monkeypatch.setattr(main_module, "load_corridor_data", raise_unavailable)
 
-    client = TestClient(app)
-    try:
+    with TestClient(app) as client:
         response = client.get("/api/stops")
         assert response.status_code == 503
         assert "missing parquet files" in response.json()["detail"]
-    finally:
-        data_module.get_corridor_data.cache_clear()
