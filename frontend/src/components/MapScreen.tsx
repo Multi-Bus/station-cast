@@ -57,6 +57,90 @@ function centroid(stops: NearbyStop[]): { lat: number; lng: number } | null {
   return { lat, lng };
 }
 
+const LEVEL_RANK: Record<NearbyStop["congestionLevel"], number> = {
+  relaxed: 0,
+  moderate: 1,
+  heavy: 2,
+};
+
+// Circles this close together on screen visually merge no matter how they're
+// sized, so grouping them into one marker is the fix, not a smaller circle.
+// 50px covers the largest single-stop disc (52px) with a little room.
+const CLUSTER_CELL_PX = 50;
+
+type MarkerGroup =
+  | { kind: "single"; stop: NearbyStop }
+  | { kind: "cluster"; key: string; stops: NearbyStop[]; lat: number; lng: number };
+
+/** Buckets stops into screen-space grid cells at the map's current zoom, so
+ * markers that would overlap on screen combine into one. Recomputed on every
+ * render; cheap at the corridor's stop count and always reflects the
+ * projection at call time, so the caller just needs to re-render after pan
+ * or zoom rather than keep this in step itself. */
+function buildMarkerGroups(
+  map: kakao.maps.Map,
+  stops: NearbyStop[],
+  selectedStopId: string | null,
+): MarkerGroup[] {
+  const projection = map.getProjection();
+  // globalThis.Map, not the react-kakao-maps-sdk `Map` component imported above.
+  const buckets = new globalThis.Map<string, NearbyStop[]>();
+  const groups: MarkerGroup[] = [];
+
+  for (const stop of stops) {
+    // The selected stop is never folded into a cluster -- it was just panned
+    // into view on purpose, so it has to stay a marker you can see and tap.
+    if (stop.id === selectedStopId) {
+      groups.push({ kind: "single", stop });
+      continue;
+    }
+    const point = projection.pointFromCoords(new window.kakao.maps.LatLng(stop.latLng.lat, stop.latLng.lng));
+    const key = `${Math.round(point.x / CLUSTER_CELL_PX)}:${Math.round(point.y / CLUSTER_CELL_PX)}`;
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(stop);
+    else buckets.set(key, [stop]);
+  }
+
+  for (const [key, bucketStops] of buckets) {
+    if (bucketStops.length === 1) {
+      groups.push({ kind: "single", stop: bucketStops[0] });
+      continue;
+    }
+    groups.push({
+      kind: "cluster",
+      key,
+      stops: bucketStops,
+      lat: bucketStops.reduce((sum, s) => sum + s.latLng.lat, 0) / bucketStops.length,
+      lng: bucketStops.reduce((sum, s) => sum + s.latLng.lng, 0) / bucketStops.length,
+    });
+  }
+  return groups;
+}
+
+function ClusterMarker({ stops, onExpand }: { stops: NearbyStop[]; onExpand: () => void }) {
+  // Coloured by the worst reading inside, same as a single marker would be --
+  // the group is exactly as alarming as its most crowded member.
+  const worstLevel = stops.reduce(
+    (worst, s) => (LEVEL_RANK[s.congestionLevel] > LEVEL_RANK[worst] ? s.congestionLevel : worst),
+    stops[0].congestionLevel,
+  );
+  return (
+    <button
+      className="map-marker"
+      data-level={worstLevel}
+      onClick={onExpand}
+      aria-label={`이 근처 정류장 ${stops.length}곳, 눌러서 펼치기`}
+    >
+      <span
+        className="map-dot map-dot-cluster"
+        style={{ "--wait": stops.length * 5 } as CSSProperties}
+      >
+        <span className="map-dot-value figure">{stops.length}</span>
+      </span>
+    </button>
+  );
+}
+
 function StopMarker({
   stop,
   selected,
@@ -128,9 +212,23 @@ function KakaoStopsMap({
 }) {
   const { ready, failed } = useKakaoScript(KAKAO_MAP_KEY);
   const mapRef = useRef<kakao.maps.Map | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const selected = visibleStops.find((s) => s.id === selectedStopId);
   const selectedLat = selected?.latLng.lat;
   const selectedLng = selected?.latLng.lng;
+
+  // buildMarkerGroups reads the map's live projection, which only changes via
+  // Kakao's own pan/zoom internals -- nothing React knows about. This just
+  // forces a re-render after each one settles so the groups it computes stay
+  // current; it holds no state of its own.
+  const [, forceRegroup] = useState(0);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+    const bump = () => forceRegroup((n) => n + 1);
+    window.kakao.maps.event.addListener(map, "idle", bump);
+    return () => window.kakao.maps.event.removeListener(map, "idle", bump);
+  }, [mapReady]);
 
   // Tapping a marker opens the sheet over the bottom half of the map, which is
   // usually where the marker just was. Push the map down by half the sheet so
@@ -165,6 +263,7 @@ function KakaoStopsMap({
       style={{ position: "absolute", inset: 0 }}
       onCreate={(map) => {
         mapRef.current = map;
+        setMapReady(true);
       }}
     >
       {userPosition && (
@@ -172,11 +271,33 @@ function KakaoStopsMap({
           <div className="user-location-dot" aria-label="내 위치" role="img" />
         </CustomOverlayMap>
       )}
-      {visibleStops.map((stop) => (
-        <CustomOverlayMap key={stop.id} position={stop.latLng} clickable yAnchor={0.5}>
-          <StopMarker stop={stop} selected={selectedStopId === stop.id} onSelectStop={onSelectStop} />
-        </CustomOverlayMap>
-      ))}
+      {(mapReady && mapRef.current
+        ? buildMarkerGroups(mapRef.current, visibleStops, selectedStopId)
+        : visibleStops.map((stop): MarkerGroup => ({ kind: "single", stop }))
+      ).map((group) =>
+        group.kind === "single" ? (
+          <CustomOverlayMap key={group.stop.id} position={group.stop.latLng} clickable yAnchor={0.5}>
+            <StopMarker
+              stop={group.stop}
+              selected={selectedStopId === group.stop.id}
+              onSelectStop={onSelectStop}
+            />
+          </CustomOverlayMap>
+        ) : (
+          <CustomOverlayMap key={group.key} position={{ lat: group.lat, lng: group.lng }} clickable yAnchor={0.5}>
+            <ClusterMarker
+              stops={group.stops}
+              onExpand={() => {
+                const map = mapRef.current;
+                if (!map) return;
+                map.setLevel(map.getLevel() - 1, {
+                  anchor: new window.kakao.maps.LatLng(group.lat, group.lng),
+                });
+              }}
+            />
+          </CustomOverlayMap>
+        ),
+      )}
     </Map>
   );
 }
@@ -266,7 +387,7 @@ export function MapScreen({
 
       <div className="map-floating-top">
         <div className="search-bar">
-          <Search size={16} strokeWidth={2} color="var(--on-map-muted)" />
+          <Search size={16} strokeWidth={2} color="var(--color-text-faint)" />
           <input
             className="search-bar-input"
             type="text"
