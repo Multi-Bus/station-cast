@@ -467,8 +467,7 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 | `corridor_features_daily.parquet` | `features/demand_factors.py` | 위 3개를 사용일자로 결합 + 요일구분(평일/주말+공휴일)·날씨구분(맑음/강수)·기온구분(저온/보통/고온) | 23,015행 | 사용 — `boarding_reproduction.py`(issue #16, PR #74)의 MAPE 계산 입력. **API는 더 이상 읽지 않는다** — `/stops/{id}/context`가 이 파일에서 조회하던 요일·날씨·기온 라벨은 **날짜만의 함수**라(weather_daily가 서울 전체 단일 관측소 — 23,015행 전수 검증: 날짜별 라벨 고유값이 3개 컬럼 모두 1개이고, 엔드포인트 경로로 재계산한 라벨과 불일치 0건) `weather_daily`·`holiday_daily_all`에서 직접 유도하도록 바꿨다. 서울 스코프에서 12.1M행(워커당 약 1.76GB)이 될 테이블이라 `CorridorData`에서 제외 |
 | ~~`weekday_holiday_factor.parquet`~~ | (생성 중단) | 표준버스정류장ID·정류장명·평일/주말+공휴일 평균·보정계수·극단치주의 | 정류장별 요일 보정계수(2그룹). 사전 테스트용으로 만들었던 버전 | **생성 안 함(issue #86)** — `weekday_weather_factor.parquet`(12그룹)이 요일 축을 포함해 상위 호환하고, issue #78(PR #79)에서 `api/data.py`가 읽기를 끊은 뒤로 읽는 코드가 없어 `demand_factors.run()` 출력에서 제외했다. `build_weekday_holiday_factor()` 함수와 그 테스트는 남아 있어, 요일 단독 비교가 필요하면 직접 호출해 계산할 수 있다 |
 | `weekday_weather_factor.parquet` | `features/demand_factors.py` | 표준버스정류장ID·정류장명·요일구분×날씨구분×기온구분(평일/주말+공휴일 × 맑음/강수 × 저온/보통/고온) 12그룹 평균·보정계수·극단치주의 | 21행. `weekday_holiday_factor.parquet`(요일만 2그룹)와 별개 파일 — 날씨(강수 여부)와 기온(3분위)까지 함께 반영한 보정계수 | 사용 — `api/data.py`(issue #78)가 `/stops/{id}/context`의 `congestion_note` 계산에 직접 읽음(`weekday_holiday_factor.parquet` 대체 완료). `boarding_reproduction.py`는 이 파일을 직접 읽지 않고 `build_weekday_weather_factor()` 함수만 재사용해 자체 train/test 분할로 재계산 |
-| `stop_capacity.parquet` | `ingest/stop_capacity.py` | 표준버스정류장ID·포용인원 | 21행. 현장 실사(issue #12, 승차대 1개당 10명) 기반 | **사용(제한적)** — `estimator/congestion.py`의 `run()`(독립 실행 시)만 이 파일을 읽음. 라이브 API(`api/data.py`)는 이 파일 대신 `build_stop_capacity()`를 메모리에서 직접 호출 — 파일은 안 거침 |
-| `corridor_wait_graded.parquet` | `estimator/congestion.py` `run()` | `corridor_wait.parquet` + 혼잡도등급(여유/보통/혼잡) | `corridor_wait.parquet`에 등급 컬럼을 추가한 버전 | **사용 안함** — 생성만 되고 이후 어디서도 다시 안 읽힘. 라이브 API는 `grade_wait()` 함수를 요청마다 직접 호출해서 등급을 매번 새로 계산(이 파일을 캐시로 쓰지 않음) |
+| `grade_thresholds.parquet` | `estimator/congestion.py` `run()` | p70·p90 | 1행. `corridor_wait.parquet`의 W 분포 전체(정류장×시간대 전 행)에서 뽑은 70/90 백분위 | 사용 — 라이브 API(`api/data.py`)가 기동 시 읽어 `grade_wait()`의 등급 경계로 씀. 시간대별이 아니라 **전역** 백분위라 새벽 시간대가 억지로 혼잡으로 분류되지 않는다 |
 
 **월간 총량 → 일평균 정규화 (S2, issue #42)**: §1의 원본 컬럼은 "그 시간대의 **월간 누적** 인원"이다. 대기인원 추정(§9, Little's Law)은 `B_r(s,t)`를 그 시간대의 **시간당 도착률**로 쓰는데, 월간 누적값을 그대로 넣으면 그 값 자체가 사용년월의 일수(6월=30일)만큼 부풀려진다. 그래서 `build_corridor_hourly`가 groupby-sum 이후 `사용년월`(YYYYMM)로 일수를 계산해 승차·하차를 그 값으로 나눈다. 이 정규화 이전 버전으로 만들어진 `corridor_wait.parquet`(S1 GATE, issue #8, 당시 큐 수지 모델 기준)는 이 부풀림 때문에 비음수 위반율 90.9%로 나왔었다.
 
@@ -512,7 +511,7 @@ stop_ts = df[df["표준버스정류장ID"] == TARGET_ID][hour_cols].sum()
 
 **배차정보 공백**: 서울 12,595개 정류장 중 125개는 자기 정류장의 어느 노선에서도 배차간격을 얻지 못했다(117개는 노선이 하나뿐이라 빌려올 이웃이 없다). `fill_missing_headway()`가 같은 `유형`의 서울 전체 중앙값으로 2단계 폴백을 태워 대부분을 복구하고, `서울시버스노선기본정보`에 아예 없어 유형조차 모르는 8개 노선(`2115A`·`2115B`·`5522A`·`8553출근`·`금천01-1`·`서대문02`·`서대문09`·`한강버스01`)만 제외한다 — 정류장 70개(0.56%), 승차 비중 0.138%.
 
-**API 서빙**: 기동 후 워커 resident 약 173MB(3회 측정 172.5~174.5), 적재 0.2초. `/api/stops` 전체(12,537개) 144ms, `/api/stops?bbox=` 7ms(184개로 축소), `/api/stops?limit=100` 5ms, `/health` 5ms. `/api/corridor`는 `ingest/stop_capacity.py`의 포용인원이 현장 실사 21개 하드코딩이라 나머지 정류장에서 404가 나며, 트랙 C의 백분위 기반 등급 전환(`grade_thresholds.parquet`) 이후에 열린다.
+**API 서빙**: 기동 후 워커 resident 약 173MB(3회 측정 172.5~174.5), 적재 0.2초. `/api/stops` 전체(12,537개) 144ms, `/api/stops?bbox=` 7ms(184개로 축소), `/api/stops?limit=100` 5ms, `/health` 5ms. `/api/corridor`는 등급 기준이 정류장별 포용인원(현장 실사 21개 하드코딩)에서 서울 전체 백분위(`grade_thresholds.parquet`)로 바뀌면서 모든 정류장에 열렸다.
 
 **QA 결과 (데이터셋⑧/기상청 단기예보)**: ⑥과 마찬가지로 저장하지 않는 실시간 호출이라
 행수·결측 방식의 QA가 성립하지 않는다. 대신 실제 API 키로 라이브 호출해 아래를 확인했고

@@ -30,8 +30,7 @@ from stationcast.ingest.route_schedule import day_type_schedule, fill_missing_he
 
 BUS_CAPACITY = 46.0
 """Assumed 정원 (seated + standing) for every route in the corridor, since
-no per-route vehicle-capacity data exists yet -- parallel to
-ingest/stop_capacity.py's 10-per-platform assumption. This is a placeholder
+no per-route vehicle-capacity data exists yet. This is a placeholder
 pending a real per-route source; override via the ``bus_capacity`` parameter
 if one becomes available."""
 

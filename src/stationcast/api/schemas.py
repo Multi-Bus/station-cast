@@ -17,13 +17,19 @@ class StopsResponse(BaseModel):
 
 
 class CongestionResponse(BaseModel):
-    """Estimated wait and congestion grade for one stop at one hour."""
+    """Estimated wait and congestion grade for one stop at one hour.
+
+    grade_basis says what the 여유/보통/혼잡 label is relative to --
+    "seoul_percentile" means Seoul-wide 70/90th percentiles of W, not the
+    stop's own capacity (estimator/congestion.py).
+    """
 
     stop_id: int
     name: str
     hour: int
     estimated_wait: float
     grade: str
+    grade_basis: str
 
 
 class TimelinePoint(BaseModel):

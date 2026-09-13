@@ -6,9 +6,11 @@ data. Endpoints depend on get_corridor_data() via FastAPI's Depends so tests can
 override it with in-memory fixtures instead of touching disk.
 
 ``wait`` reads corridor_wait.parquet, the per-route wait-population
-estimate (estimator/wait_population.py). ``capacity`` comes from the field survey's
-build_stop_capacity() (issue #12) rather than a parquet file, since it's
-a plain in-memory constant with no ingest step to run.
+estimate (estimator/wait_population.py). ``grade_thresholds`` reads
+grade_thresholds.parquet, the Seoul-wide (p70, p90) cutoffs
+estimator/congestion.py derives from that same W distribution -- one row,
+not a per-stop table, since grading is now relative to all of Seoul rather
+than to each stop's own field-surveyed 포용인원.
 
 ``weather``, ``holiday``, ``weekday_weather_factor`` back the
 /stops/{id}/context endpoint (issue #47, #78) and are the direct parquet
@@ -34,13 +36,13 @@ STATIONCAST_SCOPE=seoul the table would be ~11,000 stops x ~1,100 days
 21-stop demo scope), by far the largest thing the API would hold;
 validate/boarding_reproduction.py still reads the file from disk.
 
-stops/wait/capacity are indexed by 표준버스정류장ID (wait also by 시간대,
+stops/wait are indexed by 표준버스정류장ID (wait also by 시간대,
 CorridorData.__post_init__) so api/deps.py's per-stop lookups are a
 ``.loc[]`` index lookup instead of a boolean-mask scan over every row -- at
-demo scope (21 stops) the difference is noise, but /corridor calls the
-capacity lookup once per stop per request, so an unindexed scan is
-O(stops²) and that stops being true well before STATIONCAST_SCOPE=seoul's
-~11,000 stops. Indexing lives on the dataclass rather than in
+demo scope (21 stops) the difference is noise, but /corridor does one
+lookup per stop per request, so an unindexed scan is O(stops²) and that
+stops being true well before STATIONCAST_SCOPE=seoul's ~11,000 stops.
+Indexing lives on the dataclass rather than in
 load_corridor_data() so tests that build a CorridorData directly (see
 tests/test_api_stops.py's fixture) get the same indexing without having to
 remember to do it themselves.
@@ -52,13 +54,12 @@ from pathlib import Path
 import pandas as pd
 from fastapi import Request
 
-from stationcast.ingest.stop_capacity import build_stop_capacity
-
 DATA_DIR = Path("data/processed")
 
 _PARQUET_FILES = (
     "corridor_stops.parquet",
     "corridor_wait.parquet",
+    "grade_thresholds.parquet",
     "weather_daily.parquet",
     "holiday_daily_all.parquet",
     "weekday_weather_factor.parquet",
@@ -77,7 +78,7 @@ class CorridorData:
     """
     stops: 표준버스정류장ID·정류장명·ARS번호·X좌표·Y좌표·정류소 타입 (corridor_stops.parquet)
     wait: 표준버스정류장ID·정류장명·시간대·W (corridor_wait.parquet)
-    capacity: 표준버스정류장ID·포용인원 (build_stop_capacity())
+    grade_thresholds: p70·p90 1행 (grade_thresholds.parquet)
     weather: 사용일자·평균기온·최고기온·강수량·습도·신적설·평균풍속 등
         (weather_daily.parquet)
     holiday: 사용일자·공휴일명 (holiday_daily_all.parquet, 범위 무제한)
@@ -87,7 +88,7 @@ class CorridorData:
 
     stops: pd.DataFrame
     wait: pd.DataFrame
-    capacity: pd.DataFrame
+    grade_thresholds: pd.DataFrame
     weather: pd.DataFrame
     holiday: pd.DataFrame
     weekday_weather_factor: pd.DataFrame
@@ -95,7 +96,6 @@ class CorridorData:
     def __post_init__(self) -> None:
         self.stops = self.stops.set_index("표준버스정류장ID", drop=False)
         self.wait = self.wait.set_index(["표준버스정류장ID", "시간대"], drop=False).sort_index()
-        self.capacity = self.capacity.set_index("표준버스정류장ID", drop=False)
 
 
 def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
@@ -116,14 +116,14 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
 
     stops = pd.read_parquet(data_dir / "corridor_stops.parquet")
     wait = pd.read_parquet(data_dir / "corridor_wait.parquet")
-    capacity = build_stop_capacity()
+    grade_thresholds = pd.read_parquet(data_dir / "grade_thresholds.parquet")
     weather = pd.read_parquet(data_dir / "weather_daily.parquet")
     holiday = pd.read_parquet(data_dir / "holiday_daily_all.parquet")
     weekday_weather_factor = pd.read_parquet(data_dir / "weekday_weather_factor.parquet")
     return CorridorData(
         stops=stops,
         wait=wait,
-        capacity=capacity,
+        grade_thresholds=grade_thresholds,
         weather=weather,
         holiday=holiday,
         weekday_weather_factor=weekday_weather_factor,

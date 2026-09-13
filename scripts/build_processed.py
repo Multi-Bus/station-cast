@@ -30,6 +30,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from stationcast.estimator.congestion import run as run_grade_thresholds
 from stationcast.estimator.wait_population import run as run_wait_population
 from stationcast.features.demand_factors import run as run_demand_factors
 from stationcast.ingest.holiday import run as run_holiday
@@ -37,7 +38,6 @@ from stationcast.ingest.oa12912 import run as run_oa12912
 from stationcast.ingest.oa12913 import DEMO_STOP_IDS, HOURLY_BOARDING_DIRNAME
 from stationcast.ingest.oa12913 import run as run_oa12913
 from stationcast.ingest.route_schedule import run as run_route_schedule
-from stationcast.ingest.stop_capacity import run as run_stop_capacity
 from stationcast.ingest.weather import run as run_weather
 
 RAW_DIR = Path("data/raw")
@@ -126,12 +126,13 @@ def main() -> int:
     print(f"입력: {HOURLY_BOARDING_DIR}/ (월별 CSV {hourly_month_count}개)")
     print(f"출력: {PROCESSED_DIR}/\n")
 
-    # oa12913/oa12912/route_schedule/weather/holiday/stop_capacity read only
-    # data/raw, so their order is free among themselves; demand_factors runs
-    # last because it reads corridor_daily/weather_daily/holiday_daily back
-    # out of data/processed. wait_population is the one exception -- it reads
-    # corridor_route_hourly and corridor_route_schedule back out of
-    # data/processed too, so it has to come after both of those.
+    # oa12913/oa12912/route_schedule/weather/holiday read only data/raw, so
+    # their order is free among themselves; demand_factors runs last because
+    # it reads corridor_daily/weather_daily/holiday_daily back out of
+    # data/processed. Two steps read data/processed back and so are pinned:
+    # wait_population needs corridor_route_hourly and corridor_route_schedule,
+    # and grade_thresholds needs wait_population's corridor_wait (its
+    # percentiles are taken over that whole W distribution).
     steps: list[tuple[str, Callable[[], None]]] = [
         (
             "corridor_route_hourly, corridor_stops",
@@ -155,7 +156,13 @@ def main() -> int:
         ),
         ("weather_daily", lambda: run_weather(weather_csv, PROCESSED_DIR)),
         ("holiday_daily, holiday_daily_all", lambda: run_holiday(holiday_csv, PROCESSED_DIR)),
-        ("stop_capacity", lambda: run_stop_capacity(PROCESSED_DIR)),
+        (
+            "grade_thresholds",
+            lambda: run_grade_thresholds(
+                PROCESSED_DIR / "corridor_wait.parquet",
+                PROCESSED_DIR / "grade_thresholds.parquet",
+            ),
+        ),
         (
             "corridor_features_daily, weekday_weather_factor",
             lambda: run_demand_factors(PROCESSED_DIR),

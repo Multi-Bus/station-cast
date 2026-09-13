@@ -47,12 +47,14 @@ def stop_wait(data: CorridorData, stop_id: int) -> pd.DataFrame:
         raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
 
 
-def stop_capacity(data: CorridorData, stop_id: int) -> float:
-    try:
-        row = data.capacity.loc[stop_id]
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"stop {stop_id} not found") from None
-    return float(row["포용인원"])
+def grade_thresholds(data: CorridorData) -> tuple[float, float]:
+    """Seoul-wide (p70, p90) cutoffs every grade_wait() call compares against.
+
+    Global, not per stop -- grade_thresholds.parquet is a single row (see
+    estimator/congestion.py), so there's no lookup to miss and no 404.
+    """
+    row = data.grade_thresholds.iloc[0]
+    return float(row["p70"]), float(row["p90"])
 
 
 def stop_name(data: CorridorData, stop_id: int) -> str:

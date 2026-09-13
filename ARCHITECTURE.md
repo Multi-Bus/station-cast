@@ -86,8 +86,7 @@ flowchart LR
         I3["weather.py"]
         I4["holiday.py"]
         I5["route_schedule.py"]
-        I6["stop_capacity.py"]
-        I7["realtime_arrival.py"]
+        I6["realtime_arrival.py"]
     end
 
     subgraph features["features/"]
@@ -96,7 +95,7 @@ flowchart LR
 
     subgraph estimator["estimator/"]
         E1["wait_population.py<br/>W(s,t) 추정 (Little's Law)"]
-        E2["congestion.py<br/>혼잡도 등급 (여유/보통/혼잡)"]
+        E2["congestion.py<br/>혼잡도 등급 (서울 전체 백분위)"]
     end
 
     subgraph validate["validate/"]
@@ -116,7 +115,7 @@ flowchart LR
     WEATHER --> I3
     HOLIDAY --> I4
     ROUTE --> I5
-    TOPIS --> I7
+    TOPIS --> I6
 
     I2 --> F1
     I3 --> F1
@@ -136,7 +135,6 @@ flowchart LR
     E2 --> A1
     F1 --> A1
     I6 --> A1
-    I7 --> A1
     A1 --> FRONTEND
 ```
 
