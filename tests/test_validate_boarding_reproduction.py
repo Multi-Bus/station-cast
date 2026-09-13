@@ -5,7 +5,7 @@ import pytest
 
 from stationcast.validate.boarding_reproduction import (
     TRAIN_TEST_CUTOFF,
-    _anomalous_dates,
+    _anomalous_stop_days,
     build_boarding_reproduction_report,
     per_stop_mape,
     summarize_mape,
@@ -129,23 +129,37 @@ def _collapse_fixture() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def test_anomalous_dates_flags_strike_shaped_not_holiday_shaped() -> None:
+def _pairs(index) -> set:
+    return set(map(tuple, index.to_frame(index=False).to_numpy()))
+
+
+def test_anomalous_stop_days_flags_strike_shaped_not_holiday_shaped() -> None:
     # Date 4 cuts every stop to 40% -- a quiet day, not a stopped network.
     # Date 5 zeroes 2 of 10 stops (20% >= ANOMALY_THRESHOLD 0.15), the shape
     # a strike makes when 마을버스 keeps running.
-    assert _anomalous_dates(_collapse_fixture()) == {5}
+    assert _pairs(_anomalous_stop_days(_collapse_fixture())) == {(0, 5), (1, 5)}
 
 
-def test_anomalous_dates_ignores_a_collapse_too_small_to_clear_the_threshold() -> None:
+def test_anomalous_stop_days_keeps_the_stops_that_ran_that_day() -> None:
+    # The eight stops still at 100 on date 5 were operating normally, so date
+    # 5 stays in their series. A local event (2023-12-31's 제야의 종 closures
+    # in the demo corridor) must not take unaffected stops down with it.
+    dropped = _pairs(_anomalous_stop_days(_collapse_fixture()))
+
+    assert all((stop, 5) not in dropped for stop in range(2, 10))
+
+
+def test_anomalous_stop_days_ignores_a_collapse_too_small_to_clear_the_threshold() -> None:
     # One stop of 10 collapsing is 10%, under ANOMALY_THRESHOLD -- a single
-    # stop closing for roadworks is not a network-wide event.
+    # stop closing for roadworks is not a network-wide event, and without this
+    # gate every small stop's ordinary quiet day would qualify.
     df = _collapse_fixture()
     df.loc[(df["사용일자"] == 5) & (df["표준버스정류장ID"] == 1), "승차"] = 100.0
 
-    assert _anomalous_dates(df) == set()
+    assert len(_anomalous_stop_days(df)) == 0
 
 
-def test_anomalous_dates_measures_each_stop_against_its_own_median() -> None:
+def test_anomalous_stop_days_measures_each_stop_against_its_own_median() -> None:
     # A stop whose normal day is 4 boardings and a stop whose normal day is
     # 1000 both collapse to zero on date 5 -- the rule must not let the big
     # stop's scale decide for the small one.
@@ -153,7 +167,7 @@ def test_anomalous_dates_measures_each_stop_against_its_own_median() -> None:
     df.loc[df["표준버스정류장ID"] == 0, "승차"] *= 0.04
     df.loc[df["표준버스정류장ID"] == 1, "승차"] *= 10.0
 
-    assert _anomalous_dates(df) == {5}
+    assert _pairs(_anomalous_stop_days(df)) == {(0, 5), (1, 5)}
 
 
 def test_build_boarding_reproduction_report_drops_anomalous_dates() -> None:

@@ -49,8 +49,9 @@ so the test means the same thing for a 4-boardings-a-day side street and a
 
 ANOMALY_THRESHOLD = 0.15
 """A date where at least this fraction of stops collapsed
-(STOP_COLLAPSE_RATIO) is treated as a day the bus network did not run, and
-dropped before fitting or evaluating either prediction.
+(STOP_COLLAPSE_RATIO) is treated as a day the bus network did not run. The
+collapsed stops' rows for that date are dropped before fitting or evaluating
+either prediction; stops that ran normally keep the date (_anomalous_stop_days).
 
 Discovered via 2026-01-13/2026-01-14, the two-day Seoul city-bus strike
 (data/README.md §10). This started out as a rule on the corridor-wide
@@ -85,16 +86,32 @@ _WEATHER_TYPES = ("맑음", "강수")
 _TEMP_TYPES = ("저온", "보통", "고온")
 
 
-def _anomalous_dates(
+def _anomalous_stop_days(
     corridor_daily: pd.DataFrame, threshold: float = ANOMALY_THRESHOLD
-) -> set[int]:
-    """Dates where at least `threshold` of stops collapsed below STOP_COLLAPSE_RATIO
-    of their own median day."""
+) -> pd.MultiIndex:
+    """(표준버스정류장ID, 사용일자) pairs to drop: stops that collapsed, on dates
+    where enough stops collapsed to mark a network-wide event.
+
+    Both halves matter. Without the date gate, every stop's ordinary quiet day
+    would qualify -- stops whose median is under 5 boardings collapse on 12.99%
+    of days just from noise. Without the per-stop half, one date's event takes
+    every stop down with it, which is wrong whenever the event is local: the
+    21-stop demo corridor sits on 종로/보신각, so 2023-12-31's 제야의 종 road
+    closures collapsed 23.81% of *it* (5 stops) and tripped the gate, while
+    citywide the same day is 3.78% and never qualifies. The other 16 corridor
+    stops ran normally that night and keep the date.
+    """
     stop_medians = corridor_daily.groupby("표준버스정류장ID")["승차"].median()
     floors = corridor_daily["표준버스정류장ID"].map(stop_medians) * STOP_COLLAPSE_RATIO
     collapsed = corridor_daily["승차"] < floors
-    collapsed_share = collapsed.groupby(corridor_daily["사용일자"]).mean()
-    return set(collapsed_share[collapsed_share >= threshold].index)
+    event_day = collapsed.groupby(corridor_daily["사용일자"]).transform("mean") >= threshold
+    dropped = corridor_daily[collapsed & event_day]
+    return pd.MultiIndex.from_frame(dropped[["표준버스정류장ID", "사용일자"]])
+
+
+def _drop_stop_days(frame: pd.DataFrame, stop_days: pd.MultiIndex) -> pd.DataFrame:
+    keys = pd.MultiIndex.from_frame(frame[["표준버스정류장ID", "사용일자"]])
+    return frame[~keys.isin(stop_days)]
 
 
 def _long_group_means(
@@ -140,9 +157,9 @@ def build_boarding_reproduction_report(
     returns one row per (stop, day) for the test split only, with 실측_승차
     and the two predictions, ready for MAPE aggregation.
     """
-    anomalies = _anomalous_dates(corridor_daily)
-    corridor_daily = corridor_daily[~corridor_daily["사용일자"].isin(anomalies)]
-    features_daily = features_daily[~features_daily["사용일자"].isin(anomalies)]
+    anomalies = _anomalous_stop_days(corridor_daily)
+    corridor_daily = _drop_stop_days(corridor_daily, anomalies)
+    features_daily = _drop_stop_days(features_daily, anomalies)
 
     train_daily = corridor_daily[corridor_daily["사용일자"] < TRAIN_TEST_CUTOFF]
     train_features = features_daily[features_daily["사용일자"] < TRAIN_TEST_CUTOFF]
@@ -250,10 +267,11 @@ def run(processed_dir: Path, out_dir: Path) -> None:
     corridor_daily = pd.read_parquet(processed_dir / "corridor_daily.parquet")
     features_daily = pd.read_parquet(processed_dir / "corridor_features_daily.parquet")
 
-    anomalies = _anomalous_dates(corridor_daily)
-    if anomalies:
-        print(f"이상치로 제외된 날짜 {len(anomalies)}개 (ANOMALY_THRESHOLD={ANOMALY_THRESHOLD}): "
-              f"{sorted(anomalies)}")
+    anomalies = _anomalous_stop_days(corridor_daily)
+    if len(anomalies):
+        dates = sorted({int(date) for _, date in anomalies})
+        print(f"이상치로 제외된 (정류장, 날짜) {len(anomalies):,}쌍 "
+              f"(ANOMALY_THRESHOLD={ANOMALY_THRESHOLD}), 해당 날짜: {dates}")
 
     report = build_boarding_reproduction_report(corridor_daily, features_daily)
     summary = summarize_mape(report)
