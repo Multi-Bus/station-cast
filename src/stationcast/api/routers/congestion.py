@@ -12,7 +12,6 @@ from stationcast.api.schemas import CongestionResponse, StopContextResponse
 from stationcast.estimator.congestion import grade_wait
 from stationcast.features.demand_factors import (
     BoardingFactorUnavailable,
-    boarding_factor,
     boarding_factor_for_labels,
     classify_day_type,
     classify_temperature,
@@ -69,15 +68,26 @@ def get_context(
     target_date = deps.current_date() if date is None else date
     deps.validate_date(target_date)
     day_type = classify_day_type(target_date, set(data.holiday["사용일자"]))
+    # 보정계수 테이블은 평일/주말+공휴일 2분류로 묶여 있어 공휴일과 주말이 한 그룹.
+    weekday_group = "평일" if day_type == "평일" else "주말+공휴일"
 
     weather_row = data.weather[data.weather["사용일자"] == target_date]
     if not weather_row.empty:
         precipitation = float(weather_row["강수량"].iloc[0])
         snowfall = float(weather_row["신적설"].iloc[0])
         raw_wind_speed = weather_row["평균풍속"].iloc[0]
+        # 요일·날씨·기온 라벨은 **날짜만의 함수**라(weather_daily가 서울 전체
+        # 단일 관측소) 이 관측행에서 바로 유도한다 -- 아래 예보 분기와 같은 방식.
+        # 예전에는 정류장×일자로 미리 계산해둔 corridor_features_daily에서 같은
+        # 라벨을 조회했는데, 서울 전체 스코프에서 12M행짜리 테이블을 문자열 3개
+        # 때문에 상주시키게 되어 걷어냈다(api/data.py 참고).
         try:
-            factor = boarding_factor(
-                data.features_daily, data.weekday_weather_factor, stop_id, target_date
+            factor = boarding_factor_for_labels(
+                data.weekday_weather_factor,
+                stop_id,
+                weekday_group,
+                "강수" if precipitation > 0 or snowfall > 0 else "맑음",
+                classify_temperature(float(weather_row["최고기온"].iloc[0])),
             )
         except BoardingFactorUnavailable as exc:
             raise HTTPException(
@@ -105,12 +115,13 @@ def get_context(
             status_code=404, detail=f"weather for date {target_date} not found"
         ) from exc
 
-    weekday_group = "평일" if day_type == "평일" else "주말+공휴일"
-    weather_group = "강수" if forecast.is_precipitating else "맑음"
-    temp_group = classify_temperature(forecast.high_temp)
     try:
         factor = boarding_factor_for_labels(
-            data.weekday_weather_factor, stop_id, weekday_group, weather_group, temp_group
+            data.weekday_weather_factor,
+            stop_id,
+            weekday_group,
+            "강수" if forecast.is_precipitating else "맑음",
+            classify_temperature(forecast.high_temp),
         )
     except BoardingFactorUnavailable as exc:
         raise HTTPException(

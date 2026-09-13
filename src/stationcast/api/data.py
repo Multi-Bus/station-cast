@@ -10,15 +10,29 @@ estimate (estimator/wait_population.py). ``capacity`` comes from the field surve
 build_stop_capacity() (issue #12) rather than a parquet file, since it's
 a plain in-memory constant with no ingest step to run.
 
-``weather``, ``holiday``, ``features_daily``, ``weekday_weather_factor``
-back the /stops/{id}/context endpoint (issue #47, #78) and are the direct
-parquet outputs of features/demand_factors.py and ingest/holiday.py:
-- weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속 (weather_daily.parquet)
+``weather``, ``holiday``, ``weekday_weather_factor`` back the
+/stops/{id}/context endpoint (issue #47, #78) and are the direct parquet
+outputs of features/demand_factors.py and ingest/holiday.py:
+- weather: 사용일자·평균기온·최고기온·강수량·습도·신적설·평균풍속 등
+  (weather_daily.parquet)
 - holiday: 사용일자·공휴일명 (holiday_daily_all.parquet, 범위 무제한)
-- features_daily: 표준버스정류장ID·사용일자·요일구분·날씨구분·기온구분 등
-  (요일×날씨×기온 라벨 조회용 -- 12그룹 보정계수의 컬럼명을 구성하는 데 씀)
 - weekday_weather_factor: 표준버스정류장ID·정류장명·요일구분×날씨구분×기온구분
   (12그룹)별 보정계수_승차·보정계수_하차 등
+
+corridor_features_daily.parquet is deliberately *not* loaded. It is
+corridor_daily joined with the 요일구분/날씨구분/기온구분 labels, and the
+API only ever read it to look those three labels up for one (stop, date).
+Those labels are a function of the date alone -- weather_daily is a single
+city-wide observation station, so every stop on a given date carries
+identical labels (verified over all 23,015 rows: exactly one distinct
+value per date for each of the three columns, and recomputing them the way
+this endpoint now does matches the stored labels on every row) -- so
+routers/congestion.py derives them from ``weather`` and ``holiday``
+instead, the same way its forecast branch already did. At
+STATIONCAST_SCOPE=seoul the table would be ~11,000 stops x ~1,100 days
+~= 12M rows (~1.8GB resident per worker, extrapolated from 3.45MB for the
+21-stop demo scope), by far the largest thing the API would hold;
+validate/boarding_reproduction.py still reads the file from disk.
 
 stops/wait/capacity are indexed by 표준버스정류장ID (wait also by 시간대,
 CorridorData.__post_init__) so api/deps.py's per-stop lookups are a
@@ -47,7 +61,6 @@ _PARQUET_FILES = (
     "corridor_wait.parquet",
     "weather_daily.parquet",
     "holiday_daily_all.parquet",
-    "corridor_features_daily.parquet",
     "weekday_weather_factor.parquet",
 )
 
@@ -65,10 +78,9 @@ class CorridorData:
     stops: 표준버스정류장ID·정류장명·ARS번호·X좌표·Y좌표·정류소 타입 (corridor_stops.parquet)
     wait: 표준버스정류장ID·정류장명·시간대·W (corridor_wait.parquet)
     capacity: 표준버스정류장ID·포용인원 (build_stop_capacity())
-    weather: 사용일자·평균기온·강수량·습도·신적설·평균풍속 (weather_daily.parquet)
+    weather: 사용일자·평균기온·최고기온·강수량·습도·신적설·평균풍속 등
+        (weather_daily.parquet)
     holiday: 사용일자·공휴일명 (holiday_daily_all.parquet, 범위 무제한)
-    features_daily: 표준버스정류장ID·사용일자·요일구분·날씨구분·기온구분 등
-        (corridor_features_daily.parquet)
     weekday_weather_factor: 표준버스정류장ID·보정계수_승차_<요일구분>_<날씨구분>_<기온구분> 등
         (weekday_weather_factor.parquet)
     """
@@ -78,7 +90,6 @@ class CorridorData:
     capacity: pd.DataFrame
     weather: pd.DataFrame
     holiday: pd.DataFrame
-    features_daily: pd.DataFrame
     weekday_weather_factor: pd.DataFrame
 
     def __post_init__(self) -> None:
@@ -108,7 +119,6 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
     capacity = build_stop_capacity()
     weather = pd.read_parquet(data_dir / "weather_daily.parquet")
     holiday = pd.read_parquet(data_dir / "holiday_daily_all.parquet")
-    features_daily = pd.read_parquet(data_dir / "corridor_features_daily.parquet")
     weekday_weather_factor = pd.read_parquet(data_dir / "weekday_weather_factor.parquet")
     return CorridorData(
         stops=stops,
@@ -116,7 +126,6 @@ def load_corridor_data(data_dir: Path = DATA_DIR) -> CorridorData:
         capacity=capacity,
         weather=weather,
         holiday=holiday,
-        features_daily=features_daily,
         weekday_weather_factor=weekday_weather_factor,
     )
 

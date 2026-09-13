@@ -52,6 +52,9 @@ def corridor_data() -> CorridorData:
             # 20260101 목요일이지만 신정(공휴일), 20260102 금(평일)
             "사용일자": [20260101, 20260102],
             "평균기온": [-2.5, -1.0],
+            # 최고기온으로 기온구분(저온/보통/고온)을 가른다 -- 둘 다 13.9 이하라
+            # 저온. /stops/{id}/context가 이 컬럼에서 라벨을 직접 유도한다.
+            "최고기온": [1.0, 2.5],
             "강수량": [0.0, 3.2],
             "습도": [55.0, 70.0],
             "신적설": [0.0, 1.5],
@@ -60,22 +63,14 @@ def corridor_data() -> CorridorData:
         }
     )
     holiday = pd.DataFrame({"사용일자": [20260101], "공휴일명": ["신정"]})
-    # 사전 계산된 요일/날씨/기온 라벨 (corridor_features_daily.parquet 형태) --
-    # 20260101은 공휴일+맑음, 20260102는 평일+강수, 둘 다 기온구분은 저온으로 둔다.
-    features_daily = pd.DataFrame(
-        {
-            "표준버스정류장ID": [STOP_A, STOP_B],
-            "사용일자": [20260101, 20260102],
-            "요일구분": ["주말+공휴일", "평일"],
-            "날씨구분": ["맑음", "강수"],
-            "기온구분": ["저온", "저온"],
-        }
-    )
+    # 20260101은 주말+공휴일·맑음·저온, 20260102는 평일·강수·저온으로 분류된다.
+    # 실데이터의 weekday_weather_factor는 모든 정류장이 12그룹을 전부 채우고
+    # 있으므로(21개 정류장 x 11개 비기준선 그룹, NaN 0건) 픽스처도 그렇게 둔다.
     weekday_weather_factor = pd.DataFrame(
         {
             "표준버스정류장ID": [STOP_A, STOP_B],
-            "보정계수_승차_주말+공휴일_맑음_저온": [0.85, None],
-            "보정계수_승차_평일_강수_저온": [None, 1.2],
+            "보정계수_승차_주말+공휴일_맑음_저온": [0.85, 0.70],
+            "보정계수_승차_평일_강수_저온": [1.10, 1.2],
         }
     )
     return CorridorData(
@@ -84,7 +79,6 @@ def corridor_data() -> CorridorData:
         capacity=capacity,
         weather=weather,
         holiday=holiday,
-        features_daily=features_daily,
         weekday_weather_factor=weekday_weather_factor,
     )
 
@@ -294,15 +288,27 @@ def test_context_unknown_date_returns_404(client: TestClient) -> None:
     assert response.status_code == 404
 
 
-def test_context_missing_features_daily_combo_returns_404(client: TestClient) -> None:
-    # STOP_A only has a features_daily row for 20260101, not 20260102 -- weather
-    # exists for both dates, but this (stop, date) combo doesn't. Mirrors the
-    # 17 corridor-wide combinations missing from corridor_features_daily.parquet
-    # in real data (data/README.md §10, night-bus-only days). boarding_factor()
-    # used to crash on an empty frame's .iloc[0] here (issue #137).
-    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260102})
+def test_context_resolves_date_absent_from_the_stops_boarding_history(
+    client: TestClient,
+) -> None:
+    # STOP_B has no boarding record on 20260101, so the old lookup through
+    # corridor_features_daily found no (stop, date) row and returned 404.
+    # Labels come from the date now, so this resolves: 신정 -> 주말+공휴일,
+    # 강수량 0 -> 맑음, 최고기온 1.0 -> 저온, and STOP_B's factor for that
+    # group (0.70) is applied -- "30% lower than usual".
+    #
+    # Deliberate contract change. The one such combination in real data
+    # (stop 101000042 on 2026-01-14) falls in the Seoul city-bus strike
+    # (data/README.md §10): the buses did not run, so there is no boarding
+    # row. The correction factor is a per-stop x group average, not a
+    # per-date value, so it is still a well-defined answer on a day that
+    # stop happened to record nothing.
+    response = client.get(f"/api/stops/{STOP_B}/context", params={"date": 20260101})
 
-    assert response.status_code == 404
+    assert response.status_code == 200
+    body = response.json()
+    assert body["day_type"] == "공휴일"
+    assert body["congestion_note"] == "공휴일이라 평소보다 혼잡도가 약 30% 낮을 것으로 예상됩니다."
 
 
 @pytest.mark.parametrize("bad_date", [0, -5, 1, 20261332, 20260230])
