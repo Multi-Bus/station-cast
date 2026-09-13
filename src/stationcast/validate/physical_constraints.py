@@ -131,11 +131,24 @@ def build_validation_report(
     day_type: str = DEFAULT_DAY_TYPE,
     bus_capacity: float = BUS_CAPACITY,
 ) -> dict[str, float]:
-    """Corridor-wide summary: non-negativity rate and capacity violation rate."""
-    capacity_rate = capacity_violation_rate(route_hourly, route_schedule, day_type, bus_capacity)
+    """Corridor-wide summary: non-negativity rate, capacity violation rate, and
+    the share of rows the capacity check could not evaluate.
+
+    ``용량_검사제외율`` exists because the capacity rate is a mean over the rows
+    that survived ingest.route_schedule.fill_missing_headway, which drops rows
+    whose route has no headway and no 유형 to borrow one from (8 서울 routes,
+    0.189% of rows). Leaving that implicit let the check report a clean rate
+    while silently skipping rows it never looked at.
+    """
+    capacity_report = capacity_violation_report(
+        route_hourly, route_schedule, day_type, bus_capacity
+    )
+    if len(capacity_report) == 0:
+        raise ValueError("route_hourly is empty")
     return {
         "비음수_위반율": non_negativity_violation_rate(wait_df),
-        "용량_위반율": capacity_rate,
+        "용량_위반율": float(capacity_report["위반"].mean()),
+        "용량_검사제외율": (len(route_hourly) - len(capacity_report)) / len(route_hourly),
     }
 
 
@@ -166,8 +179,16 @@ def run(
     )
 
     summary = build_validation_report(wait_df, route_hourly, route_schedule, day_type, bus_capacity)
-    print(f"비음수 위반율: {summary['비음수_위반율']:.1%}")
-    print(f"용량 위반율: {summary['용량_위반율']:.1%}")
+    # .3% not .1%: 서울 전체's capacity violation rate is 0.001% (13 rows of
+    # 948,384), which .1% rounds to a clean-looking "0.0%" and hides a real
+    # signal -- 동대문01 boards over twice its hourly capacity at 8시.
+    violations = int(capacity_report["위반"].sum())
+    print(f"비음수 위반율: {summary['비음수_위반율']:.3%}")
+    print(
+        f"용량 위반율: {summary['용량_위반율']:.3%} "
+        f"({violations:,} / {len(capacity_report):,}행)"
+    )
+    print(f"용량 검사제외율: {summary['용량_검사제외율']:.3%}")
 
 
 if __name__ == "__main__":

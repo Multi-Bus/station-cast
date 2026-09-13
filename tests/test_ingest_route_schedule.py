@@ -19,6 +19,7 @@ def _boarding_df() -> pd.DataFrame:
             # with no published schedule; "N15" is a night bus, flagged via
             # is_night_bus rather than excluded.
             "노선번호": ["150", "새벽A160", "N15", "999"],
+            "사용년월": [202601, 202601, 202601, 202601],
         }
     )
 
@@ -71,3 +72,24 @@ def test_build_corridor_route_schedule_flags_night_bus_with_missing_headway() ->
     assert len(night_bus) == 3  # one per day type
     assert night_bus["is_night_bus"].all()
     assert night_bus["배차정보없음"].all()  # fixture has no schedule row for N15
+
+
+def test_build_corridor_route_schedule_does_not_split_a_renamed_stop() -> None:
+    # 100000389 is recorded under two names across the window (real case:
+    # 101000042 was renamed 해운센터.롯데영플라자 -> 소공동.롯데영플라자 mid-2026).
+    # Route 150 must still produce one row per day type, not one per name --
+    # estimator/wait_population.py joins on (정류장, 노선) alone, so a second
+    # row would duplicate that stop's boarding and double its W.
+    renamed = pd.DataFrame(
+        {
+            "표준버스정류장ID": [100000389, 100000389],
+            "역명": ["옛이름(00063)", "새이름(00063)"],
+            "노선번호": ["150", "150"],
+            "사용년월": [202512, 202601],
+        }
+    )
+
+    result = build_corridor_route_schedule(renamed, _route_schedule(), stop_ids=(100000389,))
+
+    assert len(result) == 3  # 평일/토요일/공휴일, one each
+    assert result["정류장명"].unique().tolist() == ["새이름"]  # most recent name wins

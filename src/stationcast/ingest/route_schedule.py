@@ -80,7 +80,16 @@ def build_corridor_route_schedule(
     sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
     sub["정류장명"] = sub["역명"].apply(clean_stop_name)
     sub["노선번호"] = sub["노선번호"].astype(str)
-    corridor_routes = sub[["표준버스정류장ID", "정류장명", "노선번호"]].drop_duplicates()
+
+    # Deduplicate on (정류장, 노선) alone and attach the most recent name
+    # afterwards, the same way oa12913.py and oa12912.py do. Keeping 정류장명
+    # in the key splits a renamed stop into one row per name -- 814 of 서울
+    # 전체's 12,595 stops were renamed across the 12-month window (11 of them
+    # twice) -- and estimator/wait_population.py joins on (정류장, 노선) only,
+    # so each extra row duplicated that stop's boarding and multiplied its W.
+    latest_name = sub.sort_values("사용년월").groupby("표준버스정류장ID")["정류장명"].last()
+    corridor_routes = sub[["표준버스정류장ID", "노선번호"]].drop_duplicates()
+    corridor_routes = corridor_routes.merge(latest_name, on="표준버스정류장ID", how="left")
     corridor_routes["is_night_bus"] = corridor_routes["노선번호"].map(
         dict(zip(u := corridor_routes["노선번호"].unique(), map(is_night_bus, u), strict=True))
     )
