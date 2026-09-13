@@ -35,7 +35,6 @@ def test_load_corridor_data_lists_every_missing_file(tmp_path: Path) -> None:
         "corridor_wait.parquet",
         "weather_daily.parquet",
         "holiday_daily_all.parquet",
-        "corridor_features_daily.parquet",
         "weekday_weather_factor.parquet",
     ):
         assert name in message

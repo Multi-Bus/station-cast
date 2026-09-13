@@ -51,6 +51,9 @@ def build_smoke_data(out_dir: Path) -> None:
         {
             "사용일자": [SMOKE_DATE],
             "평균기온": [18.0],
+            # /stops/{id}/context labels the day 저온/보통/고온 from 최고기온;
+            # 22.0 lands inside the 보통 band (demand_factors._TEMP_BOUNDARIES).
+            "최고기온": [22.0],
             "강수량": [0.0],
             "습도": [55.0],
             "신적설": [0.0],
@@ -60,16 +63,6 @@ def build_smoke_data(out_dir: Path) -> None:
 
     holiday = pd.DataFrame(
         {"사용일자": pd.Series([], dtype="int64"), "공휴일명": pd.Series([], dtype="str")}
-    )
-
-    features_daily = pd.DataFrame(
-        {
-            "표준버스정류장ID": stop_ids,
-            "사용일자": [SMOKE_DATE for _ in stop_ids],
-            "요일구분": ["평일" for _ in stop_ids],
-            "날씨구분": ["맑음" for _ in stop_ids],
-            "기온구분": ["보통" for _ in stop_ids],
-        }
     )
 
     # Baseline (평일/맑음/보통) short-circuits to factor 1.0 before touching
@@ -82,7 +75,6 @@ def build_smoke_data(out_dir: Path) -> None:
     wait.to_parquet(out_dir / "corridor_wait.parquet", index=False)
     weather.to_parquet(out_dir / "weather_daily.parquet", index=False)
     holiday.to_parquet(out_dir / "holiday_daily_all.parquet", index=False)
-    features_daily.to_parquet(out_dir / "corridor_features_daily.parquet", index=False)
     weekday_weather_factor.to_parquet(out_dir / "weekday_weather_factor.parquet", index=False)
 
 

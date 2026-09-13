@@ -111,11 +111,17 @@ def precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) ->
 class BoardingFactorUnavailable(Exception):
     """Raised when boarding_factor()/boarding_factor_for_labels() has no row
     to compute a correction factor from -- an unlisted stop_id, a (stop,
-    date) combination features_daily never covered (issue #137, e.g. the 17
-    corridor-wide night-bus-only dates documented in data/README.md), or a
+    date) combination features_daily never covered (issue #137), or a
     요일×날씨×기온 group weekday_weather_factor has no column for. Callers
     should catch this and degrade to a 404 rather than let the underlying
-    .iloc[0]/KeyError surface as a 500."""
+    .iloc[0]/KeyError surface as a 500.
+
+    The one uncovered (stop, date) combination in the demo corridor is stop
+    101000042 on 2026-01-14, during the two-day Seoul city-bus strike
+    (data/README.md §10) -- a day the buses did not run, not a day the data
+    is missing. It no longer reaches this exception from
+    /stops/{id}/context, which derives the labels from the date instead of
+    looking up features_daily."""
 
 
 def boarding_factor_for_labels(

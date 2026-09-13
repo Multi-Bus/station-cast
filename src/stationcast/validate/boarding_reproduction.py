@@ -43,17 +43,25 @@ MAPE measures reproduction on days the factors never saw."""
 
 ANOMALY_THRESHOLD = 0.1
 """A date whose corridor-wide total 승차 (summed across every stop) falls
-below this fraction of the median date's total is treated as a source-data
-collection gap rather than real demand, and dropped before fitting or
+below this fraction of the median date's total is treated as a day the bus
+network did not run rather than real demand, and dropped before fitting or
 evaluating either prediction. Discovered via 2026-01-13/2026-01-14, where
-total boarding collapses to ~1% of the median day with no weather (no
-precipitation/snowfall either date, and 2026-01-12's actual snow saw normal
-boarding) or calendar explanation -- previously misattributed to every
-route serving those stops being night-bus-only (see git history), which
-doesn't hold up: totals stay collapsed even with night buses included.
-0.1 is well clear of real low-traffic days (the next-lowest dates in the
-3-year series sit at 40%+ of the median), so it isolates this specific kind
-of collapse without touching genuine variation."""
+corridor boarding collapses to 735/557 against a median of 63,739 with no
+weather explanation (no precipitation/snowfall either date, and
+2026-01-12's actual snow saw normal boarding).
+
+Those two dates are the Seoul city-bus strike (data/README.md §10): the
+준공영제 network ran at 0.1-0.8% of the preceding Monday while 마을버스,
+which is outside 준공영제 and kept running, carried ~40% *more* riders.
+So the zeros are real -- the buses did not run -- which is exactly why
+these days must not train or score a demand model. (Two earlier readings
+of these dates, "night-bus-only days" and "source-data gap", were both
+wrong; see git history.)
+
+0.1 is well clear of real low-traffic days -- across all 36 months the
+only other sub-50% dates are 신정/설날/추석 holidays, which bottom out at
+33% of the median -- so it isolates this specific kind of collapse without
+touching genuine variation."""
 
 
 _DAY_TYPES = ("평일", "주말+공휴일")
