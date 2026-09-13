@@ -41,27 +41,43 @@ days before this (2023-07-01~2025-06-30, ~2 years) and evaluated against
 actual boarding on/after this date (2025-07-01~2026-06-30, ~1 year), so
 MAPE measures reproduction on days the factors never saw."""
 
-ANOMALY_THRESHOLD = 0.1
-"""A date whose corridor-wide total 승차 (summed across every stop) falls
-below this fraction of the median date's total is treated as a day the bus
-network did not run rather than real demand, and dropped before fitting or
-evaluating either prediction. Discovered via 2026-01-13/2026-01-14, where
-corridor boarding collapses to 735/557 against a median of 63,739 with no
-weather explanation (no precipitation/snowfall either date, and
-2026-01-12's actual snow saw normal boarding).
+STOP_COLLAPSE_RATIO = 0.1
+"""A stop counts as "collapsed" on a date when its 승차 falls below this
+fraction of that stop's own median day. Per-stop rather than corridor-wide
+so the test means the same thing for a 4-boardings-a-day side street and a
+2,000-boardings 종로 stop."""
 
-Those two dates are the Seoul city-bus strike (data/README.md §10): the
-준공영제 network ran at 0.1-0.8% of the preceding Monday while 마을버스,
-which is outside 준공영제 and kept running, carried ~40% *more* riders.
-So the zeros are real -- the buses did not run -- which is exactly why
-these days must not train or score a demand model. (Two earlier readings
-of these dates, "night-bus-only days" and "source-data gap", were both
-wrong; see git history.)
+ANOMALY_THRESHOLD = 0.15
+"""A date where at least this fraction of stops collapsed
+(STOP_COLLAPSE_RATIO) is treated as a day the bus network did not run, and
+dropped before fitting or evaluating either prediction.
 
-0.1 is well clear of real low-traffic days -- across all 36 months the
-only other sub-50% dates are 신정/설날/추석 holidays, which bottom out at
-33% of the median -- so it isolates this specific kind of collapse without
-touching genuine variation."""
+Discovered via 2026-01-13/2026-01-14, the two-day Seoul city-bus strike
+(data/README.md §10). This started out as a rule on the corridor-wide
+*total* (below 10% of the median day), which worked at demo scope -- the
+21-stop corridor is served by 간선/지선 only, so it collapsed to 1% of
+normal. It silently stops working at STATIONCAST_SCOPE=seoul: 마을버스 is
+outside 준공영제, kept running, and carried ~40% more riders, so the
+citywide total only fell to 26% of the median -- above a 10% cutoff, and
+uncomfortably close to the 33% of the quietest 설날 day, leaving no safe
+threshold on totals at all.
+
+Counting collapsed *stops* separates the two cleanly, because a strike and
+a holiday have different shapes: a holiday makes everyone somewhat quieter,
+while a strike zeroes out the 간선/지선 stops and leaves 마을버스 stops
+untouched. Measured over 서울 전체:
+
+    2026-01-13 (파업)   28.7%
+    2026-01-14 (파업)   25.4%
+    2024-02-10 (설날)    7.5%
+    2025-01-29 (설날)    6.7%
+    2025-10-06 (추석)    6.1%
+    평범한 날            1.0%
+
+0.15 sits between 7.5% and 25.4% with roughly 1.7x headroom either way,
+against the 26%-vs-33% squeeze the totals rule offered. The same rule still
+fires at demo scope, where a strike day collapses nearly every stop, so
+both scopes share one definition."""
 
 
 _DAY_TYPES = ("평일", "주말+공휴일")
@@ -72,10 +88,13 @@ _TEMP_TYPES = ("저온", "보통", "고온")
 def _anomalous_dates(
     corridor_daily: pd.DataFrame, threshold: float = ANOMALY_THRESHOLD
 ) -> set[int]:
-    """Dates where corridor-wide total 승차 collapses below `threshold` of the median date."""
-    daily_totals = corridor_daily.groupby("사용일자")["승차"].sum()
-    cutoff = daily_totals.median() * threshold
-    return set(daily_totals[daily_totals < cutoff].index)
+    """Dates where at least `threshold` of stops collapsed below STOP_COLLAPSE_RATIO
+    of their own median day."""
+    stop_medians = corridor_daily.groupby("표준버스정류장ID")["승차"].median()
+    floors = corridor_daily["표준버스정류장ID"].map(stop_medians) * STOP_COLLAPSE_RATIO
+    collapsed = corridor_daily["승차"] < floors
+    collapsed_share = collapsed.groupby(corridor_daily["사용일자"]).mean()
+    return set(collapsed_share[collapsed_share >= threshold].index)
 
 
 def _long_group_means(
@@ -171,11 +190,42 @@ def _mape(actual: pd.Series, predicted: pd.Series) -> float:
     return float(((predicted[valid] - actual[valid]).abs() / actual[valid]).mean() * 100)
 
 
-def summarize_mape(report: pd.DataFrame) -> dict[str, float]:
-    """Corridor-wide MAPE for each of the two prediction versions."""
+MAPE_VOLUME_FLOOR = 100
+"""Daily 승차 a (stop, day) must reach to enter the floored MAPE figures.
+
+MAPE divides by the actual, so it is meaningless where the actual is a
+handful of people: predicting 12 at a stop that saw 4 is an 8-person miss
+and a 200% error, while the same 8-person miss at a 400-boarding stop is
+2%. The 21-stop demo corridor is all downtown arterials and never exercised
+this, but 서울 전체 is mostly small stops, and they dominate the unfiltered
+mean -- measured over the held-out year, by decile of actual boarding:
+
+    decile 1 (median   4/day)   297.2%
+    decile 2 (median  19/day)    56.4%
+    decile 5 (median 181/day)    16.3%
+    decile 8 (median 741/day)    11.5%
+    decile 10 (median 1611/day)  10.0%
+
+Both figures are reported rather than just the floored one: the unfiltered
+number is the honest headline, and the floored number is what is comparable
+to the demo corridor's, which sat entirely in the top deciles."""
+
+
+def summarize_mape(report: pd.DataFrame, volume_floor: int = MAPE_VOLUME_FLOOR) -> dict[str, float]:
+    """Corridor-wide MAPE for each prediction version, unfiltered and volume-floored.
+
+    The _100이상 variants restrict to (stop, day) rows with at least
+    ``volume_floor`` actual boardings -- see MAPE_VOLUME_FLOOR for why the
+    unfiltered mean stops being informative at 서울 전체 scope.
+    """
+    busy = report[report["실측_승차"] >= volume_floor]
     return {
         "무보정_MAPE": _mape(report["실측_승차"], report["무보정_예측승차"]),
         "요일날씨기온보정_MAPE": _mape(report["실측_승차"], report["요일날씨기온보정_예측승차"]),
+        f"무보정_MAPE_{volume_floor}이상": _mape(busy["실측_승차"], busy["무보정_예측승차"]),
+        f"요일날씨기온보정_MAPE_{volume_floor}이상": _mape(
+            busy["실측_승차"], busy["요일날씨기온보정_예측승차"]
+        ),
     }
 
 

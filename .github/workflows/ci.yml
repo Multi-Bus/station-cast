@@ -40,10 +40,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # data/processed/ is no longer committed (it is 158MB at
+      # STATIONCAST_SCOPE=seoul -- see data/README.md §11), and the real
+      # pipeline needs raw files behind a login. The smoke set uses the
+      # corridor's real stop IDs with made-up values, which is enough for the
+      # endpoint check below and is what the Dockerfile's COPY picks up.
+      - name: Build smoke data into the build context
+        run: |
+          pip install -c constraints.txt .
+          python scripts/build_smoke_data.py
+
       - name: Build image
         run: docker build -t station-cast:ci .
 
-      - name: Run the self-contained image -- every endpoint must answer, no volume needed
+      - name: Run the image -- every endpoint must answer
         run: |
           docker run -d --rm -p 8000:8000 --name station-cast-smoke station-cast:ci
           for i in $(seq 1 10); do curl -sf http://127.0.0.1:8000/health && break; sleep 1; done

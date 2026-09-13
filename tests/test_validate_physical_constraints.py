@@ -44,6 +44,7 @@ def _route_schedule() -> pd.DataFrame:
         {
             "표준버스정류장ID": [STOP, STOP],
             "노선번호": ["150", "402"],
+            "유형": ["간선", "간선"],
             "요일유형": ["평일", "평일"],
             "배차간격": [6.0, 10.0],
             "배차정보없음": [False, False],
@@ -144,6 +145,7 @@ def test_capacity_violation_filters_by_day_type() -> None:
         {
             "표준버스정류장ID": [STOP],
             "노선번호": ["150"],
+            "유형": ["간선"],
             "요일유형": ["토요일"],
             "배차간격": [20.0],
             "배차정보없음": [False],
@@ -164,10 +166,10 @@ def test_capacity_violation_filters_by_day_type() -> None:
     assert saturday.iloc[0]["수송능력"] == pytest.approx((60 / 20) * 46.0)
 
 
-def test_capacity_violation_no_schedule_data_on_any_route_raises() -> None:
-    # Neither route serving STOP has a matching schedule row -- same guard
-    # as estimate_wait() (issue #109), reached here via the shared
-    # fill_missing_headway().
+def test_capacity_violation_route_missing_from_schedule_file_is_dropped() -> None:
+    # Neither route serving STOP has a matching schedule row, so neither has
+    # a 유형 to borrow a median from -- dropped, same as estimate_wait()
+    # does, via the shared fill_missing_headway().
     hourly = pd.DataFrame(
         {
             "표준버스정류장ID": [STOP, STOP],
@@ -179,8 +181,35 @@ def test_capacity_violation_no_schedule_data_on_any_route_raises() -> None:
     )
     empty_schedule = _route_schedule().iloc[0:0]
 
+    assert capacity_violation_report(hourly, empty_schedule).empty
+
+
+def test_capacity_violation_known_유형_with_no_headway_anywhere_raises() -> None:
+    # "777" has a 유형 but no 간선 route here has a headway, so both fallback
+    # levels come up empty -- same guard as estimate_wait() (issue #109),
+    # reached via the shared fill_missing_headway().
+    hourly = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP],
+            "정류장명": ["종로2가"],
+            "노선번호": ["777"],
+            "시간대": [18],
+            "승차": [30.0],
+        }
+    )
+    schedule = pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP],
+            "노선번호": ["777"],
+            "유형": ["간선"],
+            "요일유형": ["평일"],
+            "배차간격": [None],
+            "배차정보없음": [True],
+        }
+    )
+
     with pytest.raises(ValueError, match=str(STOP)):
-        capacity_violation_report(hourly, empty_schedule)
+        capacity_violation_report(hourly, schedule)
 
 
 def test_build_validation_report_aggregates_both_metrics() -> None:

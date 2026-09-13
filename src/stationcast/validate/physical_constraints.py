@@ -26,7 +26,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.ingest.route_schedule import fill_missing_headway
+from stationcast.ingest.route_schedule import day_type_schedule, fill_missing_headway
 
 BUS_CAPACITY = 46.0
 """Assumed 정원 (seated + standing) for every route in the corridor, since
@@ -87,8 +87,7 @@ def capacity_violation_report(
     fallback rules to the same gap. Raises ValueError instead if a stop has
     no route with a 배차간격 value at all (issue #109).
     """
-    schedule = route_schedule[route_schedule["요일유형"] == day_type]
-    schedule = schedule[~schedule["배차정보없음"]][["표준버스정류장ID", "노선번호", "배차간격"]]
+    schedule = day_type_schedule(route_schedule, day_type, ["배차간격"])
 
     merged = route_hourly.merge(schedule, on=["표준버스정류장ID", "노선번호"], how="left")
     merged = fill_missing_headway(merged, ["배차간격"])

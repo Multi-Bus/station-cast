@@ -28,8 +28,8 @@ def _route_schedule() -> pd.DataFrame:
     # across day types with identical values, same shape as the real
     # source file. "새벽A160" has a published 배차간격 of 0 (no schedule
     # registered yet).
-    route_150 = {"배차간격": 8, "인가대수": 20, "최소배차": 6, "최대배차": 10}
-    route_dawn = {"배차간격": 0, "인가대수": 3, "최소배차": 0, "최대배차": 0}
+    route_150 = {"유형": "간선", "배차간격": 8, "인가대수": 20, "최소배차": 6, "최대배차": 10}
+    route_dawn = {"유형": "지선", "배차간격": 0, "인가대수": 3, "최소배차": 0, "최대배차": 0}
 
     rows = []
     for day_type in ("평일", "토요일", "공휴일"):
