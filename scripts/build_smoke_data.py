@@ -14,7 +14,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.ingest.stop_capacity import build_stop_capacity
+from stationcast.estimator.congestion import compute_thresholds
+from stationcast.ingest.oa12913 import DEMO_STOP_IDS
 
 # A Monday with no precipitation and a temperature inside demand_factors.py's
 # "보통" band -- lands on the 평일/맑음/보통 baseline, whose correction factor
@@ -24,8 +25,7 @@ SMOKE_DATE = 20260105
 
 
 def build_smoke_data(out_dir: Path) -> None:
-    capacity = build_stop_capacity()
-    stop_ids = capacity["표준버스정류장ID"].tolist()
+    stop_ids = list(DEMO_STOP_IDS)
 
     stops = pd.DataFrame(
         {
@@ -73,6 +73,7 @@ def build_smoke_data(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     stops.to_parquet(out_dir / "corridor_stops.parquet", index=False)
     wait.to_parquet(out_dir / "corridor_wait.parquet", index=False)
+    compute_thresholds(wait).to_parquet(out_dir / "grade_thresholds.parquet", index=False)
     weather.to_parquet(out_dir / "weather_daily.parquet", index=False)
     holiday.to_parquet(out_dir / "holiday_daily_all.parquet", index=False)
     weekday_weather_factor.to_parquet(out_dir / "weekday_weather_factor.parquet", index=False)

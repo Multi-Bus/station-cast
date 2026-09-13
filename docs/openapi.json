@@ -104,7 +104,7 @@
         "type": "object"
       },
       "CongestionResponse": {
-        "description": "Estimated wait and congestion grade for one stop at one hour.",
+        "description": "Estimated wait and congestion grade for one stop at one hour.\n\ngrade_basis says what the 여유/보통/혼잡 label is relative to --\n\"seoul_percentile\" means Seoul-wide 70/90th percentiles of W, not the\nstop's own capacity (estimator/congestion.py).",
         "properties": {
           "estimated_wait": {
             "title": "Estimated Wait",
@@ -112,6 +112,10 @@
           },
           "grade": {
             "title": "Grade",
+            "type": "string"
+          },
+          "grade_basis": {
+            "title": "Grade Basis",
             "type": "string"
           },
           "hour": {
@@ -132,7 +136,8 @@
           "name",
           "hour",
           "estimated_wait",
-          "grade"
+          "grade",
+          "grade_basis"
         ],
         "title": "CongestionResponse",
         "type": "object"
@@ -428,7 +433,7 @@
   "paths": {
     "/api/corridor": {
       "get": {
-        "description": "Every stop's estimated wait and congestion grade at one hour (default: current hour).\n\ndata.wait's [표준버스정류장ID, 시간대] index (api/data.py) makes both the\nper-hour cross-section and each row's capacity lookup (deps.stop_capacity,\nnow also indexed) O(1)-ish index lookups instead of full-table scans --\nthe old per-row deps.stop_capacity() call made this endpoint O(stops²).",
+        "description": "Every stop's estimated wait and congestion grade at one hour (default: current hour).\n\ndata.wait's [표준버스정류장ID, 시간대] index (api/data.py) makes the\nper-hour cross-section an O(1)-ish index lookup instead of a full-table\nscan. Grading needs no per-stop lookup at all now that thresholds are\nSeoul-wide -- they're read once, before the loop.",
         "operationId": "get_corridor_api_corridor_get",
         "parameters": [
           {

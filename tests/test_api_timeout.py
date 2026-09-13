@@ -32,7 +32,7 @@ def corridor_data() -> CorridorData:
             "W": [12.5],
         }
     )
-    capacity = pd.DataFrame({"표준버스정류장ID": [STOP_A], "포용인원": [20.0]})
+    grade_thresholds = pd.DataFrame({"p70": [10.0], "p90": [20.0]})
     weather = pd.DataFrame(
         {
             "사용일자": [20260101],
@@ -55,7 +55,7 @@ def corridor_data() -> CorridorData:
     return CorridorData(
         stops=stops,
         wait=wait,
-        capacity=capacity,
+        grade_thresholds=grade_thresholds,
         weather=weather,
         holiday=holiday,
         weekday_weather_factor=weekday_weather_factor,

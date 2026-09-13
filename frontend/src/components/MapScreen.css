@@ -91,11 +91,11 @@
   padding: 0;
 }
 
-/* Diameter tracks the headcount, not the grade. The grade is relative to each
-   stop's capacity, so a big number can legitimately be 여유 while a smaller one
-   at a cramped stop is 보통 -- but once the number is printed inside the dot,
-   sizing by grade makes the two look like they contradict each other. Size
-   follows the digit; colour carries the grade. */
+/* Diameter tracks the headcount, not the grade. Both now come from the same
+   Seoul-wide scale, but they still round differently -- two dots showing the
+   same digit can sit on either side of a percentile cutoff, so sizing by grade
+   would make them look like they contradict each other. Size follows the digit;
+   colour carries the grade. */
 .map-dot {
   display: grid;
   place-items: center;

@@ -1,6 +1,6 @@
-/** The level always comes from the backend's own grade (congestion.py's W/capacity
- * ratio, via congestionLevelFromGrade) or is set directly in mock data -- there is
- * no client-side numeric threshold any more (issue #111). */
+/** The level always comes from the backend's own grade (congestion.py's
+ * Seoul-wide W percentile, via congestionLevelFromGrade) or is set directly in
+ * mock data -- there is no client-side numeric threshold any more (issue #111). */
 export type CongestionLevel = "relaxed" | "moderate" | "heavy";
 
 export const CONGESTION_LABEL: Record<CongestionLevel, string> = {

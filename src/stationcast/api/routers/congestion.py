@@ -47,7 +47,8 @@ def get_congestion(
         name=str(row["정류장명"].iloc[0]),
         hour=target_hour,
         estimated_wait=estimated_wait,
-        grade=grade_wait(estimated_wait, deps.stop_capacity(data, stop_id)),
+        grade=grade_wait(estimated_wait, deps.grade_thresholds(data)),
+        grade_basis="seoul_percentile",
     )
 
 

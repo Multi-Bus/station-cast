@@ -81,7 +81,7 @@ def get_timeline(stop_id: int, data: CorridorData = Depends(get_corridor_data)) 
     # which one is meant. The index's second level is 시간대 and the first
     # (표준버스정류장ID) is constant here, so sorting the index sorts by hour.
     wait = deps.stop_wait(data, stop_id).sort_index()
-    capacity = deps.stop_capacity(data, stop_id)
+    thresholds = deps.grade_thresholds(data)
     return TimelineResponse(
         stop_id=stop_id,
         name=str(wait["정류장명"].iloc[0]),
@@ -89,7 +89,7 @@ def get_timeline(stop_id: int, data: CorridorData = Depends(get_corridor_data)) 
             TimelinePoint(
                 hour=int(row["시간대"]),
                 estimated_wait=(wait_value := float(row["W"])),
-                grade=grade_wait(wait_value, capacity),
+                grade=grade_wait(wait_value, thresholds),
             )
             for _, row in wait.iterrows()
         ],
@@ -103,22 +103,23 @@ def get_corridor(
 ) -> CorridorResponse:
     """Every stop's estimated wait and congestion grade at one hour (default: current hour).
 
-    data.wait's [표준버스정류장ID, 시간대] index (api/data.py) makes both the
-    per-hour cross-section and each row's capacity lookup (deps.stop_capacity,
-    now also indexed) O(1)-ish index lookups instead of full-table scans --
-    the old per-row deps.stop_capacity() call made this endpoint O(stops²).
+    data.wait's [표준버스정류장ID, 시간대] index (api/data.py) makes the
+    per-hour cross-section an O(1)-ish index lookup instead of a full-table
+    scan. Grading needs no per-stop lookup at all now that thresholds are
+    Seoul-wide -- they're read once, before the loop.
     """
     target_hour = deps.current_hour() if hour is None else hour
+    thresholds = deps.grade_thresholds(data)
     try:
         snapshot = data.wait.xs(target_hour, level="시간대")
     except KeyError:
         snapshot = data.wait.iloc[:0]
     stops = [
         CorridorStopSnapshot(
-            stop_id=(stop_id := int(row["표준버스정류장ID"])),
+            stop_id=int(row["표준버스정류장ID"]),
             name=str(row["정류장명"]),
             estimated_wait=(estimated_wait := float(row["W"])),
-            grade=grade_wait(estimated_wait, deps.stop_capacity(data, stop_id)),
+            grade=grade_wait(estimated_wait, thresholds),
         )
         for row in snapshot.to_dict("records")
     ]
