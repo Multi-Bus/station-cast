@@ -26,7 +26,11 @@ COPY src/ ./src/
 RUN pip install --no-cache-dir -c constraints.txt .
 
 # api/data.py reads these at startup and raises CorridorDataUnavailable without
-# them. They are committed (only data/raw/ is ignored), so no volume is needed.
+# them. They are no longer committed, so this copies whatever the build context
+# has: build them first (scripts/build_processed.py, or scripts/build_smoke_data.py
+# for a smoke test) and the image carries them. Build from a clean checkout and
+# the directory is empty -- the app still starts and /health answers, while the
+# data routes return 503 until a data/processed/ volume is mounted (issue #141).
 COPY data/processed/ ./data/processed/
 
 # main.py serves this at / when the directory exists.

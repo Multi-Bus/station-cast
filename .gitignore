@@ -21,11 +21,17 @@ license-report.csv
 scancode-source-report-*.json
 venv_osc_dep_tmp/
 
-# Data (raw is not committed -- API keys/login required to fetch, 16MB;
-# processed *is* committed since issue #159 -- 548KB, and every source
-# dataset's license permits redistribution, see data/README.md §11)
+# Data (neither raw nor processed is committed). processed used to be
+# (issue #159, 548KB at the 21-stop demo scope), but STATIONCAST_SCOPE=seoul
+# makes it 158MB -- corridor_features_daily alone is 96.7MB, and git keeps
+# every past version forever, so a few rebuilds would leave the repo in the
+# gigabytes. Rebuild it with scripts/build_processed.py (data/README.md
+# §1~§7 for the raw downloads) or scripts/build_smoke_data.py for a
+# container smoke test.
 data/raw/*
 !data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
 
 # Secrets / local config
 .env

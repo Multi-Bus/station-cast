@@ -20,7 +20,7 @@ _SHEET_TO_DAY_TYPE = {
     "공휴일공동배차": "공휴일",
 }
 
-_SCHEDULE_COLUMNS = ["노선번호", "요일유형", "배차간격", "인가대수", "최소배차", "최대배차"]
+_SCHEDULE_COLUMNS = ["노선번호", "유형", "요일유형", "배차간격", "인가대수", "최소배차", "최대배차"]
 
 
 def load_route_schedule(xlsx_path: Path) -> pd.DataFrame:
@@ -99,6 +99,7 @@ def build_corridor_route_schedule(
                 "정류장명",
                 "노선번호",
                 "is_night_bus",
+                "유형",
                 "요일유형",
                 "배차간격",
                 "인가대수",
@@ -112,8 +113,28 @@ def build_corridor_route_schedule(
     )
 
 
+def day_type_schedule(
+    route_schedule: pd.DataFrame, day_type: str, columns: Sequence[str]
+) -> pd.DataFrame:
+    """One day type's per-(stop, route) headway columns, ready to left-join.
+
+    Rows flagged 배차정보없음 keep their place with NaN in ``columns``
+    rather than being dropped: the join would produce the same NaN either
+    way, but keeping the row carries 유형 along, which is what
+    fill_missing_headway()'s second fallback level needs. Shared by
+    estimator/wait_population.py and validate/physical_constraints.py so
+    the two can't drift apart in how they prepare the same join.
+    """
+    schedule = route_schedule[route_schedule["요일유형"] == day_type].copy()
+    schedule.loc[schedule["배차정보없음"], list(columns)] = pd.NA
+    return schedule[["표준버스정류장ID", "노선번호", "유형", *columns]]
+
+
 def fill_missing_headway(
-    merged: pd.DataFrame, columns: Sequence[str], group_col: str = "표준버스정류장ID"
+    merged: pd.DataFrame,
+    columns: Sequence[str],
+    group_col: str = "표준버스정류장ID",
+    type_col: str = "유형",
 ) -> pd.DataFrame:
     """Fill missing headway-derived columns with the same stop's other routes' median.
 
@@ -131,14 +152,35 @@ def fill_missing_headway(
     apart was the risk (each module's own tests would still pass even if the
     fallback diverged, since neither compares against the other).
 
-    Raises ValueError if a stop has *no* route with a value in some column
-    (issue #109): the median itself is then undefined (NaN), and letting
-    that NaN flow through would silently turn into a NaN W or capacity
-    figure downstream instead of a visible failure.
+    A stop whose routes *all* lack schedule data has no sibling to borrow
+    from -- impossible in the 21-stop demo corridor (every stop is a
+    downtown arterial with several routes), but 125 of 서울 전체's 12,595
+    stops hit it, 117 of them served by a single route. Those fall back a
+    second level, to the median of every 서울 route of the same 유형.
+    유형 is what actually separates headways -- 간선 11분, 지선 12분, 마을
+    13분, 광역 15분, but 공항 50분 and 한강 75분 -- so a single citywide
+    median would understate a 한강버스 stop's wait about sixfold. Medians
+    come from one row per 노선번호, so a route serving many stops doesn't
+    outvote the rest of its 유형, and from the pre-fill values, so the
+    first level's substitutions don't feed the second.
+
+    Rows whose 유형 is itself unknown are dropped: the route is absent from
+    서울시버스노선기본정보 altogether (8 routes, data/README.md §10), so
+    there is no group to borrow from and nothing to compute W from. Raises
+    ValueError if anything is still missing after both levels (issue #109)
+    -- a known 유형 with no schedule data anywhere in 서울 is a real
+    failure, not a data gap, and letting the NaN through would surface
+    downstream as a NaN W or capacity figure instead.
     """
     merged = merged.copy()
+    per_route = merged.drop_duplicates(subset=["노선번호"])
     for col in columns:
+        type_median = per_route.groupby(type_col)[col].median()
         merged[col] = merged[col].fillna(merged.groupby(group_col)[col].transform("median"))
+        merged[col] = merged[col].fillna(merged[type_col].map(type_median))
+
+    unresolved = merged[list(columns)].isna().any(axis=1)
+    merged = merged[~(unresolved & merged[type_col].isna())]
 
     still_missing = merged[merged[list(columns)].isna().any(axis=1)]
     if not still_missing.empty:
@@ -147,7 +189,7 @@ def fill_missing_headway(
             f"no schedule data for any route at stop(s) {stop_ids} in columns "
             f"{list(columns)} -- median fallback has nothing to fall back to"
         )
-    return merged
+    return merged.reset_index(drop=True)
 
 
 def run(
@@ -155,19 +197,27 @@ def run(
 ) -> None:
     """Build corridor_route_schedule.parquet from raw_dir CSV/XLSX.
 
-    Route-stop membership only needs one month's OA-12913 file (routes
-    don't come and go month to month), so this uses the most recent one
-    under raw_dir/HOURLY_BOARDING_DIRNAME rather than reading all of them.
+    Reads every monthly OA-12913 file under raw_dir/HOURLY_BOARDING_DIRNAME,
+    the same set oa12913.py's build_corridor_route_hourly() aggregates, so
+    the two outputs agree on which routes serve which stops. This used to
+    read only the most recent month on the assumption that routes don't come
+    and go month to month; over 12 months of 서울 전체 they do -- seasonal
+    routes, 출퇴근 전용 variants, and renumbered routes left 392 (stop,
+    route) pairs present in corridor_route_hourly with no row here at all.
+    Those pairs joined to nothing downstream, taking 58 stops out of
+    corridor_wait entirely (estimator/wait_population.py).
 
     stop_ids defaults to the 21-stop demo corridor; pass None for 서울 전체
     (scripts/build_processed.py does this when STATIONCAST_SCOPE=seoul).
     """
-    boarding_csv = sorted(
+    boarding_csvs = sorted(
         (raw_dir / HOURLY_BOARDING_DIRNAME).glob("*버스노선별_정류장별_시간대별_승하차*.csv")
-    )[-1]
+    )
     schedule_xlsx = next(raw_dir.glob("*버스노선기본정보*.xlsx"))
 
-    boarding_df = read_cp949_csv(boarding_csv, low_memory=False)
+    boarding_df = pd.concat(
+        [read_cp949_csv(path, low_memory=False) for path in boarding_csvs], ignore_index=True
+    )
     route_schedule = load_route_schedule(schedule_xlsx)
 
     schedule = build_corridor_route_schedule(boarding_df, route_schedule, stop_ids=stop_ids)

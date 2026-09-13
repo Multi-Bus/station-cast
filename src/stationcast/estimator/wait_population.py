@@ -32,7 +32,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from stationcast.ingest.route_schedule import fill_missing_headway
+from stationcast.ingest.route_schedule import day_type_schedule, fill_missing_headway
 
 DEFAULT_DAY_TYPE = "평일"
 
@@ -63,10 +63,7 @@ def estimate_wait(
     Returns 표준버스정류장ID, 정류장명, 시간대, W -- one row per (stop, hour),
     summed across every route serving that stop.
     """
-    schedule = route_schedule[route_schedule["요일유형"] == day_type]
-    schedule = schedule[~schedule["배차정보없음"]][
-        ["표준버스정류장ID", "노선번호", "배차간격", "최소배차", "최대배차"]
-    ]
+    schedule = day_type_schedule(route_schedule, day_type, ["배차간격", "최소배차", "최대배차"])
 
     merged = route_hourly.merge(schedule, on=["표준버스정류장ID", "노선번호"], how="left")
     merged = fill_missing_headway(merged, ["배차간격", "최소배차", "최대배차"])

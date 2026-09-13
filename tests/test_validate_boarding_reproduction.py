@@ -112,11 +112,48 @@ def test_per_stop_mape_reports_one_row_per_stop() -> None:
     assert by_stop.iloc[0]["요일날씨기온보정_MAPE"] < 30.0
 
 
-def test_anomalous_dates_flags_only_collapsed_totals() -> None:
-    df = pd.DataFrame(
-        {"사용일자": [1, 2, 3, 4], "승차": [100.0, 100.0, 100.0, 5.0]}
-    )
-    assert _anomalous_dates(df) == {4}
+def _collapse_fixture() -> pd.DataFrame:
+    """10 stops x 5 dates. Dates 1-3 are normal (every stop at 100).
+
+    Date 4 is holiday-shaped: everyone drops to 40, which is a real drop but
+    no single stop falls under its own 10% floor. Date 5 is strike-shaped:
+    two stops go to zero while the rest carry on, so 20% of stops collapse.
+    """
+    rows = []
+    for date in (1, 2, 3):
+        rows += [{"표준버스정류장ID": s, "사용일자": date, "승차": 100.0} for s in range(10)]
+    rows += [{"표준버스정류장ID": s, "사용일자": 4, "승차": 40.0} for s in range(10)]
+    rows += [
+        {"표준버스정류장ID": s, "사용일자": 5, "승차": 0.0 if s < 2 else 100.0} for s in range(10)
+    ]
+    return pd.DataFrame(rows)
+
+
+def test_anomalous_dates_flags_strike_shaped_not_holiday_shaped() -> None:
+    # Date 4 cuts every stop to 40% -- a quiet day, not a stopped network.
+    # Date 5 zeroes 2 of 10 stops (20% >= ANOMALY_THRESHOLD 0.15), the shape
+    # a strike makes when 마을버스 keeps running.
+    assert _anomalous_dates(_collapse_fixture()) == {5}
+
+
+def test_anomalous_dates_ignores_a_collapse_too_small_to_clear_the_threshold() -> None:
+    # One stop of 10 collapsing is 10%, under ANOMALY_THRESHOLD -- a single
+    # stop closing for roadworks is not a network-wide event.
+    df = _collapse_fixture()
+    df.loc[(df["사용일자"] == 5) & (df["표준버스정류장ID"] == 1), "승차"] = 100.0
+
+    assert _anomalous_dates(df) == set()
+
+
+def test_anomalous_dates_measures_each_stop_against_its_own_median() -> None:
+    # A stop whose normal day is 4 boardings and a stop whose normal day is
+    # 1000 both collapse to zero on date 5 -- the rule must not let the big
+    # stop's scale decide for the small one.
+    df = _collapse_fixture()
+    df.loc[df["표준버스정류장ID"] == 0, "승차"] *= 0.04
+    df.loc[df["표준버스정류장ID"] == 1, "승차"] *= 10.0
+
+    assert _anomalous_dates(df) == {5}
 
 
 def test_build_boarding_reproduction_report_drops_anomalous_dates() -> None:

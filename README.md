@@ -81,10 +81,13 @@ cp frontend/.env.example frontend/.env   # 카카오 지도 키
 `.env`는 `.gitignore`에 있습니다. 포털이 주는 키가 퍼센트 인코딩(`%2F`, `%3D` 등)돼
 있어도 그대로 붙여넣으면 됩니다 — 코드가 `unquote()`로 디코딩합니다.
 
-### 3. (선택) 원본 데이터로 최신화
+### 3. 원본 데이터 내려받기
 
-`data/processed/`의 parquet은 **이미 저장소에 포함**돼 있으므로 바로 5번(API 서버)으로
-건너뛰어도 됩니다. 원본을 다시 받아 최신 데이터로 갱신하고 싶을 때만 이 단계를 진행합니다.
+`data/processed/`의 parquet은 **저장소에 포함되지 않습니다** — 서울 전체 스코프에서
+158MB이고 git이 과거 버전을 계속 쌓기 때문입니다. API 서버를 띄우려면 이 단계와 4번을
+먼저 거쳐야 합니다. (컨테이너 기동만 확인할 목적이라면 원본 없이
+`python scripts/build_smoke_data.py`로 가짜 데이터를 만들 수 있습니다 — 실데이터 아님.)
+
 원본 CSV/XLSX는 기상청 로그인·공공데이터포털 인증키가 필요해 자동화할 수 없으니, 먼저
 [`data/README.md`](./data/README.md) §1~§7을 보고 `data/raw/`에 내려받습니다.
 
@@ -92,22 +95,23 @@ cp frontend/.env.example frontend/.env   # 카카오 지도 키
 XLSX). 기상청 ASOS 일자료만 회원가입·로그인이 필요하고, 특일정보(공휴일)는 위 2번과 같은
 방식의 오픈API 키를 씁니다.
 
-### 4. (선택) 파이프라인 재실행
+### 4. 파이프라인 실행
 
-이어서 재현하려면 이렇게 실행합니다 — 위 3번을 건너뛰었다면 이 단계도 건너뛰고, 저장소에
-이미 포함된 `data/processed/` 파일을 그대로 씁니다.
+내려받은 원본에서 `data/processed/`를 만듭니다.
 
 ```bash
 python scripts/build_processed.py
 ```
 
-`ingest/`·`features/` 산출물(정류장·노선별 승하차, 날씨, 공휴일, 요일×날씨×기온 보정계수)이
-한 번에 만들어집니다. 원본이 빠져 있으면 어떤 파일이 왜 필요한지 먼저 알려주고 멈춥니다.
+`ingest/`·`features/` 산출물(정류장·노선별 승하차, 날씨, 공휴일, 요일×날씨×기온 보정계수)과
+대기인원 추정치(`corridor_wait.parquet`, API가 서빙하는 `W(s,t)`)가 한 번에 만들어집니다.
+원본이 빠져 있으면 어떤 파일이 왜 필요한지 먼저 알려주고 멈춥니다.
 
-이어서 대기인원 추정치(`corridor_wait.parquet`, API가 서빙하는 `W(s,t)`)를 만듭니다.
+기본값은 종로-명동-을지로 회랑 21개 정류장(`demo`)입니다. 서울 전체(정류장 12,537개,
+약 5분 소요, 산출물 158MB)로 빌드하려면 `STATIONCAST_SCOPE=seoul`을 줍니다.
 
 ```bash
-python -m stationcast.estimator.wait_population
+STATIONCAST_SCOPE=seoul python scripts/build_processed.py
 ```
 
 ### 5. API 서버
@@ -123,8 +127,10 @@ uvicorn stationcast.api.main:app --reload
 
 ### 5-1. Docker로 실행 (선택)
 
-`data/processed/`가 이미지에 포함돼 있고 프론트엔드도 함께 빌드되므로, 볼륨 마운트 없이
-컨테이너 하나로 API와 웹 UI가 같은 주소에서 뜹니다.
+이미지는 빌드 시점의 `data/processed/`를 그대로 담습니다 — 위 4번을 먼저 돌려두면
+볼륨 마운트 없이 컨테이너 하나로 API와 웹 UI가 같은 주소에서 뜹니다. 데이터 없이 빌드하면
+컨테이너는 뜨고 `/health`도 응답하지만 데이터 경로는 `data/processed/`를 마운트할 때까지
+503을 반환합니다.
 
 ```bash
 docker compose up --build
