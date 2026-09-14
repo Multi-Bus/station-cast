@@ -6,7 +6,6 @@ import pytest
 from stationcast.features.demand_factors import (
     BoardingFactorUnavailable,
     _temp_type,
-    boarding_factor,
     boarding_factor_for_labels,
     build_features_daily,
     build_weekday_weather_factor,
@@ -223,18 +222,6 @@ def _weekday_weather_factor() -> pd.DataFrame:
     )
 
 
-def _features_daily_single_row() -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "표준버스정류장ID": [100000389],
-            "사용일자": [20260601],
-            "요일구분": ["평일"],
-            "날씨구분": ["강수"],
-            "기온구분": ["저온"],
-        }
-    )
-
-
 def test_boarding_factor_for_labels_raises_for_unknown_stop() -> None:
     with pytest.raises(BoardingFactorUnavailable):
         boarding_factor_for_labels(_weekday_weather_factor(), 999999999, "평일", "강수", "저온")
@@ -248,20 +235,3 @@ def test_boarding_factor_for_labels_raises_for_missing_group_column() -> None:
         boarding_factor_for_labels(
             _weekday_weather_factor(), 100000389, "주말+공휴일", "강수", "고온"
         )
-
-
-def test_boarding_factor_raises_for_missing_date_combo() -> None:
-    # features_daily has a row for 20260601 only -- 20260602 mirrors one of
-    # the 17 corridor-wide (정류장, 날짜) combinations missing from
-    # corridor_features_daily.parquet in real data (data/README.md §10).
-    with pytest.raises(BoardingFactorUnavailable):
-        boarding_factor(
-            _features_daily_single_row(), _weekday_weather_factor(), 100000389, 20260602
-        )
-
-
-def test_boarding_factor_looks_up_labels_and_returns_factor() -> None:
-    result = boarding_factor(
-        _features_daily_single_row(), _weekday_weather_factor(), 100000389, 20260601
-    )
-    assert result == 1.2

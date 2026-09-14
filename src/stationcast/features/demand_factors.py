@@ -112,19 +112,10 @@ def precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) ->
 
 
 class BoardingFactorUnavailable(Exception):
-    """Raised when boarding_factor()/boarding_factor_for_labels() has no row
-    to compute a correction factor from -- an unlisted stop_id, a (stop,
-    date) combination features_daily never covered (issue #137), or a
-    요일×날씨×기온 group weekday_weather_factor has no column for. Callers
-    should catch this and degrade to a 404 rather than let the underlying
-    .iloc[0]/KeyError surface as a 500.
-
-    The one uncovered (stop, date) combination in the demo corridor is stop
-    101000042 on 2026-01-14, during the two-day Seoul city-bus strike
-    (data/README.md §10) -- a day the buses did not run, not a day the data
-    is missing. It no longer reaches this exception from
-    /stops/{id}/context, which derives the labels from the date instead of
-    looking up features_daily."""
+    """Raised when a correction-factor lookup has no row to compute from --
+    an unlisted stop_id, or a 요일×날씨×기온 group weekday_weather_factor has
+    no column for (issue #137). Callers should catch this rather than let
+    the underlying .iloc[0]/KeyError surface as a 500."""
 
 
 def boarding_factor_for_labels(
@@ -189,35 +180,12 @@ def _factor_for_labels(
     return float(factor_row[column].iloc[0])
 
 
-def boarding_factor(
-    features_daily: pd.DataFrame,
-    weekday_weather_factor: pd.DataFrame,
-    stop_id: int,
-    date: int,
-) -> float:
-    """boarding_factor_for_labels(), looking up the date's labels from
-    features_daily. Moved from api/main.py (issue #107)."""
-    features_row = features_daily[
-        (features_daily["표준버스정류장ID"] == stop_id) & (features_daily["사용일자"] == date)
-    ]
-    if features_row.empty:
-        raise BoardingFactorUnavailable(f"no features_daily row for stop {stop_id} on date {date}")
-    row = features_row.iloc[0]
-    return boarding_factor_for_labels(
-        weekday_weather_factor,
-        stop_id,
-        str(row["요일구분"]),
-        str(row["날씨구분"]),
-        str(row["기온구분"]),
-    )
-
-
 def congestion_note(day_type: str, boarding_factor: float) -> str:
     """Human-readable explanation of the day-type correction factor. Moved
     from api/main.py (issue #107).
 
     boarding_factor is 보정계수_승차 (해당 요일×날씨×기온 그룹 평균승차 / 기준선
-    평균승차) from weekday_weather_factor.parquet, via boarding_factor() above.
+    평균승차) from weekday_weather_factor.parquet, via boarding_factor_for_labels().
     """
     if day_type == "평일":
         return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
