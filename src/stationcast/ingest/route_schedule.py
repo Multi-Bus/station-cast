@@ -78,7 +78,10 @@ def build_corridor_route_schedule(
     """
     keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
     sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
-    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
+    names = sub["역명"].unique()
+    sub["정류장명"] = sub["역명"].map(
+        dict(zip(names, map(clean_stop_name, names), strict=True))
+    )
     sub["노선번호"] = sub["노선번호"].astype(str)
 
     # Deduplicate on (정류장, 노선) alone and attach the most recent name

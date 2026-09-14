@@ -110,7 +110,10 @@ def build_corridor_route_hourly(
     """
     keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
     sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
-    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
+    names = sub["역명"].unique()
+    sub["정류장명"] = sub["역명"].map(
+        dict(zip(names, map(clean_stop_name, names), strict=True))
+    )
     sub["노선번호"] = sub["노선번호"].astype(str)
     sub["is_night_bus"] = sub["노선번호"].map(
         dict(zip(u := sub["노선번호"].unique(), map(is_night_bus, u), strict=True))
@@ -157,7 +160,10 @@ def build_corridor_stops(
     """
     keep = boarding_df["표준버스정류장ID"].isin(stop_ids) if stop_ids is not None else None
     sub = boarding_df.copy() if keep is None else boarding_df[keep].copy()
-    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
+    names = sub["역명"].unique()
+    sub["정류장명"] = sub["역명"].map(
+        dict(zip(names, map(clean_stop_name, names), strict=True))
+    )
     meta = sub[["표준버스정류장ID", "정류장명", "버스정류장ARS번호"]].drop_duplicates(
         subset="표준버스정류장ID"
     )
