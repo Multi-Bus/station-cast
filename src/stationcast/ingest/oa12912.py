@@ -49,7 +49,10 @@ def build_corridor_daily(
     keep = stop_id_num.notna() if stop_ids is None else stop_id_num.isin(stop_ids)
     sub = boarding_df[keep].copy()
     sub["표준버스정류장ID"] = stop_id_num[keep].astype("int64")
-    sub["정류장명"] = sub["역명"].apply(clean_stop_name)
+    names = sub["역명"].unique()
+    sub["정류장명"] = sub["역명"].map(
+        dict(zip(names, map(clean_stop_name, names), strict=True))
+    )
 
     daily_totals = (
         sub.groupby(["표준버스정류장ID", "사용일자"])
