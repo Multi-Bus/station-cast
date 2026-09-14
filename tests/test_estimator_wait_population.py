@@ -274,3 +274,47 @@ def test_filters_by_day_type() -> None:
 
     assert weekday.iloc[0]["W"] == pytest.approx(12 * 3 / 60)
     assert saturday.iloc[0]["W"] == pytest.approx(12 * 10 / 60)
+
+
+def _factors() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "표준버스정류장ID": [STOP],
+            "보정계수_승차_정규화_주말+공휴일_강수_저온": [1.4],
+        }
+    )
+
+
+def test_factors_scale_w_by_the_groups_normalized_factor() -> None:
+    hourly = _route_hourly()[_route_hourly()["시간대"] == 9]
+    labels = ("주말+공휴일", "강수", "저온")
+
+    base = estimate_wait(hourly, _route_schedule())
+    corrected = estimate_wait(hourly, _route_schedule(), factors=_factors(), labels=labels)
+
+    assert corrected.iloc[0]["W"] == pytest.approx(base.iloc[0]["W"] * 1.4)
+
+
+def test_omitting_factors_reproduces_the_uncorrected_estimate() -> None:
+    result = estimate_wait(_route_hourly(), _route_schedule())
+    explicit_none = estimate_wait(_route_hourly(), _route_schedule(), factors=None, labels=None)
+
+    pd.testing.assert_frame_equal(result, explicit_none)
+
+
+def test_stop_missing_from_the_factor_table_keeps_its_uncorrected_boarding() -> None:
+    # A left join miss must not NaN out the stop's W -- the correction is an
+    # adjustment, not a precondition for having an estimate at all.
+    hourly = _route_hourly()[_route_hourly()["시간대"] == 9]
+    other_stop = _factors().assign(표준버스정류장ID=[999999999])
+
+    result = estimate_wait(
+        hourly, _route_schedule(), factors=other_stop, labels=("주말+공휴일", "강수", "저온")
+    )
+
+    assert result.iloc[0]["W"] == pytest.approx(0.6)
+
+
+def test_factors_without_labels_is_rejected() -> None:
+    with pytest.raises(ValueError, match="together"):
+        estimate_wait(_route_hourly(), _route_schedule(), factors=_factors())

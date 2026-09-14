@@ -11,6 +11,8 @@ from stationcast.features.demand_factors import (
     build_features_daily,
     build_weekday_weather_factor,
     classify_temperature,
+    factor_column_name,
+    normalized_boarding_factor_for_labels,
 )
 
 
@@ -143,6 +145,73 @@ def test_build_weekday_weather_factor_computes_twelve_group_ratios() -> None:
 
     # 0.15 falls well below the 0.5 outlier threshold
     assert bool(row["극단치주의"]) is True
+
+
+@pytest.mark.parametrize("value", ["승차", "하차"])
+def test_normalized_factors_average_one_over_the_stops_own_history(value: str) -> None:
+    features = build_features_daily(
+        _corridor_daily_weather_temp_mix(), _weather_daily_weather_temp_mix(), _holiday_daily()
+    )
+    factor = build_weekday_weather_factor(features)
+    row = factor[factor["표준버스정류장ID"] == 100000389].iloc[0]
+
+    groups = [
+        (day, weather, temp)
+        for day in ("평일", "주말+공휴일")
+        for weather in ("맑음", "강수")
+        for temp in ["저온", "보통", "고온"]
+    ]
+    weighted = sum(
+        row[factor_column_name("표본수", *group)]
+        * row[factor_column_name(f"보정계수_{value}_정규화", *group)]
+        for group in groups
+    )
+    total_days = sum(row[factor_column_name("표본수", *group)] for group in groups)
+
+    # This is the property the whole normalization exists for: applied across
+    # the stop's real distribution of days, the correction leaves the overall
+    # level of W alone and only redistributes it between conditions.
+    assert weighted / total_days == pytest.approx(1.0, abs=0.01)
+
+
+def test_normalized_factors_keep_the_ratios_between_groups() -> None:
+    features = build_features_daily(
+        _corridor_daily_weather_temp_mix(), _weather_daily_weather_temp_mix(), _holiday_daily()
+    )
+    factor = build_weekday_weather_factor(features)
+    row = factor[factor["표준버스정류장ID"] == 100000389].iloc[0]
+
+    raw_ratio = (
+        row["보정계수_승차_평일_강수_고온"] / row["보정계수_승차_주말+공휴일_강수_저온"]
+    )
+    normalized_ratio = (
+        row["보정계수_승차_정규화_평일_강수_고온"]
+        / row["보정계수_승차_정규화_주말+공휴일_강수_저온"]
+    )
+
+    assert normalized_ratio == pytest.approx(raw_ratio)
+
+
+def test_normalized_factor_covers_the_baseline_group_too() -> None:
+    # 보정계수_승차 has no baseline column (it is 1.0 by definition), but the
+    # normalized table must carry one: rescaling moves the baseline off 1.0.
+    features = build_features_daily(
+        _corridor_daily_weather_temp_mix(), _weather_daily_weather_temp_mix(), _holiday_daily()
+    )
+    factor = build_weekday_weather_factor(features)
+
+    assert "보정계수_승차_평일_맑음_보통" not in factor.columns
+    assert "보정계수_승차_정규화_평일_맑음_보통" in factor.columns
+
+    result = normalized_boarding_factor_for_labels(factor, 100000389, "평일", "맑음", "보통")
+    assert result != 1.0
+
+
+def test_normalized_boarding_factor_raises_for_unknown_stop() -> None:
+    with pytest.raises(BoardingFactorUnavailable):
+        normalized_boarding_factor_for_labels(
+            _weekday_weather_factor(), 999999999, "평일", "강수", "저온"
+        )
 
 
 def _weekday_weather_factor() -> pd.DataFrame:
