@@ -21,6 +21,9 @@ _OUTLIER_HIGH = 2.0
 
 _TEMP_LABELS = ["저온", "보통", "고온"]
 
+# 보정계수의 기준선 그룹: 표본이 가장 크고 "평소"에 해당하는 조합.
+_BASELINE_GROUP = ("평일", "맑음", "보통")
+
 # 최고기온 3분위 경계값(3년치 데이터의 qcut 결과를 고정 상수로 전환).
 _TEMP_BOUNDARIES = (13.9, 25.9)
 
@@ -135,13 +138,50 @@ def boarding_factor_for_labels(
     api/main.py (issue #107); takes the parquet DataFrame directly rather
     than api/data.py's CorridorData, so features/ doesn't depend on api/.
     """
-    if (weekday_group, weather_group, temp_group) == ("평일", "맑음", "보통"):
+    if (weekday_group, weather_group, temp_group) == _BASELINE_GROUP:
         return 1.0
+    return _factor_for_labels(
+        weekday_weather_factor, stop_id, "보정계수_승차", weekday_group, weather_group, temp_group
+    )
 
+
+def normalized_boarding_factor_for_labels(
+    weekday_weather_factor: pd.DataFrame,
+    stop_id: int,
+    weekday_group: str,
+    weather_group: str,
+    temp_group: str,
+) -> float:
+    """보정계수_승차_정규화 for one stop's group -- the factor to multiply into W.
+
+    Use this, not boarding_factor_for_labels(), whenever the factor scales an
+    estimate rather than describing it in prose: these ratios average 1.0 over
+    the stop's own history, so they don't double-count the weather already
+    baked into B_r (see _add_normalized_boarding_factors). The baseline group
+    has no 1.0 shortcut here -- it is rescaled like every other group.
+    """
+    return _factor_for_labels(
+        weekday_weather_factor,
+        stop_id,
+        "보정계수_승차_정규화",
+        weekday_group,
+        weather_group,
+        temp_group,
+    )
+
+
+def _factor_for_labels(
+    weekday_weather_factor: pd.DataFrame,
+    stop_id: int,
+    value: str,
+    weekday_group: str,
+    weather_group: str,
+    temp_group: str,
+) -> float:
     factor_row = weekday_weather_factor[weekday_weather_factor["표준버스정류장ID"] == stop_id]
     if factor_row.empty:
         raise BoardingFactorUnavailable(f"no weekday_weather_factor row for stop {stop_id}")
-    column = factor_column_name("보정계수_승차", weekday_group, weather_group, temp_group)
+    column = factor_column_name(value, weekday_group, weather_group, temp_group)
     if column not in factor_row.columns:
         raise BoardingFactorUnavailable(
             f"no {column!r} column in weekday_weather_factor for stop {stop_id}"
@@ -214,15 +254,15 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     ]
     pivot = pivot.reset_index()
 
-    base_board = pivot[factor_column_name("평균승차", "평일", "맑음", "보통")]
-    base_alight = pivot[factor_column_name("평균하차", "평일", "맑음", "보통")]
-    non_baseline = [
+    base_board = pivot[factor_column_name("평균승차", *_BASELINE_GROUP)]
+    base_alight = pivot[factor_column_name("평균하차", *_BASELINE_GROUP)]
+    all_groups = [
         (day, weather, temp)
         for day in ("평일", "주말+공휴일")
         for weather in ("맑음", "강수")
         for temp in _TEMP_LABELS
-        if not (day == "평일" and weather == "맑음" and temp == "보통")
     ]
+    non_baseline = [group for group in all_groups if group != _BASELINE_GROUP]
     for day, weather, temp in non_baseline:
         pivot[factor_column_name("보정계수_승차", day, weather, temp)] = (
             pivot[factor_column_name("평균승차", day, weather, temp)] / base_board
@@ -235,7 +275,56 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     in_range = pivot[ratio_cols].apply(lambda s: s.between(_OUTLIER_LOW, _OUTLIER_HIGH))
     pivot["극단치주의"] = ~in_range.all(axis=1)
 
+    # 극단치주의는 위 원본 비율에 대한 판정이라 정규화 컬럼을 붙이기 전에 끝낸다.
+    for value in ("승차", "하차"):
+        _add_normalized_factors(pivot, all_groups, value)
+
     return pivot.sort_values("표준버스정류장ID").reset_index(drop=True)
+
+
+def _add_normalized_factors(
+    pivot: pd.DataFrame, all_groups: list[tuple[str, str, str]], value: str
+) -> None:
+    """Add 보정계수_<value>_정규화_* : the same ratios rescaled to average 1.0.
+
+    보정계수_승차 is each group's mean boarding over the 평일·맑음·보통
+    baseline's. Multiplying it straight into an estimate is only valid if the
+    estimate is itself on that baseline -- but wait_population's B_r is a
+    12-month daily average pooled over every weekday and weather condition
+    (ingest/oa12913.py), so the baseline-relative ratio would shift every W by
+    the gap between "baseline day" and "average day" on top of the weather
+    effect it is supposed to carry.
+
+    Dividing every group by the same per-stop constant fixes that while
+    leaving the ratios *between* groups untouched: weight each group's ratio
+    by 표본수 (how many days of history actually fell in it) and rescale so
+    that weighted average is exactly 1. The correction then only redistributes
+    W across conditions instead of moving its overall level.
+
+    Baseline included -- it is 1.0 before rescaling, so it lands near but not
+    exactly 1.0 after, and callers must look it up like any other group.
+    """
+    raw = {
+        group: (
+            pd.Series(1.0, index=pivot.index)
+            if group == _BASELINE_GROUP
+            else pivot[factor_column_name(f"보정계수_{value}", *group)]
+        )
+        for group in all_groups
+    }
+    ratios = pd.concat(raw.values(), axis=1, ignore_index=True)
+    weights = pd.concat(
+        [pivot[factor_column_name("표본수", *group)] for group in all_groups],
+        axis=1,
+        ignore_index=True,
+    )
+    # A group this stop has no history for contributes to neither side, so a
+    # stop missing one still normalizes over the groups it does have.
+    covered = weights.where(ratios.notna())
+    normalizer = (covered * ratios).sum(axis=1) / covered.sum(axis=1)
+
+    for group in all_groups:
+        pivot[factor_column_name(f"보정계수_{value}_정규화", *group)] = raw[group] / normalizer
 
 
 def run(processed_dir: Path) -> None:

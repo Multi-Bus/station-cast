@@ -22,6 +22,10 @@ class CongestionResponse(BaseModel):
     grade_basis says what the 여유/보통/혼잡 label is relative to --
     "seoul_percentile" means Seoul-wide 70/90th percentiles of W, not the
     stop's own capacity (estimator/congestion.py).
+
+    weather_applied=False means the date's 요일·날씨·기온 correction couldn't
+    be resolved, so estimated_wait is the all-conditions average rather than
+    an estimate for that specific day.
     """
 
     stop_id: int
@@ -30,6 +34,7 @@ class CongestionResponse(BaseModel):
     estimated_wait: float
     grade: str
     grade_basis: str
+    weather_applied: bool
 
 
 class TimelinePoint(BaseModel):

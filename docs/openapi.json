@@ -104,7 +104,7 @@
         "type": "object"
       },
       "CongestionResponse": {
-        "description": "Estimated wait and congestion grade for one stop at one hour.\n\ngrade_basis says what the 여유/보통/혼잡 label is relative to --\n\"seoul_percentile\" means Seoul-wide 70/90th percentiles of W, not the\nstop's own capacity (estimator/congestion.py).",
+        "description": "Estimated wait and congestion grade for one stop at one hour.\n\ngrade_basis says what the 여유/보통/혼잡 label is relative to --\n\"seoul_percentile\" means Seoul-wide 70/90th percentiles of W, not the\nstop's own capacity (estimator/congestion.py).\n\nweather_applied=False means the date's 요일·날씨·기온 correction couldn't\nbe resolved, so estimated_wait is the all-conditions average rather than\nan estimate for that specific day.",
         "properties": {
           "estimated_wait": {
             "title": "Estimated Wait",
@@ -129,6 +129,10 @@
           "stop_id": {
             "title": "Stop Id",
             "type": "integer"
+          },
+          "weather_applied": {
+            "title": "Weather Applied",
+            "type": "boolean"
           }
         },
         "required": [
@@ -137,7 +141,8 @@
           "hour",
           "estimated_wait",
           "grade",
-          "grade_basis"
+          "grade_basis",
+          "weather_applied"
         ],
         "title": "CongestionResponse",
         "type": "object"
@@ -599,7 +604,7 @@
     },
     "/api/stops/{stop_id}/congestion": {
       "get": {
-        "description": "Estimated wait and congestion grade for one stop at one hour (default: current hour).",
+        "description": "Estimated wait and congestion grade for one stop at one hour (default: current hour).\n\ncorridor_wait.parquet's W is an average over every weekday and weather\ncondition, so it is scaled here by that date's 보정계수_승차_정규화 --\nthe same correction /context has always *described* in prose but never\napplied to the number next to it. weather_applied=False means no factor\nwas available (unknown stop-group combination, or no weather for the\ndate at all) and the estimate is the uncorrected average; the estimate is\nnever withheld over a missing correction.",
         "operationId": "get_congestion_api_stops__stop_id__congestion_get",
         "parameters": [
           {
@@ -627,6 +632,22 @@
                 }
               ],
               "title": "Hour"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
             }
           }
         ],

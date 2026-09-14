@@ -63,11 +63,16 @@ def corridor_data() -> CorridorData:
     # 20260101은 주말+공휴일·맑음·저온, 20260102는 평일·강수·저온으로 분류된다.
     # 실데이터의 weekday_weather_factor는 모든 정류장이 12그룹을 전부 채우고
     # 있으므로(21개 정류장 x 11개 비기준선 그룹, NaN 0건) 픽스처도 그렇게 둔다.
+    # 보정계수_승차_*는 기준선(평일·맑음·보통) 대비 비율로 /context의 설명
+    # 문구용, 보정계수_승차_정규화_*는 정류장 이력 전체 평균이 1이 되게 다시
+    # 스케일한 값으로 /congestion이 W에 곱하는 쪽이다.
     weekday_weather_factor = pd.DataFrame(
         {
             "표준버스정류장ID": [STOP_A, STOP_B],
             "보정계수_승차_주말+공휴일_맑음_저온": [0.85, 0.70],
             "보정계수_승차_평일_강수_저온": [1.10, 1.2],
+            "보정계수_승차_정규화_주말+공휴일_맑음_저온": [0.8, 0.5],
+            "보정계수_승차_정규화_평일_강수_저온": [1.2, 1.5],
         }
     )
     return CorridorData(
@@ -113,6 +118,8 @@ def test_list_stops(client: TestClient) -> None:
 
 
 def test_congestion_returns_estimate_and_grade_for_given_hour(client: TestClient) -> None:
+    # No date given -> today, which the weather fixture doesn't cover and the
+    # forecast can't fill in (no API key), so W stays uncorrected.
     response = client.get(f"/api/stops/{STOP_A}/congestion", params={"hour": 9})
 
     assert response.status_code == 200
@@ -123,7 +130,53 @@ def test_congestion_returns_estimate_and_grade_for_given_hour(client: TestClient
         "estimated_wait": 30.0,
         "grade": "혼잡",
         "grade_basis": "seoul_percentile",
+        "weather_applied": False,
     }
+
+
+def test_congestion_scales_estimate_by_the_dates_correction_factor(client: TestClient) -> None:
+    # 20260101 is 신정 -> 주말+공휴일, 강수량 0 -> 맑음, 최고기온 1.0 -> 저온.
+    # STOP_A's normalized factor for that group is 0.8, so W drops 30.0 -> 24.0.
+    response = client.get(
+        f"/api/stops/{STOP_A}/congestion", params={"hour": 9, "date": 20260101}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estimated_wait"] == 24.0
+    assert body["weather_applied"] is True
+    assert body["grade"] == "혼잡"
+
+
+def test_congestion_grades_the_corrected_estimate_not_the_raw_one(client: TestClient) -> None:
+    # 20260102 is a 평일 with 강수 and 저온; STOP_B's normalized factor is 1.5,
+    # lifting W from 4.0 to 6.0. Both land in 여유 (p70=10.0), so the point
+    # here is that the graded number is the corrected one.
+    response = client.get(
+        f"/api/stops/{STOP_B}/congestion", params={"hour": 8, "date": 20260102}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estimated_wait"] == 6.0
+    assert body["weather_applied"] is True
+
+
+def test_congestion_still_answers_when_the_stop_has_no_factor_for_the_group(
+    client: TestClient,
+) -> None:
+    # The fixture covers 주말+공휴일_맑음_저온 and 평일_강수_저온 only. A date in
+    # neither group has no correction to apply -- the estimate must still come
+    # back, flagged, rather than 404ing over a missing factor.
+    weather_only_date = 20260103  # Saturday, absent from the weather fixture
+    response = client.get(
+        f"/api/stops/{STOP_A}/congestion", params={"hour": 9, "date": weather_only_date}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estimated_wait"] == 30.0
+    assert body["weather_applied"] is False
 
 
 def test_congestion_returns_raw_estimate_without_clamping(client: TestClient) -> None:
