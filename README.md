@@ -72,7 +72,7 @@ pytest
 | 환경변수 | 발급처 | 승인 | 없으면 |
 |---|---|---|---|
 | `SEOUL_BUS_API_KEY` | [공공데이터포털 15000314](https://www.data.go.kr/data/15000314/openapi.do) — 서울시 버스도착정보조회 | 자동승인(즉시) | `/arrivals`가 `available: false`로 응답 |
-| `KMA_FORECAST_API_KEY` | [공공데이터포털 15084084](https://www.data.go.kr/data/15084084/openapi.do) — 기상청 단기예보 | 자동승인(즉시) | `/context`가 과거 날짜만 응답, 오늘·미래는 404 |
+| `KMA_FORECAST_API_KEY` | [공공데이터포털 15084084](https://www.data.go.kr/data/15084084/openapi.do) — 기상청 단기예보 | 자동승인(즉시) | `/context`가 과거 날짜만 응답, 오늘·미래는 404. `/congestion`은 오늘·미래 날짜를 날씨 보정 없이 응답(`weather_applied=false`) |
 | `VITE_KAKAO_MAP_KEY` | [Kakao Developers](https://developers.kakao.com) JavaScript 키 | 즉시 | 지도가 CSS 격자 플레이스홀더로 폴백 |
 
 위 두가지는 data.go.kr 로그인 후 **활용신청 → 자동승인**이라 대기 없이 바로 받습니다.

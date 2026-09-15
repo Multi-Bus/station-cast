@@ -1,12 +1,13 @@
 """Tests for the weekday/holiday/weather calendar feature builder."""
 
+from collections.abc import Callable
+
 import pandas as pd
 import pytest
 
 from stationcast.features.demand_factors import (
     BoardingFactorUnavailable,
     _temp_type,
-    boarding_factor,
     boarding_factor_for_labels,
     build_features_daily,
     build_weekday_weather_factor,
@@ -207,6 +208,50 @@ def test_normalized_factor_covers_the_baseline_group_too() -> None:
     assert result != 1.0
 
 
+def test_stop_with_no_baseline_boarding_gets_undefined_factors_not_inf() -> None:
+    # 서울 스코프에는 평일·맑음·보통 날 승차가 0인 정류장(가상 정류장 등)이 있다.
+    # x/0 used to write inf into 보정계수_*, and normalizing by an inf sum then
+    # zeroed or NaN'd the stop's factors -- /congestion multiplied W by that.
+    empty_stop = 102000301
+    baseline_date = 20260603
+    other = _corridor_daily_weather_temp_mix().assign(
+        표준버스정류장ID=empty_stop, 정류장명="한강대교(가상)"
+    )
+    other.loc[other["사용일자"] == baseline_date, ["승차", "하차"]] = 0
+    daily = pd.concat([_corridor_daily_weather_temp_mix(), other], ignore_index=True)
+
+    factor = build_weekday_weather_factor(
+        build_features_daily(daily, _weather_daily_weather_temp_mix(), _holiday_daily())
+    )
+    row = factor[factor["표준버스정류장ID"] == empty_stop]
+    factor_cols = [c for c in factor.columns if c.startswith("보정계수_")]
+
+    assert row[factor_cols].isna().all(axis=None)
+    assert not factor[factor_cols].isin([float("inf"), float("-inf")]).any(axis=None)
+    # The stop with real baseline boarding is untouched by its neighbour.
+    healthy = factor[factor["표준버스정류장ID"] == 100000389]
+    assert healthy[factor_cols].notna().all(axis=None)
+
+
+@pytest.mark.parametrize("undefined", [float("nan"), float("inf")])
+@pytest.mark.parametrize(
+    "lookup", [boarding_factor_for_labels, normalized_boarding_factor_for_labels]
+)
+def test_lookup_rejects_an_undefined_factor(
+    undefined: float, lookup: Callable[[pd.DataFrame, int, str, str, str], float]
+) -> None:
+    # inf is still worth rejecting: a parquet built before the fix carries it.
+    table = pd.DataFrame(
+        {
+            "표준버스정류장ID": [100000389],
+            "보정계수_승차_주말+공휴일_강수_저온": [undefined],
+            "보정계수_승차_정규화_주말+공휴일_강수_저온": [undefined],
+        }
+    )
+    with pytest.raises(BoardingFactorUnavailable, match="undefined"):
+        lookup(table, 100000389, "주말+공휴일", "강수", "저온")
+
+
 def test_normalized_boarding_factor_raises_for_unknown_stop() -> None:
     with pytest.raises(BoardingFactorUnavailable):
         normalized_boarding_factor_for_labels(
@@ -219,18 +264,6 @@ def _weekday_weather_factor() -> pd.DataFrame:
         {
             "표준버스정류장ID": [100000389],
             "보정계수_승차_평일_강수_저온": [1.2],
-        }
-    )
-
-
-def _features_daily_single_row() -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "표준버스정류장ID": [100000389],
-            "사용일자": [20260601],
-            "요일구분": ["평일"],
-            "날씨구분": ["강수"],
-            "기온구분": ["저온"],
         }
     )
 
@@ -248,20 +281,3 @@ def test_boarding_factor_for_labels_raises_for_missing_group_column() -> None:
         boarding_factor_for_labels(
             _weekday_weather_factor(), 100000389, "주말+공휴일", "강수", "고온"
         )
-
-
-def test_boarding_factor_raises_for_missing_date_combo() -> None:
-    # features_daily has a row for 20260601 only -- 20260602 mirrors one of
-    # the 17 corridor-wide (정류장, 날짜) combinations missing from
-    # corridor_features_daily.parquet in real data (data/README.md §10).
-    with pytest.raises(BoardingFactorUnavailable):
-        boarding_factor(
-            _features_daily_single_row(), _weekday_weather_factor(), 100000389, 20260602
-        )
-
-
-def test_boarding_factor_looks_up_labels_and_returns_factor() -> None:
-    result = boarding_factor(
-        _features_daily_single_row(), _weekday_weather_factor(), 100000389, 20260601
-    )
-    assert result == 1.2

@@ -162,6 +162,40 @@ def test_congestion_grades_the_corrected_estimate_not_the_raw_one(client: TestCl
     assert body["weather_applied"] is True
 
 
+def test_congestion_falls_back_when_the_stops_factor_is_undefined(
+    client: TestClient, corridor_data: CorridorData
+) -> None:
+    # A stop with no baseline-day boarding carries NaN factors. Multiplying W
+    # by one used to return estimated_wait=null graded 혼잡 with
+    # weather_applied=true -- it must fall back to the uncorrected estimate.
+    factors = corridor_data.weekday_weather_factor
+    factors.loc[
+        factors["표준버스정류장ID"] == STOP_A, "보정계수_승차_정규화_주말+공휴일_맑음_저온"
+    ] = float("nan")
+
+    response = client.get(
+        f"/api/stops/{STOP_A}/congestion", params={"hour": 9, "date": 20260101}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["estimated_wait"] == 30.0
+    assert body["weather_applied"] is False
+
+
+def test_context_returns_404_not_500_when_the_stops_factor_is_undefined(
+    client: TestClient, corridor_data: CorridorData
+) -> None:
+    factors = corridor_data.weekday_weather_factor
+    factors.loc[
+        factors["표준버스정류장ID"] == STOP_A, "보정계수_승차_주말+공휴일_맑음_저온"
+    ] = float("nan")
+
+    response = client.get(f"/api/stops/{STOP_A}/context", params={"date": 20260101})
+
+    assert response.status_code == 404
+
+
 def test_congestion_still_answers_when_the_stop_has_no_factor_for_the_group(
     client: TestClient,
 ) -> None:

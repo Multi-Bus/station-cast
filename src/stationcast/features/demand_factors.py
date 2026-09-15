@@ -8,6 +8,7 @@ or 맑음, and a 저온/보통/고온 temperature tercile, and derives per-stop
 correction factors from those labels.
 """
 
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -112,19 +113,12 @@ def precipitation_type_from_asos(precipitation_mm: float, snowfall_cm: float) ->
 
 
 class BoardingFactorUnavailable(Exception):
-    """Raised when boarding_factor()/boarding_factor_for_labels() has no row
-    to compute a correction factor from -- an unlisted stop_id, a (stop,
-    date) combination features_daily never covered (issue #137), or a
-    요일×날씨×기온 group weekday_weather_factor has no column for. Callers
-    should catch this and degrade to a 404 rather than let the underlying
-    .iloc[0]/KeyError surface as a 500.
-
-    The one uncovered (stop, date) combination in the demo corridor is stop
-    101000042 on 2026-01-14, during the two-day Seoul city-bus strike
-    (data/README.md §10) -- a day the buses did not run, not a day the data
-    is missing. It no longer reaches this exception from
-    /stops/{id}/context, which derives the labels from the date instead of
-    looking up features_daily."""
+    """Raised when a correction-factor lookup has no usable value -- an
+    unlisted stop_id, a 요일×날씨×기온 group weekday_weather_factor has no
+    column for (issue #137), or a factor that is undefined for that stop
+    (no baseline-day boarding to divide by, or no history in the group).
+    Callers should catch this rather than let the underlying
+    .iloc[0]/KeyError, or a NaN in the arithmetic, surface as a 500."""
 
 
 def boarding_factor_for_labels(
@@ -157,7 +151,7 @@ def normalized_boarding_factor_for_labels(
     Use this, not boarding_factor_for_labels(), whenever the factor scales an
     estimate rather than describing it in prose: these ratios average 1.0 over
     the stop's own history, so they don't double-count the weather already
-    baked into B_r (see _add_normalized_boarding_factors). The baseline group
+    baked into B_r (see _add_normalized_factors). The baseline group
     has no 1.0 shortcut here -- it is rescaled like every other group.
     """
     return _factor_for_labels(
@@ -186,30 +180,12 @@ def _factor_for_labels(
         raise BoardingFactorUnavailable(
             f"no {column!r} column in weekday_weather_factor for stop {stop_id}"
         )
-    return float(factor_row[column].iloc[0])
-
-
-def boarding_factor(
-    features_daily: pd.DataFrame,
-    weekday_weather_factor: pd.DataFrame,
-    stop_id: int,
-    date: int,
-) -> float:
-    """boarding_factor_for_labels(), looking up the date's labels from
-    features_daily. Moved from api/main.py (issue #107)."""
-    features_row = features_daily[
-        (features_daily["표준버스정류장ID"] == stop_id) & (features_daily["사용일자"] == date)
-    ]
-    if features_row.empty:
-        raise BoardingFactorUnavailable(f"no features_daily row for stop {stop_id} on date {date}")
-    row = features_row.iloc[0]
-    return boarding_factor_for_labels(
-        weekday_weather_factor,
-        stop_id,
-        str(row["요일구분"]),
-        str(row["날씨구분"]),
-        str(row["기온구분"]),
-    )
+    factor = float(factor_row[column].iloc[0])
+    # isfinite, not just isnan: a parquet built before undefined ratios were
+    # written as NaN still carries inf for those stops.
+    if not math.isfinite(factor):
+        raise BoardingFactorUnavailable(f"{column!r} is undefined for stop {stop_id}")
+    return factor
 
 
 def congestion_note(day_type: str, boarding_factor: float) -> str:
@@ -217,7 +193,7 @@ def congestion_note(day_type: str, boarding_factor: float) -> str:
     from api/main.py (issue #107).
 
     boarding_factor is 보정계수_승차 (해당 요일×날씨×기온 그룹 평균승차 / 기준선
-    평균승차) from weekday_weather_factor.parquet, via boarding_factor() above.
+    평균승차) from weekday_weather_factor.parquet, via boarding_factor_for_labels().
     """
     if day_type == "평일":
         return "평일이라 평소와 비슷한 혼잡도가 예상됩니다."
@@ -254,8 +230,11 @@ def build_weekday_weather_factor(features_daily: pd.DataFrame) -> pd.DataFrame:
     ]
     pivot = pivot.reset_index()
 
-    base_board = pivot[factor_column_name("평균승차", *_BASELINE_GROUP)]
-    base_alight = pivot[factor_column_name("평균하차", *_BASELINE_GROUP)]
+    # A stop with no boarding at all on baseline days (서울 스코프의 가상 정류장 등)
+    # has nothing to take a ratio against -- leave it NaN rather than let x/0
+    # write inf into the table.
+    base_board = pivot[factor_column_name("평균승차", *_BASELINE_GROUP)].where(lambda s: s > 0)
+    base_alight = pivot[factor_column_name("평균하차", *_BASELINE_GROUP)].where(lambda s: s > 0)
     all_groups = [
         (day, weather, temp)
         for day in ("평일", "주말+공휴일")
@@ -302,11 +281,14 @@ def _add_normalized_factors(
     W across conditions instead of moving its overall level.
 
     Baseline included -- it is 1.0 before rescaling, so it lands near but not
-    exactly 1.0 after, and callers must look it up like any other group.
+    exactly 1.0 after, and callers must look it up like any other group. A
+    stop whose baseline mean is 0 or missing has no defined ratio in any
+    group, so every one of its normalized factors stays NaN.
     """
+    base_defined = pivot[factor_column_name(f"평균{value}", *_BASELINE_GROUP)].gt(0)
     raw = {
         group: (
-            pd.Series(1.0, index=pivot.index)
+            pd.Series(1.0, index=pivot.index).where(base_defined)
             if group == _BASELINE_GROUP
             else pivot[factor_column_name(f"보정계수_{value}", *group)]
         )
